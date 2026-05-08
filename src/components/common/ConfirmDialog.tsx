@@ -7,7 +7,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -16,39 +17,74 @@ interface ConfirmDialogProps {
   description?: string;
   onConfirm: () => void;
   confirmLabel?: string;
+  cancelLabel?: string;
   variant?: "destructive" | "default";
+  isLoading?: boolean;
 }
 
 const ConfirmDialog = ({
-  open, onOpenChange, title = "Are you sure?",
+  open,
+  onOpenChange,
+  title = "Are you sure?",
   description = "This action cannot be undone.",
-  onConfirm, confirmLabel = "Delete", variant = "destructive"
+  onConfirm,
+  confirmLabel = "Delete",
+  cancelLabel = "Cancel",
+  variant = "destructive",
+  isLoading = false
 }: ConfirmDialogProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-md rounded-2xl">
-      <DialogHeader>
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-accent/10">
-            <AlertTriangle size={20} className="text-accent" />
-          </div>
-          <div>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription className="mt-1">{description}</DialogDescription>
-          </div>
+    <DialogContent className="sm:max-w-[420px] rounded-[24px] border-none shadow-2xl p-0 overflow-hidden bg-card/95 backdrop-blur-xl">
+      <div className="p-8 flex flex-col items-center text-center gap-6">
+        {/* Icon Section */}
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center relative ${
+          variant === "destructive" ? "bg-red-50" : "bg-primary/5"
+        }`}>
+          <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${
+            variant === "destructive" ? "bg-red-200" : "bg-primary/20"
+          }`} />
+          <AlertTriangle 
+            size={40} 
+            className={variant === "destructive" ? "text-red-500" : "text-primary"} 
+          />
         </div>
-      </DialogHeader>
-      <DialogFooter className="gap-2">
-        <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
-          Cancel
-        </Button>
-        <Button
-          className="rounded-xl"
-          variant={variant === "destructive" ? "destructive" : "default"}
-          onClick={() => { onConfirm(); onOpenChange(false); }}
-        >
-          {confirmLabel}
-        </Button>
-      </DialogFooter>
+
+        {/* Content Section */}
+        <div className="space-y-2">
+          <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
+            {title}
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground text-sm leading-relaxed px-2">
+            {description}
+          </DialogDescription>
+        </div>
+
+        {/* Footer Section */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+          <Button
+            variant="outline"
+            className="flex-1 h-12 rounded-2xl border-border bg-transparent hover:bg-secondary transition-all font-medium order-2 sm:order-1"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
+            {cancelLabel}
+          </Button>
+          <Button
+            className={`flex-1 h-12 rounded-2xl font-bold shadow-lg transition-all order-1 sm:order-2 ${
+              variant === "destructive" 
+                ? "bg-red-500 hover:bg-red-600 shadow-red-500/20 text-white" 
+                : "bg-primary hover:bg-primary/90 shadow-primary/20 text-white"
+            }`}
+            onClick={onConfirm}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="animate-spin mr-2" size={20} />
+            ) : null}
+            {confirmLabel}
+          </Button>
+        </div>
+      </div>
     </DialogContent>
   </Dialog>
 );
