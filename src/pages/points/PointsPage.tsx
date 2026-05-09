@@ -4,7 +4,7 @@ import { Search, Filter, Coins } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
-import { mockPoints, mockMembers, categoryPoints } from "@/data/mockData";
+import { mockPoints, mockMembers, modulePoints } from "@/data/mockData";
 import type { PointEntry } from "@/types";
 import { Link } from "react-router-dom";
 
@@ -29,13 +29,13 @@ const PointsPage = () => {
         p.memberName.toLowerCase().includes(query) ||
         p.reason.toLowerCase().includes(query) ||
         p.type.toLowerCase().includes(query) ||
-        p.category?.toLowerCase().includes(query)
+        p.category?.toLowerCase().includes(query) // PointEntry still uses 'category' for now as per type definition
     );
   }, [points, searchQuery]);
 
-  const getPointsForCategory = (cat?: string) => {
-    if (!cat) return "-";
-    return categoryPoints[cat] || "-";
+  const getPointsForModule = (module?: string) => {
+    if (!module) return "-";
+    return modulePoints[module] || "-";
   };
 
   return (
@@ -92,7 +92,7 @@ const PointsPage = () => {
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Member</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Module</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Points</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Reason</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
@@ -125,7 +125,7 @@ const PointsPage = () => {
                         {p.type === "earned" ? "+" : ""}{p.points}
                         {p.category && (
                           <span className="text-xs text-muted-foreground ml-1">
-                            ({getPointsForCategory(p.category)})
+                            ({getPointsForModule(p.category)})
                           </span>
                         )}
                       </span>

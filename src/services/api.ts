@@ -27,10 +27,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Clear storage and redirect to login if unauthorized
+    const isJwtExpired = error.response?.data?.message === "jwt expired";
+    const isUnauthorized = error.response?.status === 401;
+
+    if ((isUnauthorized || isJwtExpired) && window.location.pathname !== "/login") {
+      // Clear storage and redirect to login if unauthorized or token expired
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
+      localStorage.removeItem("permissions");
       window.location.href = "/login";
     }
     return Promise.reject(error);

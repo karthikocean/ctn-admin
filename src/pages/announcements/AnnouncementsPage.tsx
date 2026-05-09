@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2 } from "lucide-react";
+import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -63,6 +63,7 @@ const AnnouncementsPage = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -82,7 +83,7 @@ const AnnouncementsPage = () => {
   const fetchAnnouncements = async () => {
     setIsLoading(true);
     try {
-      const result = await getAnnouncements({ page: 0, limit: 100 });
+      const result = await getAnnouncements({ page: 0, limit: 100, search: searchTerm });
       setAnnouncements(result.data || []);
     } catch (error) {
       console.error("Error fetching announcements:", error);
@@ -92,8 +93,12 @@ const AnnouncementsPage = () => {
   };
 
   useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      fetchAnnouncements();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
@@ -224,6 +229,15 @@ const AnnouncementsPage = () => {
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
+          <div className="relative group w-48 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={14} />
+            <Input
+              placeholder="Search announcements..."
+              className="pl-9 h-9 rounded-lg border border-border bg-secondary/50 text-xs w-full focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
           <Button
             size="sm"
             className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
