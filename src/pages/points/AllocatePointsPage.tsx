@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -15,126 +14,182 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { categoryPoints as defaultCategoryPoints } from "@/data/mockData";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getPointConfigs, createPointConfig, updatePointConfig, deletePointConfig } from "@/api/PointConfigApi";
+import { Plus, Edit, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-type CategoryPointsConfig = Record<string, number>;
+const MODULE_OPTIONS = [
+  "Ask",
+  "Give",
+  "Requirement",
+  "Post",
+  "Milestones",
+  "Trainings",
+  "One to One",
+  "Referral",
+  "Thank you Slip"
+];
 
 const AllocatePointsPage = () => {
-  const navigate = useNavigate();
-  const [categoryPointsConfig, setCategoryPointsConfig] = useState<CategoryPointsConfig>(() => {
-    const stored = localStorage.getItem("categoryPointsConfig");
-    if (stored) {
-      return JSON.parse(stored);
-    }
-    // Default from mockData
-    return { ...defaultCategoryPoints };
-  });
+  const { toast } = useToast();
+  const [pointConfigs, setPointConfigs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [moduleName, setModuleName] = useState("");
   const [pointsValue, setPointsValue] = useState("");
-  const [deleteCategory, setDeleteCategory] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteName, setDeleteName] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Persist to localStorage
+  const fetchConfigs = async () => {
+    setIsLoading(true);
+    try {
+      const res = await getPointConfigs();
+      setPointConfigs(res.data || []);
+    } catch (error) {
+      console.error("Error fetching point configs:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem("categoryPointsConfig", JSON.stringify(categoryPointsConfig));
-  }, [categoryPointsConfig]);
+    fetchConfigs();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!moduleName || pointsValue === "") {
+      toast({ title: "Validation Error", description: "Please select a module and enter points", variant: "destructive" });
+      return;
+    }
 
-    if (!moduleName.trim() || !pointsValue) return;
-
-    const points = parseInt(pointsValue);
-    if (isNaN(points) || points < 0) return;
-
-    setCategoryPointsConfig(prev => ({
-      ...prev,
-      [moduleName]: points,
-    }));
-
-    // Reset form
-    setModuleName("");
-    setPointsValue("");
-    setEditingCategory(null);
-    setShowForm(false);
+    setIsSubmitting(true);
+    try {
+      const payload = { moduleName, points: parseInt(pointsValue) };
+      
+      if (editingId) {
+        const res = await updatePointConfig(editingId, payload);
+        toast({ title: "Updated", description: res.message || "Point configuration updated successfully", variant: "success" });
+      } else {
+        const res = await createPointConfig(payload);
+        toast({ title: "Created", description: res.message || "Point configuration created successfully", variant: "success" });
+      }
+      
+      setShowForm(false);
+      setModuleName("");
+      setPointsValue("");
+      setEditingId(null);
+      fetchConfigs();
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.response?.data?.message || "Failed to save configuration", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEdit = (category: string) => {
-    setEditingCategory(category);
-    setModuleName(category);
-    setPointsValue(categoryPointsConfig[category].toString());
+  const handleEdit = (config: any) => {
+    setEditingId(config._id);
+    setModuleName(config.moduleName);
+    setPointsValue(config.points.toString());
     setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteClick = (category: string) => {
-    setDeleteCategory(category);
+  const handleDeleteClick = (config: any) => {
+    setDeleteId(config._id);
+    setDeleteName(config.moduleName);
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
-    if (deleteCategory) {
-      setCategoryPointsConfig(prev => {
-        const updated = { ...prev };
-        delete updated[deleteCategory];
-        return updated;
-      });
-      setDeleteCategory(null);
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      const res = await deletePointConfig(deleteId);
+      toast({ title: "Deleted", description: res.message || "Configuration deleted successfully", variant: "success" });
+      fetchConfigs();
       setShowDeleteDialog(false);
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.response?.data?.message || "Failed to delete configuration", 
+        variant: "destructive" 
+      });
+    } finally {
+      setDeleteId(null);
     }
   };
-
-  const sortedEntries = Object.entries(categoryPointsConfig).sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <div className="page-container">
       <PageHeader
         title="Allocate Points"
-        subtitle=""
+        subtitle="Manage point rewards for different system modules"
       >
         <Button
-          className="rounded-xl bg-primary hover:bg-primary/90"
+          className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
           onClick={() => {
-            setShowForm(true);
-            setEditingCategory(null);
-            setModuleName("");
-            setPointsValue("");
+            if (showForm && !editingId) {
+                setShowForm(false);
+            } else {
+                setShowForm(true);
+                setEditingId(null);
+                setModuleName("");
+                setPointsValue("");
+            }
           }}
         >
-          <Plus size={16} className="mr-2" />
-          Add Category
+          {showForm && !editingId ? "Cancel" : <><Plus size={16} className="mr-2" /> Add Module</>}
         </Button>
       </PageHeader>
 
       {/* Form Section */}
       {showForm && (
         <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          className="glass-card p-6 mb-6"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass-card p-6 mb-8 border-primary/10 bg-primary/5"
         >
-          <h3 className="font-semibold text-sm text-foreground mb-4">
-            {editingCategory ? `Edit "${editingCategory}"` : "Add New Category"}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="moduleName">Category Name</Label>
-                <Input
-                  id="moduleName"
-                  value={moduleName}
-                  onChange={(e) => setModuleName(e.target.value)}
-                  placeholder="e.g., Trading, Services, Manufacturing"
-                  className="mt-1"
-                  required
-                />
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <Plus size={18} />
+            </div>
+            <h3 className="font-bold text-slate-800">
+              {editingId ? `Edit Points for "${moduleName}"` : "Add New Module Points"}
+            </h3>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="moduleName" className="text-xs font-bold uppercase tracking-wider text-slate-500">Module Name</Label>
+                <Select value={moduleName} onValueChange={setModuleName} disabled={!!editingId}>
+                  <SelectTrigger id="moduleName" className="h-12 bg-white border-slate-200 rounded-xl">
+                    <SelectValue placeholder="Select Module" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODULE_OPTIONS.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <Label htmlFor="points">Points</Label>
+              <div className="space-y-2">
+                <Label htmlFor="points" className="text-xs font-bold uppercase tracking-wider text-slate-500">Points Allocation</Label>
                 <Input
                   id="points"
                   type="number"
@@ -142,18 +197,19 @@ const AllocatePointsPage = () => {
                   value={pointsValue}
                   onChange={(e) => setPointsValue(e.target.value)}
                   placeholder="Enter points value"
-                  className="mt-1"
+                  className="h-12 bg-white border-slate-200 rounded-xl font-bold text-primary"
                   required
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-3 pt-2">
               <Button
                 type="button"
                 variant="outline"
+                className="h-11 px-6 rounded-xl border-slate-200 font-bold !bg-white !text-slate-700 hover:!bg-slate-50 hover:!text-slate-900 transition-all"
                 onClick={() => {
                   setShowForm(false);
-                  setEditingCategory(null);
+                  setEditingId(null);
                   setModuleName("");
                   setPointsValue("");
                 }}
@@ -162,67 +218,84 @@ const AllocatePointsPage = () => {
               </Button>
               <Button
                 type="submit"
-                className="rounded-xl bg-primary hover:bg-primary/90"
+                className="h-11 px-8 rounded-xl bg-primary hover:bg-primary/90 font-bold shadow-lg shadow-primary/20"
+                disabled={isSubmitting}
               >
-                {editingCategory ? "Update" : "Add Category"}
+                {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <CheckCircle2 size={18} className="mr-2" />}
+                {editingId ? "Update Configuration" : "Save Module Points"}
               </Button>
             </div>
           </form>
         </motion.div>
       )}
 
-      {/* Categories List */}
+      {/* Modules List */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card overflow-hidden"
+        className="glass-card overflow-hidden border-slate-100"
       >
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-border bg-secondary/50">
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Category Name
+              <tr className="border-b border-slate-100 bg-slate-50/50">
+                <th className="text-left px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Module Name
                 </th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="text-left px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   Points Allocation
                 </th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="text-right px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {sortedEntries.length === 0 ? (
+            <tbody className="divide-y divide-slate-50">
+              {isLoading ? (
                 <tr>
-                  <td colSpan={3} className="px-6 py-12 text-center text-muted-foreground">
-                    No categories configured. Add one to get started.
+                  <td colSpan={3} className="px-8 py-16 text-center">
+                    <Loader2 className="animate-spin inline mr-3 text-primary" size={24} />
+                    <span className="text-slate-500 font-medium">Loading configurations...</span>
+                  </td>
+                </tr>
+              ) : pointConfigs.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-8 py-16 text-center">
+                    <div className="flex flex-col items-center gap-2 opacity-40">
+                        <Plus size={48} className="text-slate-300" />
+                        <p className="text-slate-500 font-medium">No modules configured yet</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                sortedEntries.map(([category, points]) => (
-                  <tr key={category} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-foreground">{category}</span>
+                pointConfigs.map((config) => (
+                  <tr key={config._id} className="group hover:bg-slate-50/80 transition-all duration-300">
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
+                        <span className="text-sm font-bold text-slate-700">{config.moduleName}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-primary">{points} points</span>
+                    <td className="px-8 py-5">
+                      <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs font-bold">
+                        {config.points} Points
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-8 py-5">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          onClick={() => handleEdit(category)}
+                          className="h-9 w-9 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 transition-all"
+                          onClick={() => handleEdit(config)}
                         >
                           <Edit size={16} />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-accent"
-                          onClick={() => handleDeleteClick(category)}
+                          className="h-9 w-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                          onClick={() => handleDeleteClick(config)}
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -238,17 +311,21 @@ const AllocatePointsPage = () => {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Category</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the category &quot;{deleteCategory}&quot;? This will remove the points allocation for this category. This action cannot be undone.
+            <AlertDialogTitle className="text-xl font-bold text-slate-800">Delete Module Configuration?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 font-medium pt-2 leading-relaxed">
+              Are you sure you want to delete the point configuration for <span className="font-bold text-slate-700">"{deleteName}"</span>? 
+              This will remove its points allocation rules from the system. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+          <AlertDialogFooter className="gap-3 pt-6">
+            <AlertDialogCancel className="rounded-xl border-slate-200 !bg-white !text-slate-700 font-bold h-12 flex-1 hover:!bg-slate-50 hover:!text-slate-900 transition-all">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 flex-1 shadow-lg shadow-red-200"
+            >
+              Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

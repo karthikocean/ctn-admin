@@ -947,18 +947,17 @@ export const permissionModules = [
 
 export const permissionActions = ["View", "Create", "Edit", "Delete", "Export"];
 
-// Points configuration for each business category
-export const categoryPoints: Record<string, number> = {
-  Trading: 10,
-  Textiles: 8,
-  "Food & Beverages": 12,
-  Pharma: 15,
-  Electronics: 10,
-  Construction: 9,
-  Services: 7,
-  "Real Estate": 14,
-  Manufacturing: 11,
-  Technology: 13,
+// Points configuration for each business module
+export const modulePoints: Record<string, number> = {
+  Ask: 10,
+  Give: 10,
+  Requirement: 10,
+  Post: 10,
+  Milestones: 20,
+  Trainings: 15,
+  "One to One": 10,
+  Referral: 50,
+  "Thank you Slip": 5,
 };
 
 export const mainCategories = [

@@ -189,20 +189,18 @@ const MembersPage = () => {
   const [mainCategories, setMainCategories] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
 
+  const [isSubCategoriesLoading, setIsSubCategoriesLoading] = useState(false);
+
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchMainCategories = async () => {
       try {
-        const [mainRes, subRes] = await Promise.all([
-          getCategories("MAIN"),
-          getCategories("SUB")
-        ]);
-        setMainCategories(mainRes.data || []);
-        setSubCategories(subRes.data || []);
+        const result = await getCategories("MAIN");
+        setMainCategories(result.data || []);
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        console.error("Error fetching main categories:", error);
       }
     };
-    fetchCategories();
+    fetchMainCategories();
   }, []);
 
   const fetchMembers = async () => {
@@ -257,8 +255,27 @@ const MembersPage = () => {
     }
   };
 
-  const handleSelectChange = (name: string, value: any) => {
+  const handleSelectChange = async (name: string, value: any) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+
+    // If category changes, fetch sub-categories and reset subCategory field
+    if (name === "businessCategory") {
+      setFormData(prev => ({ ...prev, subCategory: "" }));
+      setSubCategories([]);
+      
+      if (value) {
+        setIsSubCategoriesLoading(true);
+        try {
+          const result = await getCategories("SUB", value);
+          setSubCategories(result.data || []);
+        } catch (error) {
+          console.error("Error fetching sub-categories:", error);
+        } finally {
+          setIsSubCategoriesLoading(false);
+        }
+      }
+    }
+
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = { ...prev };
@@ -313,6 +330,18 @@ const MembersPage = () => {
       if (result.success || result.status === 200) {
         const fullData = result.data;
         setEditingMemberId(fullData._id);
+        
+        // Fetch sub-categories for this member's category
+        if (fullData.businessCategory) {
+          const catId = typeof fullData.businessCategory === 'object' ? fullData.businessCategory._id : fullData.businessCategory;
+          try {
+            const subRes = await getCategories("SUB", catId);
+            setSubCategories(subRes.data || []);
+          } catch (error) {
+            console.error("Error fetching sub-categories for edit:", error);
+          }
+        }
+
         setFormData({
           ...fullData,
           businessCategory: fullData.businessCategory?._id || fullData.businessCategory || "",
@@ -945,20 +974,29 @@ const MembersPage = () => {
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs font-bold text-slate-700 mb-2 block">Sub-Category</Label>
+                        <Label className="text-xs font-bold text-slate-700 mb-2 block">
+                          Sub-Category {isSubCategoriesLoading && <Loader2 size={10} className="animate-spin inline ml-1" />}
+                        </Label>
                         <Select
                           value={formData.subCategory}
                           onValueChange={(val) => handleSelectChange("subCategory", val)}
+                          disabled={!formData.businessCategory || isSubCategoriesLoading}
                         >
-                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
-                            <SelectValue placeholder="Select" />
+                          <SelectTrigger className={`h-11 bg-white border-slate-300 font-medium ${!formData.businessCategory ? "opacity-50 cursor-not-allowed" : ""}`}>
+                            <SelectValue placeholder={!formData.businessCategory ? "Choose category first" : "Select"} />
                           </SelectTrigger>
                           <SelectContent>
-                            {subCategories.map(cat => (
-                              <SelectItem key={cat._id} value={cat._id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
+                            {subCategories.length > 0 ? (
+                              subCategories.map(cat => (
+                                <SelectItem key={cat._id} value={cat._id}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="p-2 text-xs text-muted-foreground text-center">
+                                No sub-categories found
+                              </div>
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
