@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2 } from "lucide-react";
+import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +28,7 @@ const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?:
       setLocalPreview(objectUrl);
       return () => URL.revokeObjectURL(objectUrl);
     } else {
-        setLocalPreview("");
+      setLocalPreview("");
     }
   }, [file]);
 
@@ -41,7 +42,7 @@ const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?:
       ) : (
         <video src={displayUrl} controls className="max-w-full max-h-full" />
       )}
-      <button 
+      <button
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(); }}
         className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500/90 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20 backdrop-blur-sm"
@@ -59,6 +60,9 @@ const AnnouncementsPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -101,6 +105,7 @@ const AnnouncementsPage = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.title) newErrors.title = "Title is required";
     if (!formData.content) newErrors.content = "Content is required";
+    if (!formData.image && !filesToUpload.image) newErrors.image = "Image is required";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -142,10 +147,10 @@ const AnnouncementsPage = () => {
         result = await createAnnouncement(payload);
       }
 
-      toast({ 
-        title: "Success", 
-        description: result.message || "Announcement saved successfully", 
-        variant: "success" 
+      toast({
+        title: "Success",
+        description: result.message || "Announcement saved successfully",
+        variant: "success"
       });
       setDrawerOpen(false);
       resetForm();
@@ -157,8 +162,34 @@ const AnnouncementsPage = () => {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deletingId) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteAnnouncement(deletingId);
+      toast({
+        title: "Deleted",
+        description: res.message || "Announcement deleted successfully",
+        variant: "success"
+      });
+      fetchAnnouncements();
+      setDeleteConfirmOpen(false);
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to delete announcement",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeletingId(null);
+    }
+  };
+
   const handleEdit = async (a: any) => {
     setIsLoading(true);
+    setErrors({});
+    setFilesToUpload({ image: null, video: null });
     try {
       const result = await getAnnouncementDetails(a._id);
       if (result.success || result.status === 200) {
@@ -225,25 +256,32 @@ const AnnouncementsPage = () => {
               <div className="p-5 flex-1 flex flex-col">
                 <h3 className="font-semibold text-foreground line-clamp-1">{a.title}</h3>
                 <p className="text-sm text-muted-foreground mt-2 line-clamp-2 flex-1">{a.content}</p>
-                
+
                 <div className="mt-4 flex items-center gap-4 text-[10px] text-muted-foreground">
-                   {a.video && <div className="flex items-center gap-1 text-primary"><Video size={12} /> Video Attached</div>}
-                   <div className="flex items-center gap-1"><Calendar size={12} /> {new Date(a.createdAt).toLocaleDateString()}</div>
+                  {a.video && <div className="flex items-center gap-1 text-primary"><Video size={12} /> Video Attached</div>}
+                  <div className="flex items-center gap-1"><Calendar size={12} /> {new Date(a.createdAt).toLocaleDateString()}</div>
                 </div>
 
-                <div className="flex gap-2 mt-4">
-                  <Button variant="outline" size="sm" className="rounded-lg flex-1 text-xs" onClick={() => handleEdit(a)}>Edit</Button>
-                  <Button variant="outline" size="sm" className="rounded-lg flex-1 text-xs text-destructive hover:bg-destructive/10 border-destructive/20" onClick={async () => {
-                    if (window.confirm("Are you sure?")) {
-                      try {
-                        const res = await deleteAnnouncement(a._id);
-                        toast({ title: "Deleted", description: res.message || "Announcement deleted", variant: "success" });
-                        fetchAnnouncements();
-                      } catch (err: any) {
-                        toast({ title: "Error", description: err.response?.data?.message || "Failed to delete", variant: "destructive" });
-                      }
-                    }
-                  }}>Delete</Button>
+                <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
+                    onClick={() => handleEdit(a)}
+                  >
+                    <Pencil size={12} className="mr-1.5" /> Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
+                    onClick={() => {
+                      setDeletingId(a._id);
+                      setDeleteConfirmOpen(true);
+                    }}
+                  >
+                    <Trash2 size={12} className="mr-1.5" /> Delete
+                  </Button>
                 </div>
               </div>
             </motion.div>
@@ -257,9 +295,9 @@ const AnnouncementsPage = () => {
         </div>
       )}
 
-      <FormDrawer 
-        open={drawerOpen} 
-        onOpenChange={(open) => { setDrawerOpen(open); if(!open) resetForm(); }} 
+      <FormDrawer
+        open={drawerOpen}
+        onOpenChange={(open) => { setDrawerOpen(open); if (!open) resetForm(); }}
         title={editingId ? "Edit Announcement" : "Create Announcement"}
         description="Fill in the details to publish an announcement"
       >
@@ -278,25 +316,35 @@ const AnnouncementsPage = () => {
 
           <div className="grid grid-cols-1 gap-6">
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Announcement Image</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Announcement Image <span className="text-red-500">*</span></Label>
               {!filesToUpload.image && !formData.image ? (
                 <div className="relative group">
-                  <Input type="file" accept="image/*" className="h-11 cursor-pointer" onChange={(e) => setFilesToUpload(prev => ({ ...prev, image: e.target.files?.[0] || null }))} />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className={`h-11 cursor-pointer ${errors.image ? "border-red-500" : ""}`}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setFilesToUpload(prev => ({ ...prev, image: file }));
+                      if (file && errors.image) setErrors(prev => ({ ...prev, image: "" }));
+                    }}
+                  />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground group-hover:text-primary transition-colors pointer-events-none">
                     <ImageIcon size={18} />
                   </div>
                 </div>
               ) : (
-                <MediaPreview 
-                  type="image" 
-                  file={filesToUpload.image} 
-                  url={formData.image} 
+                <MediaPreview
+                  type="image"
+                  file={filesToUpload.image}
+                  url={formData.image}
                   onRemove={() => {
                     if (filesToUpload.image) setFilesToUpload(prev => ({ ...prev, image: null }));
                     else setFormData(prev => ({ ...prev, image: "" }));
-                  }} 
+                  }}
                 />
               )}
+              {errors.image && <p className="text-[10px] text-red-500 font-bold">{errors.image}</p>}
             </div>
 
             <div className="space-y-2">
@@ -309,14 +357,14 @@ const AnnouncementsPage = () => {
                   </div>
                 </div>
               ) : (
-                <MediaPreview 
-                  type="video" 
-                  file={filesToUpload.video} 
-                  url={formData.video} 
+                <MediaPreview
+                  type="video"
+                  file={filesToUpload.video}
+                  url={formData.video}
                   onRemove={() => {
                     if (filesToUpload.video) setFilesToUpload(prev => ({ ...prev, video: null }));
                     else setFormData(prev => ({ ...prev, video: "" }));
-                  }} 
+                  }}
                 />
               )}
             </div>
@@ -331,14 +379,25 @@ const AnnouncementsPage = () => {
           </div>
 
           <div className="pt-6 flex gap-3 pb-10">
-             <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold" onClick={() => setDrawerOpen(false)}>Cancel</Button>
-             <Button className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={handleSave} disabled={isSubmitting}>
-               {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <CheckCircle2 className="mr-2" size={18} />}
-               {editingId ? "Update Announcement" : "Save Announcement"}
-             </Button>
+            <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold" onClick={() => setDrawerOpen(false)}>Cancel</Button>
+            <Button className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={handleSave} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <CheckCircle2 className="mr-2" size={18} />}
+              {editingId ? "Update Announcement" : "Save Announcement"}
+            </Button>
           </div>
         </div>
       </FormDrawer>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={`Delete "${announcements.find(a => a._id === deletingId)?.title || 'Announcement'}"?`}
+        description="Are you sure you want to delete this announcement? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+        confirmLabel="Delete"
+        variant="destructive"
+      />
     </div>
   );
 };

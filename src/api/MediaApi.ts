@@ -7,7 +7,9 @@ export const uploadFiles = async (files: File[], folder: string = "general") => 
   files.forEach(file => formData.append("files", file));
 
   const response = await api.post(`/media/upload?folder=${folder}`, formData, {
-    headers: { "Content-Type": "multipart/form-data" }
+    headers: {
+      "Content-Type": undefined,
+    },
   });
   return response.data;
 };
