@@ -1,349 +1,1281 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { 
-  Search, Users, Filter, User, Briefcase, MapPin, 
-  FileText, Image as ImageIcon, Share2, Globe, CheckCircle2 
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Search,
+  Users,
+  User,
+  Briefcase,
+  MapPin,
+  FileText,
+  Image as ImageIcon,
+  Globe,
+  CheckCircle2,
+  Plus,
+  Phone,
+  Loader2,
+  X,
+  AlertTriangle,
+  ShieldCheck,
+  Building2,
+  ArrowRight,
+  Shield
 } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import ActionMenu from "@/components/common/ActionMenu";
 import PaginationBar from "@/components/common/PaginationBar";
 import FormDrawer from "@/components/common/FormDrawer";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
-import { mockMembers } from "@/data/mockData";
+import { useToast } from "@/hooks/use-toast";
+import {
+  registerMember,
+  verifyGST,
+  getMembers,
+  updateMember,
+  getMemberDetails,
+  deleteMember
+} from "@/api/MembersApi";
+import { uploadFiles } from "@/api/MediaApi";
+import { getCategories } from "@/api/CategoryApi";
 
-const MembersPage = () => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [page, setPage] = useState(1);
+const getFullUrl = (path: string) => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  const baseUrl = import.meta.env.VITE_API_URL.replace("/api/admin", "");
+  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
+  const [preview, setPreview] = useState<string>("");
+
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+
+  if (!file.type.startsWith("image/")) {
+    return (
+      <div className="relative w-16 h-16 rounded-lg bg-secondary flex flex-col items-center justify-center p-1 border border-border">
+        <FileText size={16} className="text-muted-foreground" />
+        <span className="text-[8px] text-muted-foreground truncate w-full text-center">
+          {file.name}
+        </span>
+        <button
+          onClick={onRemove}
+          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="page-container">
-      {/* Single Row Header */}
-      <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
-        {/* Title Block */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Users size={16} className="text-primary" />
+    <div className="relative w-16 h-16">
+      <div className="w-full h-full rounded-lg overflow-hidden border border-border shadow-sm">
+        <img
+          src={preview}
+          alt="preview"
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <button
+        onClick={onRemove}
+        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10"
+      >
+        <X size={12} />
+      </button>
+    </div>
+  );
+};
+
+const UrlPreview = ({ url, onRemove }: { url: string, onRemove: () => void }) => {
+  return (
+    <div className="relative w-16 h-16">
+      <div className="w-full h-full rounded-lg overflow-hidden border border-border shadow-sm">
+        <img
+          src={getFullUrl(url)}
+          alt="existing"
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <button
+        onClick={onRemove}
+        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10"
+      >
+        <X size={12} />
+      </button>
+    </div>
+  );
+};
+
+const ErrorMsg = ({ message }: { message?: string }) => {
+  if (!message) return null;
+  return <p className="text-[10px] text-red-500 font-bold mt-1 animate-in fade-in slide-in-from-top-1">{message}</p>;
+};
+
+const MembersPage = () => {
+  const { toast } = useToast();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [members, setMembers] = useState<any[]>([]);
+  const [totalMembers, setTotalMembers] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState("");
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const [filesToUpload, setFilesToUpload] = useState({
+    profilePhoto: null as File | null,
+    workImages: [] as File[],
+    certifications: [] as File[],
+    businessDocuments: [] as File[]
+  });
+
+  const [showGstStep, setShowGstStep] = useState(true);
+  const [gstLoading, setGstLoading] = useState(false);
+  const [gstInput, setGstInput] = useState("");
+
+  const [formData, setFormData] = useState({
+    fullName: "",
+    mobileNumber: "",
+    email: "",
+    gstNumber: "",
+    businessName: "",
+    businessCategory: "",
+    subCategory: "",
+    yearsOfExperience: null as number | null,
+    companySize: "",
+    city: "",
+    businessAddress: "",
+    serviceLocations: [] as string[],
+    productsServicesDescription: "",
+    targetAudience: "",
+    websiteUrl: "",
+    linkedinProfile: "",
+    instagramFacebook: "",
+    youtubeLink: "",
+    profilePhoto: "",
+    workImages: [] as string[],
+    certifications: [] as string[],
+    businessDocuments: [] as string[]
+  });
+
+  const [mainCategories, setMainCategories] = useState<any[]>([]);
+  const [subCategories, setSubCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const [mainRes, subRes] = await Promise.all([
+          getCategories("MAIN"),
+          getCategories("SUB")
+        ]);
+        setMainCategories(mainRes.data || []);
+        setSubCategories(subRes.data || []);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const fetchMembers = async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: page - 1,
+        limit: 10,
+      };
+      if (search) params.search = search;
+
+      const result = await getMembers(params);
+      setMembers(result.data || []);
+      setTotalMembers(result.total || 0);
+      setTotalPages(result.totalPages || 1);
+    } catch (error) {
+      console.error("Error fetching members:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMembers();
+  }, [page]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (page !== 1) setPage(1);
+      else fetchMembers();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+
+    // Restrict mobile number to digits only
+    if (id === "mobileNumber") {
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
+      setFormData(prev => ({ ...prev, [id]: digitsOnly }));
+    } else {
+      setFormData(prev => ({ ...prev, [id]: value }));
+    }
+
+    if (errors[id]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[id];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleSelectChange = (name: string, value: any) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      fullName: "",
+      mobileNumber: "",
+      email: "",
+      gstNumber: "",
+      businessName: "",
+      businessCategory: "",
+      subCategory: "",
+      yearsOfExperience: null,
+      companySize: "",
+      city: "",
+      businessAddress: "",
+      serviceLocations: [],
+      productsServicesDescription: "",
+      targetAudience: "",
+      websiteUrl: "",
+      linkedinProfile: "",
+      instagramFacebook: "",
+      youtubeLink: "",
+      profilePhoto: "",
+      workImages: [],
+      certifications: [],
+      businessDocuments: []
+    });
+    setGstInput("");
+    setShowGstStep(true);
+    setEditingMemberId(null);
+    setErrors({});
+    setFilesToUpload({
+      profilePhoto: null,
+      workImages: [],
+      certifications: [],
+      businessDocuments: []
+    });
+  };
+
+  const handleEdit = async (member: any) => {
+    setIsLoading(true);
+    setErrors({});
+    try {
+      const result = await getMemberDetails(member._id);
+      if (result.success || result.status === 200) {
+        const fullData = result.data;
+        setEditingMemberId(fullData._id);
+        setFormData({
+          ...fullData,
+          businessCategory: fullData.businessCategory?._id || fullData.businessCategory || "",
+          subCategory: fullData.subCategory?._id || fullData.subCategory || "",
+          companySize: fullData.companySize || "",
+          yearsOfExperience: fullData.yearsOfExperience || null,
+          serviceLocations: fullData.serviceLocations || [],
+          workImages: fullData.workImages || [],
+          certifications: fullData.certifications || [],
+          businessDocuments: fullData.businessDocuments || []
+        });
+        setShowGstStep(false);
+        setDrawerOpen(true);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not fetch member details",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (member: any) => {
+    setMemberToDelete(member);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!memberToDelete) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteMember(memberToDelete._id);
+      if (result.success) {
+        toast({
+          title: "Deleted",
+          description: result.message || "Member has been deleted successfully",
+          variant: "success"
+        });
+        fetchMembers();
+        setDeleteConfirmOpen(false);
+        setMemberToDelete(null);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete member",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleVerifyGST = async () => {
+    if (!gstInput) {
+      toast({
+        title: "Error",
+        description: "Please enter a GST number",
+        variant: "destructive"
+      });
+      return;
+    }
+    setGstLoading(true);
+    try {
+      const result = await verifyGST(gstInput);
+      if (result.status) {
+        const gstData = result.data;
+        setFormData(prev => ({
+          ...prev,
+          fullName: gstData.legalName || prev.fullName,
+          gstNumber: gstData.gstNumber,
+          businessName: gstData.businessName,
+          businessAddress: gstData.address,
+          city: gstData.district,
+        }));
+        setShowGstStep(false);
+        toast({
+          title: "Success",
+          description: result.message || "GST details fetched successfully",
+          variant: "success"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Verification Failed",
+        description: error.response?.data?.message || "Could not verify GSTIN",
+        variant: "destructive"
+      });
+    } finally {
+      setGstLoading(false);
+    }
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: string, multiple = false) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (multiple) {
+      setFilesToUpload(prev => ({
+        ...prev,
+        [field]: [...(prev[field as keyof typeof prev] as File[]), ...Array.from(files)]
+      }));
+    } else {
+      setFilesToUpload(prev => ({
+        ...prev,
+        [field]: files[0]
+      }));
+      if (errors[field]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+    }
+  };
+
+  const uploadBatch = async (files: File[], folder: string): Promise<string[]> => {
+    try {
+      const result = await uploadFiles(files, folder);
+      if (result.success) {
+        return result.data.map((f: any) => f.url);
+      }
+    } catch (error) {
+      console.error(`Error uploading to ${folder}:`, error);
+    }
+    return [];
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    // Name validation
+    if (!formData.fullName) {
+      newErrors.fullName = "Full Name is required";
+    }
+
+    // Mobile validation
+    if (!formData.mobileNumber) {
+      newErrors.mobileNumber = "Mobile Number is required";
+    } else if (!/^\d{10}$/.test(formData.mobileNumber)) {
+      newErrors.mobileNumber = "Enter a valid 10-digit mobile number";
+    }
+
+    // Email validation (optional but must be valid if entered)
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Enter a valid email address";
+    }
+
+    // GST validation
+    if (!formData.gstNumber) {
+      newErrors.gstNumber = "GST Number is required";
+    }
+
+    // Photo validation
+    if (!formData.profilePhoto && !filesToUpload.profilePhoto) {
+      newErrors.profilePhoto = "Profile Photo is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSaveMember = async () => {
+    if (!validateForm()) {
+      toast({
+        title: "Missing Fields",
+        description: "Please fill all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const {
+        _id,
+        createdAt,
+        updatedAt,
+        pin,
+        isDeleted,
+        __v,
+        ...dataToSave
+      } = formData as any;
+
+      const payload = { ...dataToSave };
+
+      const [profileUrls, workUrls, certUrls, docUrls] = await Promise.all([
+        filesToUpload.profilePhoto
+          ? uploadBatch([filesToUpload.profilePhoto], "profiles")
+          : Promise.resolve([]),
+        uploadBatch(filesToUpload.workImages, "portfolio"),
+        uploadBatch(filesToUpload.certifications, "certifications"),
+        uploadBatch(filesToUpload.businessDocuments, "documents")
+      ]);
+
+      if (profileUrls.length > 0) {
+        payload.profilePhoto = profileUrls[0];
+      }
+      payload.workImages = [...payload.workImages, ...workUrls];
+      payload.certifications = [...payload.certifications, ...certUrls];
+      payload.businessDocuments = [...payload.businessDocuments, ...docUrls];
+
+      let result;
+      if (editingMemberId) {
+        result = await updateMember(editingMemberId, payload);
+      } else {
+        result = await registerMember(payload);
+      }
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message || (editingMemberId ? "Member updated successfully" : "Member registered successfully"),
+          variant: "success"
+        });
+        setDrawerOpen(false);
+        resetForm();
+        fetchMembers();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Something went wrong",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <Users size={20} />
           </div>
           <div>
-            <h1 className="text-base font-semibold text-foreground">Members</h1>
+            <h1 className="text-xl font-bold">Member Directory</h1>
+            <p className="text-xs text-muted-foreground">
+              Manage network members and their business details
+            </p>
           </div>
         </div>
 
-        {/* Search, Filters, Add - aligned right on same row */}
-        <div className="flex items-center gap-2 ml-auto">
-          {/* Search */}
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
-            <input
-              type="text"
+        <div className="flex items-center gap-3">
+          <div className="relative w-full max-w-xs">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              size={16}
+            />
+            <Input
               placeholder="Search members..."
-              className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+              className="pl-9 h-10 border-slate-200 bg-white shadow-sm focus:border-primary rounded-xl text-sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
-          {/* Filters */}
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
-            <Filter size={14} className="mr-1.5" />
-            Filters
-          </Button>
-
-          {/* Add Member */}
           <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
-            onClick={() => setDrawerOpen(true)}
+            className="rounded-xl shadow-lg shadow-primary/20 h-10 px-6 font-bold"
+            onClick={() => {
+              resetForm();
+              setDrawerOpen(true);
+            }}
           >
-            + Add Member
+            <Plus size={18} className="mr-2" />
+            Add Member
           </Button>
         </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }} className="glass-card overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-card rounded-xl border border-border shadow-sm overflow-hidden"
+      >
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-secondary/50">
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Member</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Company</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Region</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Points</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Followers</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Following</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Expiry</th>
-                <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {mockMembers.map((m) => (
-                <tr key={m.id} className="hover:bg-secondary/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-semibold text-primary">{m.name.charAt(0)}</span>
+          <Table>
+            <TableHeader className="bg-secondary/30">
+              <TableRow>
+                <TableHead className="px-6 py-4">Member Details</TableHead>
+                <TableHead className="px-6 py-4">Business Name</TableHead>
+                <TableHead className="px-6 py-4">Category</TableHead>
+                <TableHead className="px-6 py-4">Location</TableHead>
+                <TableHead className="px-6 py-4">Status</TableHead>
+                <TableHead className="px-6 py-4 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && members.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-64 text-center">
+                    <Loader2 className="animate-spin inline mr-2" />
+                    Loading members...
+                  </TableCell>
+                </TableRow>
+              ) : members.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-64 text-center text-muted-foreground">
+                    No members found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                members.map((member) => (
+                  <TableRow
+                    key={member._id}
+                    className="hover:bg-secondary/10 transition-colors"
+                  >
+                    <TableCell className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-border">
+                          {member.profilePhoto ? (
+                            <img
+                              src={getFullUrl(member.profilePhoto)}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-primary font-bold">
+                              {member.fullName.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{member.fullName}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {member.mobileNumber}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-sm text-foreground">{m.name}</p>
-                        <p className="text-xs text-muted-foreground">{m.category}</p>
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
+                      <p className="font-medium text-sm">{member.businessName}</p>
+                      {member.gstNumber && (
+                        <span className="text-[10px] text-primary/60 font-medium">
+                          GST: {member.gstNumber}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
+                      <p className="text-xs font-medium">
+                        {member.businessCategory?.name || "N/A"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {member.subCategory?.name || ""}
+                      </p>
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin size={14} className="text-primary/60" />
+                        <span>{member.city}</span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden lg:table-cell">{m.company}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{m.city}, {m.region}</td>
-                  <td className="px-6 py-4 hidden sm:table-cell"><span className="text-sm font-semibold text-primary">{m.points}</span></td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{m.followers}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{m.following}</td>
-                  <td className="px-6 py-4"><StatusBadge status={m.status} /></td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden lg:table-cell">{m.membershipExpiry}</td>
-                  <td className="px-6 py-4 text-right">
-                    <ActionMenu onEdit={() => setDrawerOpen(true)} onDelete={() => {}} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
+                      <Badge
+                        className={
+                          member.status === 'active'
+                            ? 'bg-green-500/10 text-green-600 border-green-200'
+                            : 'bg-amber-500/10 text-amber-600 border-amber-200'
+                        }
+                      >
+                        {member.status.toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right">
+                      <ActionMenu
+                        onEdit={() => handleEdit(member)}
+                        onDelete={() => handleDeleteClick(member)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
-        <div className="px-6 pb-4">
-          <PaginationBar currentPage={page} totalPages={5} onPageChange={setPage} />
+        <div className="px-6 py-4 flex items-center justify-between border-t border-border bg-secondary/10">
+          <p className="text-xs text-muted-foreground font-medium">
+            Showing {members.length} of {totalMembers} members
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1 || isLoading}
+            >
+              Prev
+            </Button>
+            <div className="flex gap-1">
+              {[...Array(totalPages)].map((_, i) => (
+                <Button
+                  key={i}
+                  variant={page === i + 1 ? "default" : "ghost"}
+                  size="sm"
+                  className="w-8 h-8 p-0 text-xs"
+                  onClick={() => setPage(i + 1)}
+                  disabled={isLoading}
+                >
+                  {i + 1}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages || isLoading}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </motion.div>
 
-      <FormDrawer 
-        open={drawerOpen} 
-        onOpenChange={setDrawerOpen} 
-        title="Add Member" 
-        description="Complete all the details below to add a new member to the network"
+      <FormDrawer
+        open={drawerOpen}
+        onOpenChange={(open) => {
+          setDrawerOpen(open);
+          if (!open) resetForm();
+        }}
+        title={
+          editingMemberId
+            ? "Edit Member Details"
+            : (showGstStep ? "Registration" : "Complete Profile")
+        }
       >
-        <div className="pb-10">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 pb-2 border-b border-border mb-4">
-              <User size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Basic Information</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input id="fullName" placeholder="Enter full name" className="mt-1.5" />
-              </div>
-              
-              <div>
-                <Label htmlFor="profilePhoto">Profile Photo</Label>
-                <Input id="profilePhoto" type="file" className="mt-1.5 cursor-pointer file:bg-primary/10 file:text-primary file:border-0 file:rounded-md file:px-2 file:py-1 file:mr-2 hover:file:bg-primary/20 transition-all" />
+        <div className="flex flex-col h-full bg-slate-50/80">
+          {showGstStep ? (
+            <div className="px-10 py-12 space-y-10">
+              <div className="space-y-6 text-center">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white text-primary shadow-xl shadow-primary/5 border border-primary/10">
+                  <ShieldCheck size={42} strokeWidth={1.5} />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-slate-900 tracking-tight">
+                    Verify GST Details
+                  </h3>
+                  <p className="text-slate-500 text-sm max-w-sm mx-auto leading-relaxed">
+                    Enter your GST number to automatically fetch your business information.
+                  </p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="mobile">Mobile Number</Label>
-                    <span className="text-[10px] text-green-500 font-medium flex items-center gap-1"><CheckCircle2 size={10} /> Verified</span>
+              <div className="space-y-6 max-w-md mx-auto">
+                <div className="space-y-3">
+                  <Label
+                    htmlFor="gstInput"
+                    className="text-[11px] font-bold text-slate-700 uppercase tracking-widest pl-1"
+                  >
+                    GST Number
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="gstInput"
+                      placeholder="e.g. 33AVBPJ5809N1ZF"
+                      value={gstInput}
+                      onChange={(e) => setGstInput(e.target.value.toUpperCase())}
+                      className="h-12 text-base font-semibold tracking-wider bg-white border-slate-300 focus:border-primary shadow-sm rounded-xl px-5"
+                    />
+                    <Button
+                      onClick={handleVerifyGST}
+                      disabled={gstLoading || !gstInput}
+                      className="h-12 px-8 font-bold rounded-xl shadow-lg shadow-primary/20"
+                    >
+                      {gstLoading ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        "Verify"
+                      )}
+                    </Button>
                   </div>
-                  <Input id="mobile" placeholder="+91 00000 00000" className="mt-1.5" />
                 </div>
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="email">Email Address</Label>
-                    <span className="text-[10px] text-green-500 font-medium flex items-center gap-1"><CheckCircle2 size={10} /> Verified</span>
+
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+                  <div className="mt-0.5">
+                    <Shield size={16} className="text-primary" />
                   </div>
-                  <Input id="email" type="email" placeholder="email@example.com" className="mt-1.5" />
+                  <p className="text-[12px] text-slate-600 font-semibold leading-relaxed">
+                    This step ensures business legitimacy. All your data is securely handled and private.
+                  </p>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Business Information */}
-          <div className="space-y-4 mt-8">
-            <div className="flex items-center gap-2 pb-2 border-b border-border mb-4">
-              <Briefcase size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Business Information</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="gstNumber">GST Number</Label>
-                  <span className="text-[10px] text-amber-500 font-medium">Mandatory Verification</span>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto px-6 space-y-8 pt-6 pb-10">
+                {/* Basic Information */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-200">
+                    <User size={18} className="text-primary" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800">
+                      Personal Information
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5">
+                    <div>
+                      <Label htmlFor="fullName" className="text-xs font-bold text-slate-700 mb-2 block">
+                        Full Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="fullName"
+                        placeholder="Full legal name"
+                        className={`h-11 bg-white border-slate-300 font-medium ${errors.fullName ? "border-red-500 focus:border-red-500" : ""}`}
+                        value={formData.fullName}
+                        onChange={handleInputChange}
+                      />
+                      <ErrorMsg message={errors.fullName} />
+                    </div>
+                    <div>
+                      <Label htmlFor="profilePhoto" className="text-xs font-bold text-slate-700 mb-2 block">
+                        Profile Photo <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="profilePhoto"
+                        type="file"
+                        className={`bg-white border-slate-300 font-medium ${errors.profilePhoto ? "border-red-500 focus:border-red-500" : ""}`}
+                        onChange={(e) => onFileChange(e, "profilePhoto")}
+                      />
+                      <ErrorMsg message={errors.profilePhoto} />
+                      {filesToUpload.profilePhoto ? (
+                        <div className="mt-3">
+                          <FilePreview
+                            file={filesToUpload.profilePhoto}
+                            onRemove={() => setFilesToUpload(prev => ({
+                              ...prev,
+                              profilePhoto: null
+                            }))}
+                          />
+                        </div>
+                      ) : formData.profilePhoto && (
+                        <div className="mt-3">
+                          <UrlPreview
+                            url={formData.profilePhoto}
+                            onRemove={() => setFormData(prev => ({
+                              ...prev,
+                              profilePhoto: ""
+                            }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <Label htmlFor="mobileNumber" className="text-xs font-bold text-slate-700 mb-2 block">
+                          Mobile Number <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="mobileNumber"
+                          placeholder="+91..."
+                          className={`h-11 bg-white border-slate-300 font-medium ${errors.mobileNumber ? "border-red-500 focus:border-red-500" : ""}`}
+                          value={formData.mobileNumber}
+                          onChange={handleInputChange}
+                        />
+                        <ErrorMsg message={errors.mobileNumber} />
+                      </div>
+                      <div>
+                        <Label htmlFor="email" className="text-xs font-bold text-slate-700 mb-2 block">
+                          Email Address
+                        </Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="email@domain.com"
+                          className="h-11 bg-white border-slate-300 font-medium"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <Input id="gstNumber" placeholder="Enter GST number" className="mt-1.5" />
-              </div>
 
-              <div>
-                <Label htmlFor="businessName">Business Name</Label>
-                <Input id="businessName" placeholder="Enter business name" className="mt-1.5" />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Business Category</Label>
-                  <Select>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="it">Information Technology</SelectItem>
-                      <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                      <SelectItem value="retail">Retail</SelectItem>
-                      <SelectItem value="healthcare">Healthcare</SelectItem>
-                      <SelectItem value="education">Education</SelectItem>
-                      <SelectItem value="real-estate">Real Estate</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                    </SelectContent>
-                  </Select>
+                {/* Business Information */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-200">
+                    <Briefcase size={18} className="text-primary" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800">
+                      Business Details
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5">
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <Label htmlFor="gstNumber" className="text-xs font-bold text-slate-700 mb-2 block">
+                          GST Number <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="gstNumber"
+                          disabled
+                          className={`h-11 bg-slate-100 border-slate-200 font-bold text-slate-600 ${errors.gstNumber ? "border-red-500" : ""}`}
+                          value={formData.gstNumber}
+                        />
+                        <ErrorMsg message={errors.gstNumber} />
+                      </div>
+                      <div>
+                        <Label htmlFor="businessName" className="text-xs font-bold text-slate-700 mb-2 block">
+                          Business Name
+                        </Label>
+                        <Input
+                          id="businessName"
+                          className="h-11 bg-white border-slate-300 font-medium"
+                          value={formData.businessName}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <Label className="text-xs font-bold text-slate-700 mb-2 block">Category</Label>
+                        <Select
+                          value={formData.businessCategory}
+                          onValueChange={(val) => handleSelectChange("businessCategory", val)}
+                        >
+                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {mainCategories.map(cat => (
+                              <SelectItem key={cat._id} value={cat._id}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-bold text-slate-700 mb-2 block">Sub-Category</Label>
+                        <Select
+                          value={formData.subCategory}
+                          onValueChange={(val) => handleSelectChange("subCategory", val)}
+                        >
+                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subCategories.map(cat => (
+                              <SelectItem key={cat._id} value={cat._id}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <Label htmlFor="yearsOfExperience" className="text-xs font-bold text-slate-700 mb-2 block">
+                          Experience (Years)
+                        </Label>
+                        <Input
+                          id="yearsOfExperience"
+                          type="number"
+                          className="h-11 bg-white border-slate-300 font-medium"
+                          value={formData.yearsOfExperience ?? ""}
+                          onChange={(e) => handleSelectChange(
+                            "yearsOfExperience",
+                            e.target.value ? Number(e.target.value) : null
+                          )}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-bold text-slate-700 mb-2 block">Company Size</Label>
+                        <Select
+                          value={formData.companySize}
+                          onValueChange={(val) => handleSelectChange("companySize", val)}
+                        >
+                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1 - 5">1 - 5 Employees</SelectItem>
+                            <SelectItem value="6 - 10">6 - 10 Employees</SelectItem>
+                            <SelectItem value="11 - 20">11 - 20 Employees</SelectItem>
+                            <SelectItem value="21 - 50">21 - 50 Employees</SelectItem>
+                            <SelectItem value="51 - 100">51 - 100 Employees</SelectItem>
+                            <SelectItem value="100+">100+ Employees</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label>Sub-Category</Label>
-                  <Select>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder="Select sub-category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="software">Software Development</SelectItem>
-                      <SelectItem value="cyber">Cyber Security</SelectItem>
-                      <SelectItem value="cloud">Cloud Computing</SelectItem>
-                      <SelectItem value="ai">AI & Data Science</SelectItem>
-                      <SelectItem value="hardware">Hardware & Networking</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                {/* Location Details */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-200">
+                    <MapPin size={18} className="text-primary" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800">
+                      Location & Service
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5">
+                    <div>
+                      <Label htmlFor="city" className="text-xs font-bold text-slate-700 mb-2 block">City</Label>
+                      <Input
+                        id="city"
+                        className="h-11 bg-white border-slate-300 font-medium"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="businessAddress" className="text-xs font-bold text-slate-700 mb-2 block">
+                        Business Address
+                      </Label>
+                      <Textarea
+                        id="businessAddress"
+                        className="min-h-[80px] bg-white border-slate-300 font-medium"
+                        value={formData.businessAddress}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="serviceLocations" className="text-xs font-bold text-slate-700 mb-2 block">
+                      Service Locations
+                    </Label>
+                    <Input
+                      id="serviceLocations"
+                      placeholder="City-wide, State-wide, etc."
+                      className="h-11 bg-white border-slate-300 font-medium"
+                      value={formData.serviceLocations.join(", ")}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        serviceLocations: e.target.value.split(",").map(s => s.trim())
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Professional Details */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-200">
+                    <FileText size={18} className="text-primary" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800">
+                      Professional Info
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5">
+                    <div>
+                      <Label htmlFor="productsServicesDescription" className="text-xs font-bold text-slate-700 mb-2 block">
+                        Description of Products/Services
+                      </Label>
+                      <Textarea
+                        id="productsServicesDescription"
+                        className="min-h-[80px] bg-white border-slate-300 font-medium"
+                        value={formData.productsServicesDescription}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="targetAudience" className="text-xs font-bold text-slate-700 mb-2 block">
+                        Target Audience
+                      </Label>
+                      <Input
+                        id="targetAudience"
+                        className="h-11 bg-white border-slate-300 font-medium"
+                        value={formData.targetAudience}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Portfolio */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-200">
+                    <ImageIcon size={18} className="text-primary" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800">
+                      Portfolio & Media
+                    </h3>
+                  </div>
+                  <div className="space-y-7">
+                    <div>
+                      <Label className="text-xs font-bold text-slate-700 mb-2 block">Work Images</Label>
+                      <Input
+                        type="file"
+                        multiple
+                        className="bg-white border-slate-300 font-medium"
+                        onChange={(e) => onFileChange(e, "workImages", true)}
+                      />
+                      <div className="flex gap-3 flex-wrap mt-3">
+                        {formData.workImages.map((url, i) => (
+                          <UrlPreview
+                            key={i}
+                            url={url}
+                            onRemove={() => setFormData(prev => ({
+                              ...prev,
+                              workImages: prev.workImages.filter((_, idx) => idx !== i)
+                            }))}
+                          />
+                        ))}
+                        {filesToUpload.workImages.map((f, i) => (
+                          <FilePreview
+                            key={i}
+                            file={f}
+                            onRemove={() => setFilesToUpload(prev => ({
+                              ...prev,
+                              workImages: prev.workImages.filter((_, idx) => idx !== i)
+                            }))}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-bold text-slate-700 mb-2 block">Certifications</Label>
+                      <Input
+                        type="file"
+                        multiple
+                        className="bg-white border-slate-300 font-medium"
+                        onChange={(e) => onFileChange(e, "certifications", true)}
+                      />
+                      <div className="flex gap-3 flex-wrap mt-3">
+                        {formData.certifications.map((url, i) => (
+                          <UrlPreview
+                            key={i}
+                            url={url}
+                            onRemove={() => setFormData(prev => ({
+                              ...prev,
+                              certifications: prev.certifications.filter((_, idx) => idx !== i)
+                            }))}
+                          />
+                        ))}
+                        {filesToUpload.certifications.map((f, i) => (
+                          <FilePreview
+                            key={i}
+                            file={f}
+                            onRemove={() => setFilesToUpload(prev => ({
+                              ...prev,
+                              certifications: prev.certifications.filter((_, idx) => idx !== i)
+                            }))}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-bold text-slate-700 mb-2 block">Business Documents</Label>
+                      <Input
+                        type="file"
+                        multiple
+                        className="bg-white border-slate-300 font-medium"
+                        onChange={(e) => onFileChange(e, "businessDocuments", true)}
+                      />
+                      <div className="flex gap-3 flex-wrap mt-3">
+                        {formData.businessDocuments.map((url, i) => (
+                          <UrlPreview
+                            key={i}
+                            url={url}
+                            onRemove={() => setFormData(prev => ({
+                              ...prev,
+                              businessDocuments: prev.businessDocuments.filter((_, idx) => idx !== i)
+                            }))}
+                          />
+                        ))}
+                        {filesToUpload.businessDocuments.map((f, i) => (
+                          <FilePreview
+                            key={i}
+                            file={f}
+                            onRemove={() => setFilesToUpload(prev => ({
+                              ...prev,
+                              businessDocuments: prev.businessDocuments.filter((_, idx) => idx !== i)
+                            }))}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Links */}
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2 pb-2 border-b-2 border-slate-200">
+                    <Globe size={18} className="text-primary" />
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-slate-800">
+                      Online Presence
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="websiteUrl" className="text-xs font-bold text-slate-700 mb-2 block">Website URL</Label>
+                      <Input
+                        id="websiteUrl"
+                        placeholder="https://"
+                        className="h-11 bg-white border-slate-300 font-medium"
+                        value={formData.websiteUrl}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="linkedinProfile" className="text-xs font-bold text-slate-700 mb-2 block">LinkedIn Profile</Label>
+                      <Input
+                        id="linkedinProfile"
+                        className="h-11 bg-white border-slate-300 font-medium"
+                        value={formData.linkedinProfile}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="instagramFacebook" className="text-xs font-bold text-slate-700 mb-2 block">
+                        Instagram/Facebook
+                      </Label>
+                      <Input
+                        id="instagramFacebook"
+                        className="h-11 bg-white border-slate-300 font-medium"
+                        value={formData.instagramFacebook}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="youtubeLink" className="text-xs font-bold text-slate-700 mb-2 block">Youtube Link</Label>
+                      <Input
+                        id="youtubeLink"
+                        className="h-11 bg-white border-slate-300 font-medium"
+                        value={formData.youtubeLink}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="experience">Years of Experience</Label>
-                  <Input id="experience" type="number" placeholder="e.g. 5" className="mt-1.5" />
-                </div>
-                <div>
-                  <Label>Company Size</Label>
-                  <Select>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder="Select size" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-10">1-10 Employees</SelectItem>
-                      <SelectItem value="11-50">11-50 Employees</SelectItem>
-                      <SelectItem value="51-200">51-200 Employees</SelectItem>
-                      <SelectItem value="201-500">201-500 Employees</SelectItem>
-                      <SelectItem value="501+">501+ Employees</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Action Buttons */}
+              <div className="pt-5 px-6 pb-8 flex gap-3 border-t-2 border-slate-100 bg-white shadow-[0_-10px_40px_rgba(0,0,0,0.04)]">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-12 rounded-xl border-slate-300 font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition-all"
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 h-12 rounded-xl shadow-lg shadow-primary/20 font-bold tracking-wide"
+                  onClick={handleSaveMember}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <Loader2 size={18} className="animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle2 size={18} className="mr-2" />
+                  )}
+                  {editingMemberId ? "Update Profile" : "Register Member"}
+                </Button>
               </div>
-            </div>
-          </div>
-
-          {/* Location Details */}
-          <div className="space-y-4 mt-8">
-            <div className="flex items-center gap-2 pb-2 border-b border-border mb-4">
-              <MapPin size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Location Details</h3>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="city">City</Label>
-                <Input id="city" placeholder="Enter city" className="mt-1.5" />
-              </div>
-              {/* <div>
-                <Label htmlFor="area">Area</Label>
-                <Input id="area" placeholder="Enter area" className="mt-1.5" />
-              </div> */}
-            </div>
-            
-            <div>
-              <Label htmlFor="businessAddress">Business Address</Label>
-              <Textarea id="businessAddress" placeholder="Enter full address" className="mt-1.5 min-h-[80px]" />
-            </div>
-
-            <div>
-              <Label htmlFor="serviceLocations">Service Locations</Label>
-              <Input id="serviceLocations" placeholder="e.g. City-wide, State-wide" className="mt-1.5" />
-            </div>
-          </div>
-
-          {/* Professional Details */}
-          <div className="space-y-4 mt-8">
-            <div className="flex items-center gap-2 pb-2 border-b border-border mb-4">
-              <FileText size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Professional Details</h3>
-            </div>
-            
-            <div>
-              <Label htmlFor="description">Products/Services Description</Label>
-              <Textarea id="description" placeholder="Describe what you offer" className="mt-1.5 min-h-[100px]" />
-            </div>
-
-            <div>
-              <Label htmlFor="targetAudience">Target Audience</Label>
-              <Textarea id="targetAudience" placeholder="Who are your ideal clients?" className="mt-1.5 min-h-[80px]" />
-            </div>
-          </div>
-
-          {/* Portfolio & Proof */}
-          <div className="space-y-4 mt-8">
-            <div className="flex items-center gap-2 pb-2 border-b border-border mb-4">
-              <ImageIcon size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Portfolio & Proof</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <Label htmlFor="portfolio">Work Images / Portfolio</Label>
-                <Input id="portfolio" type="file" multiple className="mt-1.5 cursor-pointer" />
-              </div>
-              <div>
-                <Label htmlFor="certifications">Certifications</Label>
-                <Input id="certifications" type="file" multiple className="mt-1.5 cursor-pointer" />
-              </div>
-              <div>
-                <Label htmlFor="documents">Business Documents</Label>
-                <Input id="documents" type="file" multiple className="mt-1.5 cursor-pointer" />
-              </div>
-            </div>
-          </div>
-
-          {/* Social & Links */}
-          <div className="space-y-4 mt-8">
-            <div className="flex items-center gap-2 pb-2 border-b border-border mb-4">
-              <Globe size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Social & Links</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="website">Website URL</Label>
-                <Input id="website" placeholder="https://..." className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="linkedin">LinkedIn Profile</Label>
-                <Input id="linkedin" placeholder="https://linkedin.com/in/..." className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="social">Instagram / Facebook</Label>
-                <Input id="social" placeholder="Social media links" className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="youtube">Youtube Link</Label>
-                <Input id="youtube" placeholder="Youtube channel or video" className="mt-1.5" />
-              </div>
-            </div>
-          </div>
-
-          <Button className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 mt-10 font-semibold shadow-lg shadow-primary/20">
-            Save Member Profile
-          </Button>
+            </>
+          )}
         </div>
       </FormDrawer>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Member?"
+        description={`Are you sure you want to delete ${memberToDelete?.fullName}? This action cannot be undone.`}
+        confirmLabel="Yes, Delete"
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };

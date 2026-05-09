@@ -17,7 +17,7 @@ interface FormDrawerProps {
 
 const FormDrawer = ({ open, onOpenChange, title, description, children }: FormDrawerProps) => (
   <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent className="sm:max-w-lg overflow-y-auto">
+    <SheetContent className="sm:max-w-xl overflow-y-auto">
       <SheetHeader>
         <SheetTitle>{title}</SheetTitle>
         {description && <SheetDescription>{description}</SheetDescription>}
