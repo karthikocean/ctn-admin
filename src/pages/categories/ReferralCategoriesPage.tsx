@@ -10,6 +10,23 @@ import PaginationBar from "@/components/common/PaginationBar";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import PremiumLoader from "@/components/common/PremiumLoader";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,8 +53,9 @@ export const ReferralCategoriesPage = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [parentCategories, setParentCategories] = useState<any[]>([]);
+  const [availableSubCategories, setAvailableSubCategories] = useState<any[]>([]);
   const [formData, setFormData] = useState({
-    name: "",
+    subCategories: [] as string[],
     referralParent: "",
     status: "active"
   });
@@ -54,13 +72,24 @@ export const ReferralCategoriesPage = () => {
     }
   };
 
+  const fetchAvailableSubCategories = async () => {
+    try {
+      const response = await api.get("/categories", {
+        params: { type: "REFERRAL", limit: 100, page: 0 }
+      });
+      const list = response.data?.data || [];
+      setAvailableSubCategories(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.error("Failed to fetch available sub categories:", error);
+    }
+  };
+
   const fetchCategories = async (search: string = "", pageNum: number = 1) => {
     try {
       setLoading(true);
-      const response = await api.get("/categories", {
+      const response = await api.get("/referral-categories", {
         params: {
           search,
-          type: "REFERRAL",
           limit: pageSize,
           page: pageNum - 1
         }
@@ -85,6 +114,7 @@ export const ReferralCategoriesPage = () => {
   useEffect(() => {
     if (drawerOpen) {
       fetchParentCategories();
+      fetchAvailableSubCategories();
     }
   }, [drawerOpen]);
 
@@ -94,8 +124,8 @@ export const ReferralCategoriesPage = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
-      toast.error("Please enter a referral category name");
+    if (formData.subCategories.length === 0) {
+      toast.error("Please select at least one sub category");
       return;
     }
     if (!formData.referralParent) {
@@ -105,26 +135,18 @@ export const ReferralCategoriesPage = () => {
 
     try {
       setFormLoading(true);
-      if (editingId) {
-        await api.put(`/categories/${editingId}`, {
-          name: formData.name,
-          type: "REFERRAL",
-          referralParent: formData.referralParent,
-          status: formData.status
-        });
-        toast.success("Referral category updated successfully");
-      } else {
-        await api.post("/categories", {
-          name: formData.name,
-          type: "REFERRAL",
-          referralParent: formData.referralParent,
-          status: formData.status
-        });
-        toast.success("Referral category created successfully");
-      }
+      
+      // Use the new batch assignment endpoint
+      await api.post("/referral-categories", {
+        subCategory: formData.subCategories.join(","),
+        refferalCategory: formData.referralParent
+      });
+      
+      toast.success(editingId ? "Referral category updated successfully" : "Referral categories assigned successfully");
+      
       setDrawerOpen(false);
       setEditingId(null);
-      setFormData({ name: "", referralParent: "", status: "active" });
+      setFormData({ subCategories: [], referralParent: "", status: "active" });
       fetchCategories(searchTerm, page);
     } catch (error: any) {
       console.error("Failed to save referral category:", error);
@@ -137,7 +159,7 @@ export const ReferralCategoriesPage = () => {
   const handleEdit = (category: any) => {
     setEditingId(category._id);
     setFormData({
-      name: category.name,
+      subCategories: [category._id],
       referralParent: typeof category.referralParent === 'object' ? category.referralParent._id : category.referralParent,
       status: category.status?.toLowerCase() || (category.isActive ? "active" : "inactive")
     });
@@ -147,7 +169,8 @@ export const ReferralCategoriesPage = () => {
   const handleDelete = async () => {
     if (!categoryToDelete) return;
     try {
-      await api.delete(`/categories/${categoryToDelete}`);
+      // Use the referral-categories endpoint to unlink
+      await api.delete(`/referral-categories/${categoryToDelete}`);
       toast.success("Referral category deleted successfully");
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
@@ -211,8 +234,8 @@ export const ReferralCategoriesPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Referral Category</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Parent Category</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Subcategory</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
@@ -233,9 +256,11 @@ export const ReferralCategoriesPage = () => {
               ) : (
                 categories.map((c) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">{c.name}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                    <td className="px-6 py-4 text-sm font-medium text-foreground">
                       {c.referralParent?.name || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      {c.name}
                     </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"} />
@@ -269,27 +294,93 @@ export const ReferralCategoriesPage = () => {
           setDrawerOpen(open);
           if (!open) {
             setEditingId(null);
-            setFormData({ name: "", referralParent: "", status: "active" });
+            setFormData({ subCategories: [], referralParent: "", status: "active" });
           }
         }} 
         title={editingId ? "Edit Referral Category" : "Add Referral Category"}
       >
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-foreground">Referral Category Name</label>
-            <input 
-              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" 
-              placeholder="Enter name" 
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
+        <div className="space-y-6 py-2">
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-foreground ml-1">Sub Category Name</Label>
+            {editingId ? (
+              <div className="w-full px-4 py-3 rounded-xl border border-[#cbd5e1] bg-[#f8fafc] text-sm font-medium text-[#1e293b] flex items-center gap-2">
+                <Check size={16} className="text-[#2563eb]" />
+                {categories.find(c => c._id === editingId)?.name || "Selected Category"}
+              </div>
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className={cn(
+                      "w-full justify-between rounded-xl border-[#cbd5e1] bg-[#f8fafc] h-11 px-4 text-sm font-medium !text-[#1e293b] hover:bg-[#f1f5f9] transition-all shadow-sm",
+                      formData.subCategories.length === 0 && "!text-[#64748b]"
+                    )}
+                  >
+                    {formData.subCategories.length > 0
+                      ? `${formData.subCategories.length} categories selected`
+                      : "Select Category"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl border border-[#cbd5e1] bg-white overflow-hidden shadow-xl" 
+                  align="start"
+                  sideOffset={4}
+                >
+                  <Command className="bg-white">
+                    <CommandInput placeholder="Search sub categories..." className="h-10 border-none focus:ring-0 px-4 text-[#1e293b]" />
+                    <CommandList className="max-h-[250px] scrollbar-thin">
+                      <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">No sub category found.</CommandEmpty>
+                      <CommandGroup className="p-0">
+                        {availableSubCategories.map((category) => {
+                          const isSelected = formData.subCategories.includes(category._id);
+                          return (
+                            <CommandItem
+                              key={category._id}
+                              value={category.name}
+                              onSelect={() => {
+                                const newSelection = isSelected
+                                  ? formData.subCategories.filter(id => id !== category._id)
+                                  : [...formData.subCategories, category._id];
+                                setFormData({ ...formData, subCategories: newSelection });
+                              }}
+                              className={cn(
+                                "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-[#f1f5f9] last:border-0",
+                                isSelected 
+                                  ? "bg-[#2563eb] text-white !data-[selected=true]:bg-[#2563eb] !data-[selected=true]:text-white" 
+                                  : "text-[#1e293b] data-[selected=true]:bg-[#f8fafc] data-[selected=true]:text-[#2563eb]"
+                              )}
+                            >
+                              <div className={cn(
+                                "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
+                                isSelected 
+                                  ? "border-white bg-white" 
+                                  : "border-[#cbd5e1] bg-white"
+                              )}>
+                                {isSelected && (
+                                  <div className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
+                                )}
+                              </div>
+                              <span className="flex-grow text-[13px] font-medium leading-none">{category.name}</span>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
-          <div>
-            <label className="text-sm font-medium text-foreground">Parent Category</label>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-foreground ml-1">Parent Category</Label>
             <select 
-              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full px-3 h-11 rounded-xl border border-[#cbd5e1] bg-[#f8fafc] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 transition-all appearance-none cursor-pointer"
               value={formData.referralParent}
               onChange={(e) => setFormData({ ...formData, referralParent: e.target.value })}
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1rem' }}
             >
               <option value="">Select Category</option>
               {parentCategories.map((c) => (
@@ -297,19 +388,20 @@ export const ReferralCategoriesPage = () => {
               ))}
             </select>
           </div>
-          <div>
-            <label className="text-sm font-medium text-foreground">Status</label>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold text-foreground ml-1">Status</Label>
             <select 
-              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full px-3 h-11 rounded-xl border border-[#cbd5e1] bg-[#f8fafc] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 transition-all appearance-none cursor-pointer"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1rem' }}
             >
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
           </div>
           <Button 
-            className="w-full rounded-xl bg-primary hover:bg-primary/90 mt-4"
+            className="w-full h-11 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold mt-4 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98]"
             onClick={handleSave}
             disabled={formLoading}
           >
