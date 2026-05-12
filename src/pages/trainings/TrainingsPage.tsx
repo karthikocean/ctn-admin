@@ -1,185 +1,713 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { GraduationCap, Clock, Calendar, Users, Search, Filter } from "lucide-react";
+import {
+  GraduationCap, Search, Plus, Trash2, Video, User, Award,
+  ImageIcon, Layout, FileText, PlayCircle, Film, Clock, Users, X
+} from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
+import ActionMenu from "@/components/common/ActionMenu";
+import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
-import { mockTrainings } from "@/data/mockData";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
+import {
+  getTrainings,
+  createTraining,
+  updateTraining,
+  deleteTraining
+} from "@/api/TrainingApi";
+import { uploadFiles } from "@/api/MediaApi";
+
+const getFullUrl = (path: string | null) => {
+  if (!path) return "";
+  if (path.startsWith("http") || path.startsWith("blob:") || path.startsWith("data:")) return path;
+  const baseUrl = import.meta.env.VITE_API_URL.replace("/api/admin", "");
+  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+// --- Types ---
+interface Lesson {
+  _id?: string;
+  id: string; // Internal key for React
+  title: string;
+  description: string;
+  thumbnail: string | null;
+  videoUrl: string | null;
+  thumbnailFile?: File | null;
+  videoFile?: File | null;
+  points: number;
+  duration: string;
+}
+
+interface TrainingForm {
+  title: string;
+  description: string;
+  thumbnail: string | null;
+  thumbnailFile?: File | null;
+  banner: string | null;
+  bannerFile?: File | null;
+  overallPoints: number;
+  status: "active" | "inactive";
+  authorName: string;
+  authorImage: string | null;
+  authorImageFile?: File | null;
+  authorBio: string;
+  lessons: Lesson[];
+}
 
 const TrainingsPage = () => {
+  const { toast } = useToast();
+  const { hasPermission } = useAuth();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [question, setQuestion] = useState("");
-  const [options, setOptions] = useState(["", "", "", ""]);
-  const [correctOption, setCorrectOption] = useState("");
+  const [activeTab, setActiveTab] = useState<"basic" | "author" | "lessons">("basic");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [trainings, setTrainings] = useState<any[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const canCreate = hasPermission("trainings", "create");
+  const canEdit = hasPermission("trainings", "edit");
+  const canDelete = hasPermission("trainings", "delete");
+
+  const initialForm: TrainingForm = {
+    title: "",
+    description: "",
+    thumbnail: null,
+    banner: null,
+    overallPoints: 0,
+    status: "active",
+    authorName: "",
+    authorImage: null,
+    authorBio: "",
+    lessons: [
+      { id: Date.now().toString(), title: "", description: "", thumbnail: null, videoUrl: null, points: 0, duration: "" }
+    ]
+  };
+
+  const [form, setForm] = useState<TrainingForm>(initialForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // --- Fetch Data ---
+  const fetchTrainings = async () => {
+    try {
+      setIsFetching(true);
+      const result = await getTrainings({
+        page,
+        limit: 10,
+        search: searchTerm || undefined
+      });
+      setTrainings(result.data || []);
+      setTotalPages(result.totalPages || 1);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to fetch trainings",
+        variant: "destructive"
+      });
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrainings();
+  }, [page, searchTerm]);
+
+  // --- Auto-calculate Overall Points ---
+  useEffect(() => {
+    const totalPoints = form.lessons.reduce((sum, lesson) => sum + (Number(lesson.points) || 0), 0);
+    setForm(prev => ({ ...prev, overallPoints: totalPoints }));
+  }, [form.lessons]);
+
+  // --- Validation Logic ---
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!form.title.trim()) newErrors.title = "Training title is required";
+    if (!form.thumbnail && !form.thumbnailFile) newErrors.thumbnail = "Thumbnail is required";
+    if (!form.banner && !form.bannerFile) newErrors.banner = "Banner is required";
+
+    if (!form.authorName.trim()) newErrors.authorName = "Instructor name is required";
+    if (!form.authorImage && !form.authorImageFile) newErrors.authorImage = "Instructor image is required";
+
+    form.lessons.forEach((lesson) => {
+      if (!lesson.videoUrl && !lesson.videoFile) newErrors[`lesson_${lesson.id}_video`] = "Video is required";
+      if (!lesson.thumbnail && !lesson.thumbnailFile) newErrors[`lesson_${lesson.id}_thumbnail`] = "Lesson thumbnail is required";
+      if (!lesson.title.trim()) newErrors[`lesson_${lesson.id}_title`] = "Lesson title is required";
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>, lessonId: string) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(video.src);
+        const durationStr = formatDuration(video.duration);
+        updateLesson(lessonId, "duration", durationStr);
+        updateLesson(lessonId, "videoUrl", URL.createObjectURL(file));
+        updateLesson(lessonId, "videoFile", file);
+        setErrors(prev => {
+          const next = { ...prev };
+          delete next[`lesson_${lessonId}_video`];
+          return next;
+        });
+      };
+      video.src = URL.createObjectURL(file);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof TrainingForm | "lesson", lessonId?: string) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        if (field === "lesson" && lessonId) {
+          updateLesson(lessonId, "thumbnail", result);
+          updateLesson(lessonId, "thumbnailFile", file);
+          setErrors(prev => {
+            const next = { ...prev };
+            delete next[`lesson_${lessonId}_thumbnail`];
+            return next;
+          });
+        } else {
+          setForm(prev => ({ ...prev, [field]: result, [`${String(field)}File`]: file }));
+          setErrors(prev => {
+            const next = { ...prev };
+            delete next[field];
+            return next;
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addLesson = () => {
+    setForm(prev => ({
+      ...prev,
+      lessons: [...prev.lessons, { id: Date.now().toString(), title: "", description: "", thumbnail: null, videoUrl: null, points: 0, duration: "" }]
+    }));
+  };
+
+  const removeLesson = (id: string) => {
+    if (form.lessons.length > 1) {
+      setForm(prev => ({ ...prev, lessons: prev.lessons.filter(l => l.id !== id) }));
+    }
+  };
+
+  const updateLesson = (id: string, field: string, value: any) => {
+    setForm(prev => ({
+      ...prev,
+      lessons: prev.lessons.map(l => l.id === id ? { ...l, [field]: value } : l)
+    }));
+    if (field === "title") {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[`lesson_${id}_title`];
+        return next;
+      });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      toast({ title: "Validation Error", description: "Please fill all required fields marked with *", variant: "destructive" });
+      const errorKeys = Object.keys(errors);
+      if (errorKeys.some(k => ["title", "thumbnail", "banner"].includes(k))) setActiveTab("basic");
+      else if (errorKeys.some(k => ["authorName", "authorImage"].includes(k))) setActiveTab("author");
+      else setActiveTab("lessons");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // 1. Upload main files
+      let thumbnail = form.thumbnail;
+      if (form.thumbnailFile) {
+        const upload = await uploadFiles([form.thumbnailFile], "trainings");
+        thumbnail = upload.data[0].url;
+      }
+
+      let banner = form.banner;
+      if (form.bannerFile) {
+        const upload = await uploadFiles([form.bannerFile], "trainings");
+        banner = upload.data[0].url;
+      }
+
+      let authorImage = form.authorImage;
+      if (form.authorImageFile) {
+        const upload = await uploadFiles([form.authorImageFile], "trainings");
+        authorImage = upload.data[0].url;
+      }
+
+      // 2. Upload lesson files
+      const lessons = await Promise.all(form.lessons.map(async (lesson) => {
+        let lessonThumb = lesson.thumbnail;
+        if (lesson.thumbnailFile) {
+          const upload = await uploadFiles([lesson.thumbnailFile], "trainings");
+          lessonThumb = upload.data[0].url;
+        }
+
+        let lessonVideo = lesson.videoUrl;
+        if (lesson.videoFile) {
+          const upload = await uploadFiles([lesson.videoFile], "trainings");
+          lessonVideo = upload.data[0].url;
+        }
+
+        return {
+          _id: lesson._id,
+          title: lesson.title,
+          description: lesson.description,
+          thumbnail: lessonThumb,
+          videoUrl: lessonVideo,
+          points: lesson.points,
+          duration: lesson.duration
+        };
+      }));
+
+      const payload = {
+        title: form.title,
+        description: form.description,
+        thumbnail,
+        banner,
+        overallPoints: form.overallPoints,
+        status: form.status,
+        authorName: form.authorName,
+        authorImage,
+        authorBio: form.authorBio,
+        lessons
+      };
+
+      if (editingId) {
+        await updateTraining(editingId, payload);
+        toast({ title: "Success", description: "Training updated successfully", variant: "success" });
+      } else {
+        await createTraining(payload);
+        toast({ title: "Success", description: "Training published successfully", variant: "success" });
+      }
+
+      setDrawerOpen(false);
+      setEditingId(null);
+      setForm(initialForm);
+      fetchTrainings();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to save training",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEdit = (training: any) => {
+    setEditingId(training._id);
+    setForm({
+      title: training.title,
+      description: training.description,
+      thumbnail: training.thumbnail,
+      banner: training.banner,
+      overallPoints: training.overallPoints,
+      status: training.status,
+      authorName: training.authorName,
+      authorImage: training.authorImage,
+      authorBio: training.authorBio,
+      lessons: training.lessons.map((l: any, i: number) => ({
+        id: i.toString(),
+        ...l,
+        _id: l._id
+      }))
+    });
+    setDrawerOpen(true);
+    setActiveTab("basic");
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this training course?")) return;
+    try {
+      await deleteTraining(id);
+      toast({ title: "Deleted", description: "Training course removed", variant: "success" });
+      fetchTrainings();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete training",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="page-container">
-      {/* Single Row Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-border">
-        {/* Title Block */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shadow-sm">
-            <GraduationCap size={18} className="text-primary" />
+      {/* Header Section */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-border/60">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shadow-sm border border-primary/20">
+            <GraduationCap size={24} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-foreground tracking-tight">Trainings</h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold md:hidden">Curriculum</p>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Trainings & Curriculum</h1>
+            <p className="text-xs text-muted-foreground font-medium">Manage educational video courses and instructor profiles</p>
           </div>
         </div>
 
-        {/* Global Actions */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {/* Search */}
-          <div className="relative flex-1 md:w-64">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-72">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60" />
             <input
               type="text"
-              placeholder="Search sessions..."
-              className="h-10 pl-9 pr-4 w-full rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50 transition-all"
+              placeholder="Search trainings..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-11 pl-10 pr-4 w-full rounded-2xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="icon" className="h-10 w-10 md:w-auto md:px-4 rounded-xl border-border bg-card flex-1 sm:flex-initial">
-              <Filter size={16} className="md:mr-2" />
-              <span className="hidden md:inline">Filters</span>
-            </Button>
-
+          {canCreate && (
             <Button
-              className="h-10 px-4 rounded-xl bg-primary hover:bg-primary/90 text-sm font-semibold flex-1 sm:flex-initial"
-              onClick={() => setDrawerOpen(true)}
+              className="h-11 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-sm font-bold shadow-lg shadow-primary/20"
+              onClick={() => { setEditingId(null); setForm(initialForm); setDrawerOpen(true); }}
             >
-              + Add Training
+              <Plus size={18} className="mr-2" /> New Training
             </Button>
-          </div>
+          )}
         </div>
       </div>
 
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockTrainings.map((t, i) => (
-          <motion.div key={t.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-card p-5">
-            <div className="flex items-start justify-between mb-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <GraduationCap size={20} className="text-primary" />
-              </div>
-              <StatusBadge status={t.status} />
-            </div>
-            <h3 className="font-semibold text-foreground">{t.title}</h3>
-            <p className="text-sm text-muted-foreground mt-1">by {t.trainer}</p>
-            <div className="mt-4 space-y-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2"><Calendar size={14} /> {t.date}</div>
-              <div className="flex items-center gap-2"><Clock size={14} /> {t.time} · {t.duration}</div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-border text-xs text-muted-foreground">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <Users size={14} />
-                  <span>{t.attendees} attendees</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{t.viewCount}</span>
-                  <span>views</span>
+      {/* Course Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isFetching ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-[350px] rounded-3xl bg-slate-100 animate-pulse" />
+          ))
+        ) : trainings.length > 0 ? (
+          trainings.map((t, i) => (
+            <motion.div key={t._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-card overflow-hidden group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300">
+              <div className="aspect-video relative overflow-hidden bg-secondary">
+                <img src={getFullUrl(t.thumbnail)} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+                <div className="absolute top-3 right-3">
+                  <StatusBadge status={t.status} />
                 </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
+              <div className="p-5">
+                <h3 className="font-bold text-foreground text-lg leading-tight group-hover:text-primary transition-colors line-clamp-1">{t.title}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-6 h-6 rounded-full bg-secondary border border-border overflow-hidden">
+                    <img src={getFullUrl(t.authorImage)} alt={t.authorName} className="w-full h-full object-cover" />
+                  </div>
+                  <p className="text-xs text-muted-foreground font-medium">by <span className="text-foreground">{t.authorName}</span></p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mt-5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 p-2 rounded-xl border border-border/40">
+                    <PlayCircle size={14} className="text-primary" />
+                    <span className="font-semibold text-foreground">{t.lessons?.length || 0} Lessons</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 p-2 rounded-xl border border-border/40">
+                    <Award size={14} className="text-amber-500" />
+                    <span className="font-semibold text-foreground">{t.overallPoints} Points</span>
+                  </div>
+                </div>
+                <div className="mt-5 pt-4 border-t border-border/40 flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
+                    <div className="flex items-center gap-1.5"><Users size={12} /> 0 Enrolled</div>
+                    <div className="flex items-center gap-1.5"><Clock size={12} /> Course</div>
+                  </div>
+                  {(canEdit || canDelete) && (
+                    <ActionMenu
+                      onEdit={canEdit ? () => handleEdit(t) : undefined}
+                      onDelete={canDelete ? () => handleDelete(t._id) : undefined}
+                    />
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ))
+        ) : (
+          <div className="col-span-full py-20 text-center glass-card">
+            <GraduationCap size={40} className="mx-auto text-muted-foreground/30 mb-3" />
+            <p className="text-muted-foreground font-medium">No training courses found</p>
+          </div>
+        )}
       </div>
 
-      <FormDrawer open={drawerOpen} onOpenChange={setDrawerOpen} title="Add Training" description="Schedule a new training session">
-        <div className="space-y-4">
-          {[
-            "Title",
-            "Trainer",
-          ].map((f) => (
-            <div key={f}>
-              <label className="text-sm font-medium text-foreground">{f}</label>
-              <input className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder={`Enter ${f.toLowerCase()}`} />
-            </div>
-          ))}
+      {!isFetching && trainings.length > 0 && (
+        <div className="mt-8">
+          <PaginationBar
+            currentPage={page + 1}
+            totalPages={totalPages}
+            onPageChange={(p) => setPage(p - 1)}
+          />
+        </div>
+      )}
 
-          <div>
-            <label className="text-sm font-medium text-foreground">Photo Upload</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full mt-1 rounded-xl border border-border bg-secondary/50 text-sm text-foreground file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground"
-              onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-            />
-            {imageFile && <p className="text-xs text-muted-foreground mt-2">Selected image: {imageFile.name}</p>}
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-foreground">Video Upload</label>
-            <input
-              type="file"
-              accept="video/*"
-              className="w-full mt-1 rounded-xl border border-border bg-secondary/50 text-sm text-foreground file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground"
-              onChange={(event) => setVideoFile(event.target.files?.[0] ?? null)}
-            />
-            {videoFile && <p className="text-xs text-muted-foreground mt-2">Selected video: {videoFile.name}</p>}
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-foreground">Question</label>
-            <input
-              type="text"
-              value={question}
-              onChange={(event) => setQuestion(event.target.value)}
-              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder="Enter question"
-            />
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-foreground">Options</label>
-            {options.map((option, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground">{index + 1}.</span>
-                <input
-                  type="text"
-                  value={option}
-                  onChange={(event) => {
-                    const updated = [...options];
-                    updated[index] = event.target.value;
-                    setOptions(updated);
-                  }}
-                  className="flex-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder={`Option ${index + 1}`}
-                />
-              </div>
+      <FormDrawer open={drawerOpen} onOpenChange={setDrawerOpen} title={form.title || (editingId ? "Edit Training Course" : "Create Training Course")}>
+        <div className="flex flex-col h-full bg-slate-50/40 relative">
+          <div className="flex items-center gap-1 p-4 bg-white border-b border-border sticky top-0 z-10 overflow-x-auto no-scrollbar">
+            {[
+              { id: "basic", label: "General Info", icon: Layout },
+              { id: "author", label: "Instructor Info", icon: User },
+              { id: "lessons", label: "Curriculum / Lessons", icon: FileText },
+            ].map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all", activeTab === tab.id ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-secondary")}>
+                <tab.icon size={14} /> {tab.label}
+              </button>
             ))}
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-foreground">Correct Answer</label>
-            <select
-              value={correctOption}
-              onChange={(event) => setCorrectOption(event.target.value)}
-              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">Select correct answer</option>
-              {options.map((option, index) => (
-                <option key={index} value={option}>{`Option ${index + 1}`}</option>
-              ))}
-            </select>
+          <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+            {activeTab === "basic" && (
+              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Training Title <span className="text-red-500">*</span></Label>
+                  <Input placeholder="e.g. Mastering Client Relationships" className={cn("h-12 rounded-2xl", errors.title && "border-red-500 focus-visible:ring-red-500")} value={form.title} onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))} />
+                  {errors.title && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.title}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Description</Label>
+                  <Textarea placeholder="Training overview..." className="min-h-[120px] rounded-2xl" value={form.description} onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Thumbnail <span className="text-red-500">*</span></Label>
+                    <div className={cn("relative group aspect-video rounded-2xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex flex-col items-center justify-center", errors.thumbnail && "border-red-500 bg-red-50")}>
+                      {form.thumbnail ? (
+                        <div className="relative w-full h-full">
+                          <img src={getFullUrl(form.thumbnail)} className="w-full h-full object-cover" />
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, thumbnail: null, thumbnailFile: null })); }}
+                            className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <ImageIcon size={20} className="text-slate-300" />
+                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, "thumbnail")} />
+                        </>
+                      )}
+                    </div>
+                    {errors.thumbnail && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.thumbnail}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Banner <span className="text-red-500">*</span></Label>
+                    <div className={cn("relative group aspect-video rounded-2xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex flex-col items-center justify-center", errors.banner && "border-red-500 bg-red-50")}>
+                      {form.banner ? (
+                        <div className="relative w-full h-full">
+                          <img src={getFullUrl(form.banner)} className="w-full h-full object-cover" />
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, banner: null, bannerFile: null })); }}
+                            className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <ImageIcon size={20} className="text-slate-300" />
+                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, "banner")} />
+                        </>
+                      )}
+                    </div>
+                    {errors.banner && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.banner}</p>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Total Completion Points</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        readOnly
+                        className="h-12 rounded-2xl pl-10 bg-slate-50 font-bold text-primary border-slate-200 cursor-not-allowed"
+                        value={form.overallPoints}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1 ml-1 italic">Calculated from lessons automatically</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</Label>
+                    <Select value={form.status} onValueChange={(val: any) => setForm(prev => ({ ...prev, status: val }))}>
+                      <SelectTrigger className="h-12 rounded-2xl"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "author" && (
+              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                <div className="flex items-center gap-6">
+                  <div className={cn("relative group w-32 h-32 rounded-3xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex items-center justify-center", errors.authorImage && "border-red-500 bg-red-50")}>
+                    {form.authorImage ? (
+                      <div className="relative w-full h-full">
+                        <img src={getFullUrl(form.authorImage)} className="w-full h-full object-cover" />
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, authorImage: null, authorImageFile: null })); }}
+                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <User size={28} className="text-slate-300" />
+                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, "authorImage")} />
+                      </>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Instructor Name <span className="text-red-500">*</span></Label>
+                    <Input placeholder="Sneha Kapoor" className={cn("h-12 rounded-2xl", errors.authorName && "border-red-500 focus-visible:ring-red-500")} value={form.authorName} onChange={(e) => setForm(prev => ({ ...prev, authorName: e.target.value }))} />
+                    {errors.authorName && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.authorName}</p>}
+                    {errors.authorImage && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.authorImage}</p>}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Instructor Bio</Label>
+                  <Textarea placeholder="Brief bio..." className="min-h-[150px] rounded-2xl" value={form.authorBio} onChange={(e) => setForm(prev => ({ ...prev, authorBio: e.target.value }))} />
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "lessons" && (
+              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200 sticky top-0 z-10 shadow-sm">
+                  <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Video size={16} className="text-primary" /> Lessons ({form.lessons.length})</h3>
+                  <Button variant="outline" size="sm" onClick={addLesson} className="h-9 rounded-xl border-primary text-primary font-bold"><Plus size={14} className="mr-1.5" /> Add Lesson</Button>
+                </div>
+
+                <div className="space-y-5">
+                  {form.lessons.map((lesson, idx) => (
+                    <div key={lesson.id} className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm relative group/lesson overflow-hidden">
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-50">
+                        <div className="flex items-center gap-2">
+                          <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-slate-100 text-slate-900 text-[10px] font-bold">
+                            {idx + 1}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lesson Detail</span>
+                        </div>
+                        <button onClick={() => removeLesson(lesson.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/lesson:opacity-100">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold text-slate-400 uppercase">Lesson Video <span className="text-red-500">*</span></Label>
+                            <div className={cn("relative group/vid aspect-video rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden", errors[`lesson_${lesson.id}_video`] && "border-red-500 bg-red-50")}>
+                              {lesson.videoUrl ? (
+                                <div className="relative w-full h-full group">
+                                  <video src={getFullUrl(lesson.videoUrl)} className="w-full h-full object-cover" controls={false} muted />
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); updateLesson(lesson.id, "videoUrl", null); updateLesson(lesson.id, "videoFile", null); }}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <Film size={24} className="text-slate-200" />
+                                  <input type="file" accept="video/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleVideoUpload(e, lesson.id)} />
+                                </>
+                              )}
+                            </div>
+                            {lesson.videoFile && <p className="text-[9px] text-primary font-medium mt-1 truncate">{lesson.videoFile.name}</p>}
+                            {errors[`lesson_${lesson.id}_video`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_video`]}</p>}
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-[10px] font-bold text-slate-400 uppercase">Lesson Thumbnail <span className="text-red-500">*</span></Label>
+                            <div className={cn("relative group/thumb aspect-video rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden", errors[`lesson_${lesson.id}_thumbnail`] && "border-red-500 bg-red-50")}>
+                              {lesson.thumbnail ? (
+                                <div className="relative w-full h-full">
+                                  <img src={getFullUrl(lesson.thumbnail)} className="w-full h-full object-cover" />
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); updateLesson(lesson.id, "thumbnail", null); updateLesson(lesson.id, "thumbnailFile", null); }}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <ImageIcon size={24} className="text-slate-200" />
+                                  <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, "lesson", lesson.id)} />
+                                </>
+                              )}
+                            </div>
+                            {errors[`lesson_${lesson.id}_thumbnail`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_thumbnail`]}</p>}
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px] gap-4">
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-bold text-slate-500 uppercase">Lesson Title <span className="text-red-500">*</span></Label>
+                              <Input placeholder="Lesson Title" className={cn("h-10 rounded-xl text-sm", errors[`lesson_${lesson.id}_title`] && "border-red-500 focus-visible:ring-red-500")} value={lesson.title} onChange={(e) => updateLesson(lesson.id, "title", e.target.value)} />
+                              {errors[`lesson_${lesson.id}_title`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_title`]}</p>}
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-bold text-slate-500 uppercase">Points</Label>
+                              <Input type="number" className="h-10 rounded-xl text-sm" value={lesson.points} onChange={(e) => updateLesson(lesson.id, "points", parseInt(e.target.value))} />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] font-bold text-slate-500 uppercase">Duration</Label>
+                              <Input
+                                placeholder="00:00"
+                                readOnly
+                                className="h-10 rounded-xl text-sm bg-slate-50 font-mono text-slate-500 cursor-not-allowed border-slate-100"
+                                value={lesson.duration}
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold text-slate-500 uppercase">Description</Label>
+                            <Input placeholder="Short description..." className="h-10 rounded-xl text-sm" value={lesson.description} onChange={(e) => updateLesson(lesson.id, "description", e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-foreground">Date</label>
-              <input type="date" className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Duration</label>
-              <input className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="e.g. 3 hours" />
-            </div>
+          <div className="p-6 bg-white border-t border-border flex gap-3 sticky bottom-0 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+            <Button variant="outline" className="flex-1 h-12 rounded-2xl font-bold border-slate-200" onClick={() => setDrawerOpen(false)}>Discard Changes</Button>
+            <Button className="flex-1 h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={handleSave} disabled={isLoading}>
+              {isLoading ? "Saving..." : editingId ? "Update Training" : "Publish Training"}
+            </Button>
           </div>
-
-          <Button className="w-full rounded-xl bg-primary hover:bg-primary/90 mt-4">Save Training</Button>
         </div>
       </FormDrawer>
     </div>

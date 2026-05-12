@@ -335,14 +335,15 @@ const RolesPage = () => {
   const confirmDelete = async () => {
     if (!userToDelete) return;
     try {
-      await api.delete(`/admin-users/${userToDelete}`);
-      toast.success("User deleted successfully");
+      const response = await api.delete(`/admin-users/${userToDelete}`);
+      toast.success(response.data?.message || "User deleted successfully");
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
       else fetchPaginatedUsers(null, usersPage);
       fetchRoles();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error);
-      toast.error("Failed to delete user");
+      const errorMsg = error.response?.data?.message || "Failed to delete user";
+      toast.error(Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg);
     } finally {
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
@@ -363,9 +364,9 @@ const RolesPage = () => {
       const userId = userToUpdateStatus._id || userToUpdateStatus.id;
       const isActive = newStatus === "Active" ? 1 : 0;
 
-      await api.patch(`/admin-users/${userId}/status`, { isActive });
+      const response = await api.patch(`/admin-users/${userId}/status`, { isActive });
 
-      toast.success(`User status updated to ${newStatus}`);
+      toast.success(response.data?.message || `User status updated to ${newStatus}`);
 
       // Refresh data
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
@@ -374,9 +375,10 @@ const RolesPage = () => {
       fetchRecentUsers();
 
       setStatusDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating status:", error);
-      toast.error("Failed to update status");
+      const errorMsg = error.response?.data?.message || "Failed to update status";
+      toast.error(Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg);
     }
   };
 
@@ -405,8 +407,8 @@ const RolesPage = () => {
         })
         .filter(p => p !== null);
 
-      await api.patch(`/roles/${editingRoleId}`, { permissions: rolePermissions });
-      toast.success("Permissions updated successfully");
+      const response = await api.patch(`/roles/${editingRoleId}`, { permissions: rolePermissions });
+      toast.success(response.data?.message || "Permissions updated successfully");
 
       setPermDialogOpen(false);
       setEditingRoleId(null);
@@ -457,11 +459,11 @@ const RolesPage = () => {
       };
 
       if (editingRoleId) {
-        await api.patch(`/roles/${editingRoleId}`, payload);
-        toast.success("Role updated successfully");
+        const response = await api.patch(`/roles/${editingRoleId}`, payload);
+        toast.success(response.data?.message || "Role updated successfully");
       } else {
-        await api.post("/roles", payload);
-        toast.success("Role created successfully");
+        const response = await api.post("/roles", payload);
+        toast.success(response.data?.message || "Role created successfully");
       }
 
       // Reset and close
@@ -535,12 +537,12 @@ const RolesPage = () => {
 
       if (isEditMode && editingUserId) {
         console.log("Triggering PATCH for user:", editingUserId);
-        await api.patch(`/admin-users/${editingUserId}`, payload);
-        toast.success("User updated successfully");
+        const response = await api.patch(`/admin-users/${editingUserId}`, payload);
+        toast.success(response.data?.message || "User updated successfully");
       } else {
         console.log("Triggering POST for new user");
-        await api.post("/admin-users", payload);
-        toast.success("User created successfully");
+        const response = await api.post("/admin-users", payload);
+        toast.success(response.data?.message || "User created successfully");
       }
 
 
@@ -583,7 +585,7 @@ const RolesPage = () => {
     return (
       <GlobalNetworkLoader
         fullScreen={true}
-        title="Syncing Network Data..."
+        title="CTN Admin Network Data..."
         subtitle="Establishing secure connection to global nodes"
       />
     );

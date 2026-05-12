@@ -1,4 +1,4 @@
-import { LucideIcon, Users, Shield, MapPin, Megaphone, Calendar, GraduationCap, BarChart3, Layers, Link2, Gift, Trophy, Medal, LayoutDashboard, UserCheck, Activity, CreditCard } from "lucide-react";
+import { LucideIcon, Users, Shield, MapPin, Megaphone, Calendar, GraduationCap, BarChart3, Layers, Link2, Gift, Trophy, Medal, LayoutDashboard, UserCheck, Activity, CreditCard, Star } from "lucide-react";
 
 export interface SidebarNavItem {
   title: string;
@@ -47,6 +47,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
       { title: "Requirements", path: "/activities/requirement", moduleId: "activities" },
     ],
   },
+  { title: "Spotlight", path: "/spotlight", icon: Star, moduleId: "spotlight" },
   { title: "Connections", path: "/connections", icon: Link2, moduleId: "connections" },
   { title: "Contributions", path: "/contributions", icon: Gift, moduleId: "contributions" },
   { title: "Reports", path: "/reports", icon: BarChart3, moduleId: "reports" },

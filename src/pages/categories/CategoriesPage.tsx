@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import api from "@/services/api";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import PremiumLoader from "@/components/common/PremiumLoader";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const CategoriesPage = () => {
+  const { toast } = useToast();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +32,7 @@ const CategoriesPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
-  
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
@@ -77,26 +78,38 @@ const CategoriesPage = () => {
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast.error("Please enter a category name");
+      toast({
+        title: "Validation Error",
+        description: "Please enter a category name",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
       setFormLoading(true);
       if (editingId) {
-        await api.put(`/categories/${editingId}`, {
+        const response = await api.put(`/categories/${editingId}`, {
           name: formData.name,
           type: "MAIN",
           status: formData.status
         });
-        toast.success("Category updated successfully");
+        toast({
+          title: "Success",
+          description: response.data?.message || "Category updated successfully",
+          variant: "success"
+        });
       } else {
-        await api.post("/categories", {
+        const response = await api.post("/categories", {
           name: formData.name,
           type: "MAIN",
           status: formData.status
         });
-        toast.success("Category created successfully");
+        toast({
+          title: "Success",
+          description: response.data?.message || "Category created successfully",
+          variant: "success"
+        });
       }
       setDrawerOpen(false);
       setEditingId(null);
@@ -104,7 +117,11 @@ const CategoriesPage = () => {
       fetchCategories(searchTerm, page);
     } catch (error: any) {
       console.error("Failed to save category:", error);
-      toast.error(error.response?.data?.message || "Failed to save category");
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to save category",
+        variant: "destructive"
+      });
     } finally {
       setFormLoading(false);
     }
@@ -122,14 +139,23 @@ const CategoriesPage = () => {
   const handleDelete = async () => {
     if (!categoryToDelete) return;
     try {
-      await api.delete(`/categories/${categoryToDelete}`);
-      toast.success("Category deleted successfully");
+      const response = await api.delete(`/categories/${categoryToDelete}`);
+      toast({
+        title: "Deleted",
+        description: response.data?.message || "Category deleted successfully",
+        variant: "success"
+      });
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
       fetchCategories(searchTerm, page);
     } catch (error: any) {
       console.error("Failed to delete category:", error);
-      toast.error(error.response?.data?.message || "Failed to delete category");
+      const errorMsg = error.response?.data?.message || "Failed to delete category";
+      toast({
+        title: "Error",
+        description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        variant: "destructive"
+      });
     }
   };
 
@@ -226,9 +252,9 @@ const CategoriesPage = () => {
                       <StatusBadge status={c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"} />
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <ActionMenu 
-                        onEdit={() => handleEdit(c)} 
-                        onDelete={() => confirmDelete(c._id)} 
+                      <ActionMenu
+                        onEdit={() => handleEdit(c)}
+                        onDelete={() => confirmDelete(c._id)}
                       />
                     </td>
                   </tr>
@@ -239,7 +265,7 @@ const CategoriesPage = () => {
         </div>
         {!loading && (editingId || categories.length > 0) && (
           <div className="px-6 py-4 border-t border-border">
-            <PaginationBar 
+            <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
               onPageChange={handlePageChange}
@@ -248,31 +274,31 @@ const CategoriesPage = () => {
         )}
       </motion.div>
 
-      <FormDrawer 
-        open={drawerOpen} 
+      <FormDrawer
+        open={drawerOpen}
         onOpenChange={(open) => {
           setDrawerOpen(open);
           if (!open) {
             setEditingId(null);
             setFormData({ name: "", status: "active" });
           }
-        }} 
+        }}
         title={editingId ? "Edit Category" : "Add Category"}
         description={editingId ? "Update category details" : "Create a new business category"}
       >
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground">Category Name</label>
-            <input 
-              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" 
-              placeholder="Enter category name" 
+            <input
+              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Enter category name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
           <div>
             <label className="text-sm font-medium text-foreground">Status</label>
-            <select 
+            <select
               className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -281,7 +307,7 @@ const CategoriesPage = () => {
               <option value="inactive">Inactive</option>
             </select>
           </div>
-          <Button 
+          <Button
             className="w-full rounded-xl bg-primary hover:bg-primary/90 mt-4"
             onClick={handleSave}
             disabled={formLoading}
@@ -306,7 +332,7 @@ const CategoriesPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3">
             <AlertDialogCancel className="rounded-xl mt-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDelete}
               className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
             >
@@ -322,6 +348,7 @@ const CategoriesPage = () => {
 export default CategoriesPage;
 
 export const SubCategoriesPage = () => {
+  const { toast } = useToast();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -329,7 +356,7 @@ export const SubCategoriesPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
-  
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
@@ -398,32 +425,48 @@ export const SubCategoriesPage = () => {
 
   const handleSave = async () => {
     if (!formData.name.trim()) {
-      toast.error("Please enter a sub-category name");
+      toast({
+        title: "Validation Error",
+        description: "Please enter a sub-category name",
+        variant: "destructive"
+      });
       return;
     }
     if (!formData.parentCategory) {
-      toast.error("Please select a parent category");
+      toast({
+        title: "Validation Error",
+        description: "Please select a parent category",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
       setFormLoading(true);
       if (editingId) {
-        await api.put(`/categories/${editingId}`, {
+        const response = await api.put(`/categories/${editingId}`, {
           name: formData.name,
           type: "SUB",
           parentCategory: formData.parentCategory,
           status: formData.status
         });
-        toast.success("Sub-category updated successfully");
+        toast({
+          title: "Success",
+          description: response.data?.message || "Sub-category updated successfully",
+          variant: "success"
+        });
       } else {
-        await api.post("/categories", {
+        const response = await api.post("/categories", {
           name: formData.name,
           type: "SUB",
           parentCategory: formData.parentCategory,
           status: formData.status
         });
-        toast.success("Sub-category created successfully");
+        toast({
+          title: "Success",
+          description: response.data?.message || "Sub-category created successfully",
+          variant: "success"
+        });
       }
       setDrawerOpen(false);
       setEditingId(null);
@@ -431,7 +474,11 @@ export const SubCategoriesPage = () => {
       fetchSubCategories(searchTerm, page);
     } catch (error: any) {
       console.error("Failed to save sub-category:", error);
-      toast.error(error.response?.data?.message || "Failed to save sub-category");
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to save sub-category",
+        variant: "destructive"
+      });
     } finally {
       setFormLoading(false);
     }
@@ -450,14 +497,23 @@ export const SubCategoriesPage = () => {
   const handleDelete = async () => {
     if (!categoryToDelete) return;
     try {
-      await api.delete(`/categories/${categoryToDelete}`);
-      toast.success("Sub-category deleted successfully");
+      const response = await api.delete(`/categories/${categoryToDelete}`);
+      toast({
+        title: "Deleted",
+        description: response.data?.message || "Sub-category deleted successfully",
+        variant: "success"
+      });
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
       fetchSubCategories(searchTerm, page);
     } catch (error: any) {
       console.error("Failed to delete sub-category:", error);
-      toast.error(error.response?.data?.message || "Failed to delete sub-category");
+      const errorMsg = error.response?.data?.message || "Failed to delete sub-category";
+      toast({
+        title: "Error",
+        description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        variant: "destructive"
+      });
     }
   };
 
@@ -545,9 +601,9 @@ export const SubCategoriesPage = () => {
                       <StatusBadge status={c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"} />
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <ActionMenu 
-                        onEdit={() => handleEdit(c)} 
-                        onDelete={() => confirmDelete(c._id)} 
+                      <ActionMenu
+                        onEdit={() => handleEdit(c)}
+                        onDelete={() => confirmDelete(c._id)}
                       />
                     </td>
                   </tr>
@@ -558,7 +614,7 @@ export const SubCategoriesPage = () => {
         </div>
         {!loading && (editingId || subCategories.length > 0) && (
           <div className="px-6 py-4 border-t border-border">
-            <PaginationBar 
+            <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
               onPageChange={handlePageChange}
@@ -567,30 +623,30 @@ export const SubCategoriesPage = () => {
         )}
       </motion.div>
 
-      <FormDrawer 
-        open={drawerOpen} 
+      <FormDrawer
+        open={drawerOpen}
         onOpenChange={(open) => {
           setDrawerOpen(open);
           if (!open) {
             setEditingId(null);
             setFormData({ name: "", parentCategory: "", status: "active" });
           }
-        }} 
+        }}
         title={editingId ? "Edit Sub Category" : "Add Sub Category"}
       >
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground">Sub Category Name</label>
-            <input 
-              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" 
-              placeholder="Enter name" 
+            <input
+              className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Enter name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
           <div>
             <label className="text-sm font-medium text-foreground">Parent Category</label>
-            <select 
+            <select
               className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={formData.parentCategory}
               onChange={(e) => setFormData({ ...formData, parentCategory: e.target.value })}
@@ -603,7 +659,7 @@ export const SubCategoriesPage = () => {
           </div>
           <div>
             <label className="text-sm font-medium text-foreground">Status</label>
-            <select 
+            <select
               className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -612,7 +668,7 @@ export const SubCategoriesPage = () => {
               <option value="inactive">Inactive</option>
             </select>
           </div>
-          <Button 
+          <Button
             className="w-full rounded-xl bg-primary hover:bg-primary/90 mt-4"
             onClick={handleSave}
             disabled={formLoading}
@@ -637,7 +693,7 @@ export const SubCategoriesPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3">
             <AlertDialogCancel className="rounded-xl mt-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDelete}
               className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
             >

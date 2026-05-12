@@ -39,11 +39,12 @@ export interface Role {
 }
 
 export interface Region {
-  id: string;
+  _id: string;
   country: string;
   state: string;
   city: string;
-  membersCount: number;
+  memberCount: number;
+  status: "active" | "inactive";
 }
 
 export interface Announcement {
