@@ -262,7 +262,7 @@ const MembersPage = () => {
     if (name === "businessCategory") {
       setFormData(prev => ({ ...prev, subCategory: "" }));
       setSubCategories([]);
-      
+
       if (value) {
         setIsSubCategoriesLoading(true);
         try {
@@ -330,7 +330,7 @@ const MembersPage = () => {
       if (result.success || result.status === 200) {
         const fullData = result.data;
         setEditingMemberId(fullData._id);
-        
+
         // Fetch sub-categories for this member's category
         if (fullData.businessCategory) {
           const catId = typeof fullData.businessCategory === 'object' ? fullData.businessCategory._id : fullData.businessCategory;

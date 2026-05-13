@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import api from "@/services/api";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import PremiumLoader from "@/components/common/PremiumLoader";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const ReferralCategoriesPage = () => {
+  const { toast } = useToast();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +47,7 @@ export const ReferralCategoriesPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
-  
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
@@ -125,32 +126,48 @@ export const ReferralCategoriesPage = () => {
 
   const handleSave = async () => {
     if (formData.subCategories.length === 0) {
-      toast.error("Please select at least one sub category");
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one sub category",
+        variant: "destructive"
+      });
       return;
     }
     if (!formData.referralParent) {
-      toast.error("Please select a parent category");
+      toast({
+        title: "Validation Error",
+        description: "Please select a parent category",
+        variant: "destructive"
+      });
       return;
     }
 
     try {
       setFormLoading(true);
-      
+
       // Use the new batch assignment endpoint
-      await api.post("/referral-categories", {
+      const response = await api.post("/referral-categories", {
         subCategory: formData.subCategories.join(","),
         refferalCategory: formData.referralParent
       });
-      
-      toast.success(editingId ? "Referral category updated successfully" : "Referral categories assigned successfully");
-      
+
+      toast({
+        title: "Success",
+        description: response.data?.message || (editingId ? "Referral category updated successfully" : "Referral categories assigned successfully"),
+        variant: "success"
+      });
+
       setDrawerOpen(false);
       setEditingId(null);
       setFormData({ subCategories: [], referralParent: "", status: "active" });
       fetchCategories(searchTerm, page);
     } catch (error: any) {
       console.error("Failed to save referral category:", error);
-      toast.error(error.response?.data?.message || "Failed to save referral category");
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to save referral category",
+        variant: "destructive"
+      });
     } finally {
       setFormLoading(false);
     }
@@ -170,14 +187,23 @@ export const ReferralCategoriesPage = () => {
     if (!categoryToDelete) return;
     try {
       // Use the referral-categories endpoint to unlink
-      await api.delete(`/referral-categories/${categoryToDelete}`);
-      toast.success("Referral category deleted successfully");
+      const response = await api.delete(`/referral-categories/${categoryToDelete}`);
+      toast({
+        title: "Deleted",
+        description: response.data?.message || "Referral category deleted successfully",
+        variant: "success"
+      });
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
       fetchCategories(searchTerm, page);
     } catch (error: any) {
       console.error("Failed to delete referral category:", error);
-      toast.error(error.response?.data?.message || "Failed to delete referral category");
+      const errorMsg = error.response?.data?.message || "Failed to delete referral category";
+      toast({
+        title: "Error",
+        description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
+        variant: "destructive"
+      });
     }
   };
 
@@ -266,9 +292,9 @@ export const ReferralCategoriesPage = () => {
                       <StatusBadge status={c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"} />
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <ActionMenu 
-                        onEdit={() => handleEdit(c)} 
-                        onDelete={() => confirmDelete(c._id)} 
+                      <ActionMenu
+                        onEdit={() => handleEdit(c)}
+                        onDelete={() => confirmDelete(c._id)}
                       />
                     </td>
                   </tr>
@@ -279,7 +305,7 @@ export const ReferralCategoriesPage = () => {
         </div>
         {!loading && (editingId || categories.length > 0) && (
           <div className="px-6 py-4 border-t border-border">
-            <PaginationBar 
+            <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
               onPageChange={handlePageChange}
@@ -288,15 +314,15 @@ export const ReferralCategoriesPage = () => {
         )}
       </motion.div>
 
-      <FormDrawer 
-        open={drawerOpen} 
+      <FormDrawer
+        open={drawerOpen}
         onOpenChange={(open) => {
           setDrawerOpen(open);
           if (!open) {
             setEditingId(null);
             setFormData({ subCategories: [], referralParent: "", status: "active" });
           }
-        }} 
+        }}
         title={editingId ? "Edit Referral Category" : "Add Referral Category"}
       >
         <div className="space-y-6 py-2">
@@ -324,8 +350,8 @@ export const ReferralCategoriesPage = () => {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent 
-                  className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl border border-[#cbd5e1] bg-white overflow-hidden shadow-xl" 
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl border border-[#cbd5e1] bg-white overflow-hidden shadow-xl"
                   align="start"
                   sideOffset={4}
                 >
@@ -348,15 +374,15 @@ export const ReferralCategoriesPage = () => {
                               }}
                               className={cn(
                                 "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-[#f1f5f9] last:border-0",
-                                isSelected 
-                                  ? "bg-[#2563eb] text-white !data-[selected=true]:bg-[#2563eb] !data-[selected=true]:text-white" 
+                                isSelected
+                                  ? "bg-[#2563eb] text-white !data-[selected=true]:bg-[#2563eb] !data-[selected=true]:text-white"
                                   : "text-[#1e293b] data-[selected=true]:bg-[#f8fafc] data-[selected=true]:text-[#2563eb]"
                               )}
                             >
                               <div className={cn(
                                 "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
-                                isSelected 
-                                  ? "border-white bg-white" 
+                                isSelected
+                                  ? "border-white bg-white"
                                   : "border-[#cbd5e1] bg-white"
                               )}>
                                 {isSelected && (
@@ -376,7 +402,7 @@ export const ReferralCategoriesPage = () => {
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-foreground ml-1">Parent Category</Label>
-            <select 
+            <select
               className="w-full px-3 h-11 rounded-xl border border-[#cbd5e1] bg-[#f8fafc] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 transition-all appearance-none cursor-pointer"
               value={formData.referralParent}
               onChange={(e) => setFormData({ ...formData, referralParent: e.target.value })}
@@ -390,7 +416,7 @@ export const ReferralCategoriesPage = () => {
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-foreground ml-1">Status</Label>
-            <select 
+            <select
               className="w-full px-3 h-11 rounded-xl border border-[#cbd5e1] bg-[#f8fafc] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 transition-all appearance-none cursor-pointer"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -400,7 +426,7 @@ export const ReferralCategoriesPage = () => {
               <option value="inactive">Inactive</option>
             </select>
           </div>
-          <Button 
+          <Button
             className="w-full h-11 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-semibold mt-4 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.98]"
             onClick={handleSave}
             disabled={formLoading}
@@ -425,7 +451,7 @@ export const ReferralCategoriesPage = () => {
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3">
             <AlertDialogCancel className="rounded-xl mt-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDelete}
               className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
             >

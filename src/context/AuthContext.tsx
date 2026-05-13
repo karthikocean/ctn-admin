@@ -21,7 +21,7 @@ interface AuthContextType {
   user: User | null;
   accessToken: string | null;
   permissions: Permission[];
-  login: (phoneNumber: string, pin: string) => Promise<boolean>;
+  login: (phoneNumber: string, pin: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
   }, [fetchPermissions]);
 
-  const login = async (phoneNumber: string, pin: string): Promise<boolean> => {
+  const login = async (phoneNumber: string, pin: string): Promise<{ success: boolean; message: string }> => {
     try {
       const response = await api.post("/auth/login", {
         phoneNumber,
@@ -107,12 +107,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Fetch granular permissions
         await fetchPermissions(user.roleId);
         
-        return true;
+        return { success: true, message: response.data.message || "Login successful" };
       }
-      return false;
-    } catch (error) {
+      return { success: false, message: response.data.message || "Login failed" };
+    } catch (error: any) {
       console.error("Login failed:", error);
-      return false;
+      const errorMsg = error.response?.data?.message || "Login failed. Please try again.";
+      return { 
+        success: false, 
+        message: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg 
+      };
     }
   };
 

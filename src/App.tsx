@@ -6,12 +6,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { AuthProvider } from "@/context/AuthContext";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
+import { ProtectedRoute, PublicRoute, PermissionRoute } from "@/components/ProtectedRoute";
 import LoginPage from "@/pages/auth/LoginPage";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
 import RolesPage from "@/pages/roles/RolesPage";
 import MembersPage from "@/pages/members/MembersPage";
 import { AskPage, GivePage, PostPage, RequirementPage } from "@/pages/activities/ActivitiesPage";
+import SpotlightPage from "@/pages/spotlight/SpotlightPage";
 import RegionsPage from "@/pages/regions/RegionsPage";
 import CategoriesPage from "@/pages/categories/CategoriesPage";
 import { SubCategoriesPage } from "@/pages/categories/CategoriesPage";
@@ -53,6 +54,11 @@ const App = () => (
               <Route path="/" element={<DashboardPage />} />
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/members" element={<MembersPage />} />
+              <Route path="/spotlight" element={
+                <PermissionRoute module="spotlight" action="view">
+                  <SpotlightPage />
+                </PermissionRoute>
+              } />
               <Route path="/activities/ask" element={<AskPage />} />
               <Route path="/activities/give" element={<GivePage />} />
               <Route path="/activities/post" element={<PostPage />} />

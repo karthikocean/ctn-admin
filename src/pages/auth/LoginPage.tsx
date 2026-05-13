@@ -64,18 +64,18 @@ const LoginPage = () => {
     if (loading || !isPinComplete || !isPhoneValid) return;
 
     setLoading(true);
-    
-    const pinString = pin.join("");
-    const success = await login(phone, pinString);
 
-    if (success) {
+    const pinString = pin.join("");
+    const result = await login(phone, pinString);
+
+    if (result.success) {
       setIsSuccess(true);
-      toast.success("Login successful! Redirecting...");
+      toast.success(result.message);
       setTimeout(() => {
         navigate("/", { replace: true });
       }, 800);
     } else {
-      toast.error("Invalid phone number or PIN. Please try again.");
+      toast.error(result.message);
       setPin(["", "", "", ""]);
       inputRefs[0].current?.focus();
       setLoading(false);
@@ -87,7 +87,7 @@ const LoginPage = () => {
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#0d2b6b]">
       {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#0d2b6b] to-[#0a1f5c]" />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -96,13 +96,13 @@ const LoginPage = () => {
       >
         {/* Main Card */}
         <div className="bg-[#f4f5f7] rounded-[20px] shadow-2xl p-10 md:p-12 border border-white/20">
-          
+
           {/* Logo Section */}
           <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 bg-[#0a1f5c] rounded-2xl flex items-center justify-center mb-6 shadow-lg">
               <Globe className="text-white w-10 h-10" />
             </div>
-            
+
             <div className="text-center space-y-2">
               <span className="text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase">CREATE TRUSTED NETWORK</span>
               <h1 className="text-3xl font-bold text-[#0a1f5c] tracking-tight">Sign In</h1>
@@ -162,7 +162,7 @@ const LoginPage = () => {
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="text-center">
                   <a href="#" className="text-sm font-bold text-[#0a1f5c] hover:underline transition-all">
                     Forgot PIN?
@@ -197,7 +197,7 @@ const LoginPage = () => {
                   </>
                 )}
               </Button>
-              
+
               <div className="text-center">
                 <p className="text-xs font-bold text-gray-400 tracking-wide cursor-pointer hover:text-[#0a1f5c] transition-colors">
                   New to Globe Connect? <span className="text-[#0a1f5c]">Register Now</span>

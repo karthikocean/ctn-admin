@@ -43,12 +43,12 @@ export const mockRoles: Role[] = [
 ];
 
 export const mockRegions: Region[] = [
-  { id: "1", country: "India", state: "Maharashtra", city: "Mumbai", membersCount: 145 },
-  { id: "2", country: "India", state: "Maharashtra", city: "Pune", membersCount: 89 },
-  { id: "3", country: "India", state: "Gujarat", city: "Ahmedabad", membersCount: 112 },
-  { id: "4", country: "India", state: "Karnataka", city: "Bangalore", membersCount: 98 },
-  { id: "5", country: "India", state: "Delhi", city: "New Delhi", membersCount: 156 },
-  { id: "6", country: "India", state: "Kerala", city: "Kochi", membersCount: 67 },
+  { id: "1", country: "India", state: "Maharashtra", city: "Mumbai", membersCount: 145, status: "active" },
+  { id: "2", country: "India", state: "Maharashtra", city: "Pune", membersCount: 89, status: "active" },
+  { id: "3", country: "India", state: "Gujarat", city: "Ahmedabad", membersCount: 112, status: "active" },
+  { id: "4", country: "India", state: "Karnataka", city: "Bangalore", membersCount: 98, status: "active" },
+  { id: "5", country: "India", state: "Delhi", city: "New Delhi", membersCount: 156, status: "active" },
+  { id: "6", country: "India", state: "Kerala", city: "Kochi", membersCount: 67, status: "inactive" },
 ];
 
 export const mockAnnouncements: Announcement[] = [
@@ -940,6 +940,7 @@ export const permissionModules = [
   "awards",
   "members",
   "activities",
+  "spotlight",
   "connections",
   "contributions",
   "reports"

@@ -5,6 +5,7 @@ import { ChevronDown, X, ChevronLeft, Globe } from "lucide-react";
 import { sidebarNavItems } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import logo from "@/assets/logo.png";
 
 interface AdminSidebarProps {
   mobileOpen: boolean;
@@ -35,7 +36,7 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
     if (!item.moduleId) return true;
     const canViewParent = hasPermission(item.moduleId, "view");
     if (item.children) {
-      const accessibleChildren = item.children.filter(child => 
+      const accessibleChildren = item.children.filter(child =>
         !child.moduleId || hasPermission(child.moduleId, "view")
       );
       return canViewParent && (accessibleChildren.length > 0 || !!item.path);
@@ -59,8 +60,8 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
       {/* Logo & Toggle */}
       <div className="flex items-center justify-between p-4 h-16 border-b border-sidebar-border relative">
         <Link to="/" className="flex items-center gap-3 overflow-hidden">
-          <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-[#0a1f5c] flex items-center justify-center shadow-lg">
-            <Globe className="text-white w-5 h-5" />
+          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-md overflow-hidden p-1.5">
+            <img src={logo} alt="Logo" className="w-full h-full object-contain" />
           </div>
           {!isCollapsed && (
             <motion.div
@@ -68,14 +69,14 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
               animate={{ opacity: 1, x: 0 }}
               className="flex flex-col"
             >
-              <span className="font-bold text-sm text-sidebar-foreground leading-none">Globe</span>
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-1">Connect</span>
+              <span className="font-bold text-sm text-sidebar-foreground leading-none">Trusted</span>
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider mt-1">Admin Panel</span>
             </motion.div>
           )}
         </Link>
-        
+
         {/* Collapse Toggle Button (Desktop only) */}
-        <button 
+        <button
           onClick={onToggleCollapse}
           className="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-card border border-border rounded-full items-center justify-center shadow-sm hover:bg-secondary transition-colors z-50"
         >
@@ -175,7 +176,7 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
           );
         })}
       </nav>
-      
+
       {/* Support / Bottom Info */}
       {!isCollapsed && (
         <div className="p-4 border-t border-sidebar-border bg-sidebar-accent/10">
