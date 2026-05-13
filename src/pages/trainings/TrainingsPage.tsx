@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   GraduationCap, Search, Plus, Trash2, Video, User, Award,
-  ImageIcon, Layout, FileText, PlayCircle, Film, Clock, Users, X
+  ImageIcon, Layout, FileText, PlayCircle, Film, X
 } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
 import ActionMenu from "@/components/common/ActionMenu";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +75,9 @@ const TrainingsPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [trainings, setTrainings] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const canCreate = hasPermission("trainings", "create");
   const canEdit = hasPermission("trainings", "edit");
@@ -345,10 +349,16 @@ const TrainingsPage = () => {
     setActiveTab("basic");
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this training course?")) return;
+  const handleDelete = (id: string) => {
+    setDeletingId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingId) return;
+    setIsDeleting(true);
     try {
-      await deleteTraining(id);
+      await deleteTraining(deletingId);
       toast({ title: "Deleted", description: "Training course removed", variant: "success" });
       fetchTrainings();
     } catch (error: any) {
@@ -357,6 +367,10 @@ const TrainingsPage = () => {
         description: error.response?.data?.message || "Failed to delete training",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
     }
   };
 
@@ -413,7 +427,15 @@ const TrainingsPage = () => {
                 </div>
               </div>
               <div className="p-5">
-                <h3 className="font-bold text-foreground text-lg leading-tight group-hover:text-primary transition-colors line-clamp-1">{t.title}</h3>
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-bold text-foreground text-lg leading-tight group-hover:text-primary transition-colors line-clamp-1">{t.title}</h3>
+                  {(canEdit || canDelete) && (
+                    <ActionMenu
+                      onEdit={canEdit ? () => handleEdit(t) : undefined}
+                      onDelete={canDelete ? () => handleDelete(t._id) : undefined}
+                    />
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="w-6 h-6 rounded-full bg-secondary border border-border overflow-hidden">
                     <img src={getFullUrl(t.authorImage)} alt={t.authorName} className="w-full h-full object-cover" />
@@ -430,18 +452,6 @@ const TrainingsPage = () => {
                     <span className="font-semibold text-foreground">{t.overallPoints} Points</span>
                   </div>
                 </div>
-                <div className="mt-5 pt-4 border-t border-border/40 flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
-                    <div className="flex items-center gap-1.5"><Users size={12} /> 0 Enrolled</div>
-                    <div className="flex items-center gap-1.5"><Clock size={12} /> Course</div>
-                  </div>
-                  {(canEdit || canDelete) && (
-                    <ActionMenu
-                      onEdit={canEdit ? () => handleEdit(t) : undefined}
-                      onDelete={canDelete ? () => handleDelete(t._id) : undefined}
-                    />
-                  )}
-                </div>
               </div>
             </motion.div>
           ))
@@ -453,7 +463,7 @@ const TrainingsPage = () => {
         )}
       </div>
 
-      {!isFetching && trainings.length > 0 && (
+      {/* {!isFetching && trainings.length > 0 && (
         <div className="mt-8">
           <PaginationBar
             currentPage={page + 1}
@@ -461,9 +471,9 @@ const TrainingsPage = () => {
             onPageChange={(p) => setPage(p - 1)}
           />
         </div>
-      )}
+      )} */}
 
-      <FormDrawer open={drawerOpen} onOpenChange={setDrawerOpen} title={form.title || (editingId ? "Edit Training Course" : "Create Training Course")}>
+      <FormDrawer open={drawerOpen} onOpenChange={setDrawerOpen} title={form.title || (editingId ? "Edit Training Course" : "Create Training Course")} scrollable={false}>
         <div className="flex flex-col h-full bg-slate-50/40 relative">
           <div className="flex items-center gap-1 p-4 bg-white border-b border-border sticky top-0 z-10 overflow-x-auto no-scrollbar">
             {[
@@ -477,9 +487,18 @@ const TrainingsPage = () => {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+          {activeTab === "lessons" && (
+            <div className="px-6 py-4 bg-slate-50/50 backdrop-blur-sm border-b border-slate-100 shrink-0">
+              <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Video size={16} className="text-primary" /> Lessons ({form.lessons.length})</h3>
+                <Button variant="outline" size="sm" onClick={addLesson} className="h-9 rounded-xl border-primary text-primary font-bold"><Plus size={14} className="mr-1.5" /> Add Lesson</Button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-hidden relative">
             {activeTab === "basic" && (
-              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="h-full overflow-y-auto px-6 py-6 space-y-6 pb-32">
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Training Title <span className="text-red-500">*</span></Label>
                   <Input placeholder="e.g. Mastering Client Relationships" className={cn("h-12 rounded-2xl", errors.title && "border-red-500 focus-visible:ring-red-500")} value={form.title} onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))} />
@@ -496,7 +515,7 @@ const TrainingsPage = () => {
                       {form.thumbnail ? (
                         <div className="relative w-full h-full">
                           <img src={getFullUrl(form.thumbnail)} className="w-full h-full object-cover" />
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, thumbnail: null, thumbnailFile: null })); }}
                             className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
                           >
@@ -518,7 +537,7 @@ const TrainingsPage = () => {
                       {form.banner ? (
                         <div className="relative w-full h-full">
                           <img src={getFullUrl(form.banner)} className="w-full h-full object-cover" />
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, banner: null, bannerFile: null })); }}
                             className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
                           >
@@ -563,13 +582,13 @@ const TrainingsPage = () => {
             )}
 
             {activeTab === "author" && (
-              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="h-full overflow-y-auto px-6 py-6 space-y-6 pb-32">
                 <div className="flex items-center gap-6">
                   <div className={cn("relative group w-32 h-32 rounded-3xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex items-center justify-center", errors.authorImage && "border-red-500 bg-red-50")}>
                     {form.authorImage ? (
                       <div className="relative w-full h-full">
                         <img src={getFullUrl(form.authorImage)} className="w-full h-full object-cover" />
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, authorImage: null, authorImageFile: null })); }}
                           className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
                         >
@@ -598,106 +617,99 @@ const TrainingsPage = () => {
             )}
 
             {activeTab === "lessons" && (
-              <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200 sticky top-0 z-10 shadow-sm">
-                  <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Video size={16} className="text-primary" /> Lessons ({form.lessons.length})</h3>
-                  <Button variant="outline" size="sm" onClick={addLesson} className="h-9 rounded-xl border-primary text-primary font-bold"><Plus size={14} className="mr-1.5" /> Add Lesson</Button>
-                </div>
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full overflow-y-auto px-6 py-6 space-y-5 pb-32">
+                {form.lessons.map((lesson, idx) => (
+                  <div key={lesson.id} className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm relative group/lesson overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-50">
+                      <div className="flex items-center gap-2">
+                        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-slate-100 text-slate-900 text-[10px] font-bold">
+                          {idx + 1}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lesson Detail</span>
+                      </div>
+                      <button onClick={() => removeLesson(lesson.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/lesson:opacity-100">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
 
-                <div className="space-y-5">
-                  {form.lessons.map((lesson, idx) => (
-                    <div key={lesson.id} className="p-5 rounded-3xl bg-white border border-slate-200 shadow-sm relative group/lesson overflow-hidden">
-                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-50">
-                        <div className="flex items-center gap-2">
-                          <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-slate-100 text-slate-900 text-[10px] font-bold">
-                            {idx + 1}
-                          </span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lesson Detail</span>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold text-slate-400 uppercase">Lesson Video <span className="text-red-500">*</span></Label>
+                          <div className={cn("relative group/vid aspect-video rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden", errors[`lesson_${lesson.id}_video`] && "border-red-500 bg-red-50")}>
+                            {lesson.videoUrl ? (
+                              <div className="relative w-full h-full group">
+                                <video src={getFullUrl(lesson.videoUrl)} className="w-full h-full object-cover" controls={false} muted />
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); updateLesson(lesson.id, "videoUrl", null); updateLesson(lesson.id, "videoFile", null); }}
+                                  className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <Film size={24} className="text-slate-200" />
+                                <input type="file" accept="video/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleVideoUpload(e, lesson.id)} />
+                              </>
+                            )}
+                          </div>
+                          {lesson.videoFile && <p className="text-[9px] text-primary font-medium mt-1 truncate">{lesson.videoFile.name}</p>}
+                          {errors[`lesson_${lesson.id}_video`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_video`]}</p>}
                         </div>
-                        <button onClick={() => removeLesson(lesson.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/lesson:opacity-100">
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold text-slate-400 uppercase">Lesson Thumbnail <span className="text-red-500">*</span></Label>
+                          <div className={cn("relative group/thumb aspect-video rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden", errors[`lesson_${lesson.id}_thumbnail`] && "border-red-500 bg-red-50")}>
+                            {lesson.thumbnail ? (
+                              <div className="relative w-full h-full">
+                                <img src={getFullUrl(lesson.thumbnail)} className="w-full h-full object-cover" />
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); updateLesson(lesson.id, "thumbnail", null); updateLesson(lesson.id, "thumbnailFile", null); }}
+                                  className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <ImageIcon size={24} className="text-slate-200" />
+                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, "lesson", lesson.id)} />
+                              </>
+                            )}
+                          </div>
+                          {errors[`lesson_${lesson.id}_thumbnail`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_thumbnail`]}</p>}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold text-slate-400 uppercase">Lesson Video <span className="text-red-500">*</span></Label>
-                            <div className={cn("relative group/vid aspect-video rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden", errors[`lesson_${lesson.id}_video`] && "border-red-500 bg-red-50")}>
-                              {lesson.videoUrl ? (
-                                <div className="relative w-full h-full group">
-                                  <video src={getFullUrl(lesson.videoUrl)} className="w-full h-full object-cover" controls={false} muted />
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); updateLesson(lesson.id, "videoUrl", null); updateLesson(lesson.id, "videoFile", null); }}
-                                    className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                              ) : (
-                                <>
-                                  <Film size={24} className="text-slate-200" />
-                                  <input type="file" accept="video/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleVideoUpload(e, lesson.id)} />
-                                </>
-                              )}
-                            </div>
-                            {lesson.videoFile && <p className="text-[9px] text-primary font-medium mt-1 truncate">{lesson.videoFile.name}</p>}
-                            {errors[`lesson_${lesson.id}_video`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_video`]}</p>}
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-[10px] font-bold text-slate-400 uppercase">Lesson Thumbnail <span className="text-red-500">*</span></Label>
-                            <div className={cn("relative group/thumb aspect-video rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden", errors[`lesson_${lesson.id}_thumbnail`] && "border-red-500 bg-red-50")}>
-                              {lesson.thumbnail ? (
-                                <div className="relative w-full h-full">
-                                  <img src={getFullUrl(lesson.thumbnail)} className="w-full h-full object-cover" />
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); updateLesson(lesson.id, "thumbnail", null); updateLesson(lesson.id, "thumbnailFile", null); }}
-                                    className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                              ) : (
-                                <>
-                                  <ImageIcon size={24} className="text-slate-200" />
-                                  <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, "lesson", lesson.id)} />
-                                </>
-                              )}
-                            </div>
-                            {errors[`lesson_${lesson.id}_thumbnail`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_thumbnail`]}</p>}
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px] gap-4">
-                            <div className="space-y-1.5">
-                              <Label className="text-[10px] font-bold text-slate-500 uppercase">Lesson Title <span className="text-red-500">*</span></Label>
-                              <Input placeholder="Lesson Title" className={cn("h-10 rounded-xl text-sm", errors[`lesson_${lesson.id}_title`] && "border-red-500 focus-visible:ring-red-500")} value={lesson.title} onChange={(e) => updateLesson(lesson.id, "title", e.target.value)} />
-                              {errors[`lesson_${lesson.id}_title`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_title`]}</p>}
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-[10px] font-bold text-slate-500 uppercase">Points</Label>
-                              <Input type="number" className="h-10 rounded-xl text-sm" value={lesson.points} onChange={(e) => updateLesson(lesson.id, "points", parseInt(e.target.value))} />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-[10px] font-bold text-slate-500 uppercase">Duration</Label>
-                              <Input
-                                placeholder="00:00"
-                                readOnly
-                                className="h-10 rounded-xl text-sm bg-slate-50 font-mono text-slate-500 cursor-not-allowed border-slate-100"
-                                value={lesson.duration}
-                              />
-                            </div>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-[1fr_80px_100px] gap-4">
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold text-slate-500 uppercase">Lesson Title <span className="text-red-500">*</span></Label>
+                            <Input placeholder="Lesson Title" className={cn("h-10 rounded-xl text-sm", errors[`lesson_${lesson.id}_title`] && "border-red-500 focus-visible:ring-red-500")} value={lesson.title} onChange={(e) => updateLesson(lesson.id, "title", e.target.value)} />
+                            {errors[`lesson_${lesson.id}_title`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_title`]}</p>}
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-[10px] font-bold text-slate-500 uppercase">Description</Label>
-                            <Input placeholder="Short description..." className="h-10 rounded-xl text-sm" value={lesson.description} onChange={(e) => updateLesson(lesson.id, "description", e.target.value)} />
+                            <Label className="text-[10px] font-bold text-slate-500 uppercase">Points</Label>
+                            <Input type="number" className="h-10 rounded-xl text-sm" value={lesson.points} onChange={(e) => updateLesson(lesson.id, "points", parseInt(e.target.value))} />
                           </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] font-bold text-slate-500 uppercase">Duration</Label>
+                            <Input
+                              placeholder="00:00"
+                              readOnly
+                              className="h-10 rounded-xl text-sm bg-slate-50 font-mono text-slate-500 cursor-not-allowed border-slate-100"
+                              value={lesson.duration}
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] font-bold text-slate-500 uppercase">Description</Label>
+                          <Input placeholder="Short description..." className="h-10 rounded-xl text-sm" value={lesson.description} onChange={(e) => updateLesson(lesson.id, "description", e.target.value)} />
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </motion.div>
             )}
           </div>
@@ -710,6 +722,15 @@ const TrainingsPage = () => {
           </div>
         </div>
       </FormDrawer>
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Training Course?"
+        description="Are you sure you want to delete this course? This will remove all associated lessons and curriculum data permanently."
+        onConfirm={confirmDelete}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };
