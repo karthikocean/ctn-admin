@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Network, Share2 } from "lucide-react";
+import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface GlobalNetworkLoaderProps {
@@ -14,7 +14,7 @@ interface GlobalNetworkLoaderProps {
 const GlobalNetworkLoader: React.FC<GlobalNetworkLoaderProps> = ({
   fullScreen = true,
   size = "lg",
-  title = "Syncing Network Data...",
+  title = "Connecting to Global Network...",
   subtitle = "Establishing secure connection to global nodes",
   className,
 }) => {
@@ -27,159 +27,107 @@ const GlobalNetworkLoader: React.FC<GlobalNetworkLoaderProps> = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className={cn(
-          "flex flex-col items-center justify-center transition-all duration-700",
-          fullScreen ? "fixed inset-0 z-[9999] bg-[#020617]" : "w-full h-full min-h-[400px]",
+          "flex flex-col items-center justify-center transition-all duration-700 overflow-hidden",
+          fullScreen 
+            ? "fixed inset-0 z-[9999] bg-[#020617]/50 backdrop-blur-md" 
+            : "fixed top-0 bottom-0 right-0 z-50 bg-slate-900/5 dark:bg-[#020617]/10 backdrop-blur-md",
           className
         )}
+        style={!fullScreen ? { left: 'var(--sidebar-width, 260px)' } : {}}
       >
-        {/* Background Radial Glow */}
-        {fullScreen && (
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] opacity-50" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[80px]" />
-          </div>
-        )}
+        {/* Background Enhancements - Immersive Glows */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-blue-500/[0.03]" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-600/[0.07] rounded-full blur-[120px] animate-pulse" />
+        </div>
 
-        <div className="relative flex items-center justify-center">
-          {/* Ripple Waves */}
-          {!isSmall && (
-            <>
-              {[...Array(3)].map((_, i) => (
-                <motion.div
-                  key={`wave-${i}`}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 2.5, opacity: [0, 0.15, 0] }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    delay: i * 1.3,
-                    ease: "easeOut",
-                  }}
-                  className="absolute w-32 h-32 border border-blue-500/30 rounded-full"
+        <div className="relative flex flex-col items-center justify-center z-10 w-full h-full">
+
+          {/* Refined "The Sync Orb" - Compact and Elegant */}
+          <div className={cn(
+            "relative flex items-center justify-center mb-8",
+            isSmall ? "w-16 h-16" : "w-28 h-28"
+          )}>
+
+            {/* Fine Scanning Ring */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              className="absolute inset-0 border-[1.5px] border-transparent border-t-blue-500 rounded-full opacity-60"
+            />
+
+            {/* Outer Static Faint Ring */}
+            <div className="absolute inset-0 border border-blue-500/10 rounded-full" />
+
+            {/* Micro Orbiting Nodes */}
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={i}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 6 + i * 2, repeat: Infinity, ease: "linear" }}
+                className="absolute inset-0"
+              >
+                <div
+                  className="absolute w-1.5 h-1.5 bg-blue-400 rounded-full shadow-[0_0_8px_rgba(96,165,250,0.6)]"
+                  style={{ top: '0', left: '50%', transform: 'translate(-50%, -50%)' }}
                 />
-              ))}
-            </>
-          )}
+              </motion.div>
+            ))}
 
-          {/* Central Node */}
-          <motion.div
-            animate={{
-              scale: [1, 1.05, 1],
-              boxShadow: [
-                "0 0 20px rgba(59, 130, 246, 0.2)",
-                "0 0 40px rgba(59, 130, 246, 0.4)",
-                "0 0 20px rgba(59, 130, 246, 0.2)",
-              ],
-            }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className={cn(
-              "relative z-20 bg-[#0f172a] border border-blue-500/30 rounded-[1.5rem] flex items-center justify-center",
-              isSmall ? "w-10 h-10 rounded-xl" : "w-24 h-24"
-            )}
-          >
-            <Network className={cn("text-blue-400", isSmall ? "w-5 h-5" : "w-10 h-10")} />
-            
-            {/* Inner Glow */}
-            <div className="absolute inset-0 bg-blue-500/5 rounded-[1.5rem] animate-pulse" />
-          </motion.div>
+            {/* Central Globe Core - More compact */}
+            <motion.div
+              animate={{
+                scale: [1, 1.05, 1],
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className={cn(
+                "relative z-10 flex items-center justify-center bg-slate-100 dark:bg-slate-900 border border-blue-500/20 rounded-full shadow-xl",
+                isSmall ? "w-8 h-8" : "w-14 h-14"
+              )}
+            >
+              <Globe className={cn("text-blue-400", isSmall ? "w-4 h-4" : "w-7 h-7")} />
 
-          {/* Orbiting Nodes & Lines */}
+              {/* Subtle Internal Pulse */}
+              <motion.div
+                animate={{ scale: [1, 1.4], opacity: [0.2, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute inset-0 bg-blue-500/30 rounded-full"
+              />
+            </motion.div>
+          </div>
+
+          {/* REFINED THREE DOTS BELOW */}
+          <div className="flex items-center justify-center gap-2">
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={i}
+                animate={{
+                  y: [0, -5, 0],
+                  opacity: [0.3, 1, 0.3],
+                }}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  delay: i * 0.2,
+                  ease: "easeInOut"
+                }}
+                className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.3)]"
+              />
+            ))}
+          </div>
+
+          {/* Minimal Typography */}
           {!isSmall && (
-            <div className="absolute inset-0 w-64 h-64 -left-20 -top-20 pointer-events-none">
-              <svg className="w-full h-full" viewBox="0 0 200 200">
-                <defs>
-                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="rgba(59, 130, 246, 0)" />
-                    <stop offset="50%" stopColor="rgba(59, 130, 246, 0.5)" />
-                    <stop offset="100%" stopColor="rgba(59, 130, 246, 0)" />
-                  </linearGradient>
-                </defs>
-
-                {/* Data Flow Lines */}
-                {[...Array(6)].map((_, i) => {
-                  const angle = (i * 60 * Math.PI) / 180;
-                  const x2 = 100 + 70 * Math.cos(angle);
-                  const y2 = 100 + 70 * Math.sin(angle);
-                  return (
-                    <motion.line
-                      key={`line-${i}`}
-                      x1="100"
-                      y1="100"
-                      x2={x2}
-                      y2={y2}
-                      stroke="url(#lineGradient)"
-                      strokeWidth="1"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ 
-                        pathLength: [0, 1, 0], 
-                        opacity: [0, 1, 0],
-                        x2: [100, x2, 100],
-                        y2: [100, y2, 100]
-                      }}
-                      transition={{
-                        duration: 3 + i * 0.5,
-                        repeat: Infinity,
-                        delay: i * 0.7,
-                        ease: "easeInOut",
-                      }}
-                    />
-                  );
-                })}
-
-                {/* Orbiting Dots */}
-                {[...Array(4)].map((_, i) => (
-                  <motion.circle
-                    key={`dot-${i}`}
-                    r="3"
-                    className="fill-blue-400 shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-                    animate={{
-                      cx: [
-                        100 + (60 + i * 10) * Math.cos(0),
-                        100 + (60 + i * 10) * Math.cos(2 * Math.PI),
-                      ],
-                      cy: [
-                        100 + (60 + i * 10) * Math.sin(0),
-                        100 + (60 + i * 10) * Math.sin(2 * Math.PI),
-                      ],
-                    }}
-                    transition={{
-                      duration: 10 + i * 5,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  />
-                ))}
-              </svg>
+            <div className="mt-8 text-center space-y-1.5 relative z-10">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">
+                {title}
+              </h3>
+              <p className="text-slate-400 dark:text-blue-300/30 text-[9px] font-bold uppercase tracking-[0.3em]">
+                {subtitle}
+              </p>
             </div>
           )}
         </div>
-
-        {/* Text Content */}
-        {!isSmall && (
-          <div className="mt-12 text-center relative z-10">
-            <motion.h3
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
-              className="text-xl font-bold text-white tracking-tight"
-            >
-              <motion.span
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-              >
-                {title}
-              </motion.span>
-            </motion.h3>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.2, duration: 1 }}
-              className="mt-2 text-blue-200/40 text-xs font-medium uppercase tracking-[0.3em]"
-            >
-              {subtitle}
-            </motion.p>
-          </div>
-        )}
       </motion.div>
     </AnimatePresence>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Globe, Loader2 } from "lucide-react";
-import { Country, State } from "country-state-city";
+import { Country, State, City } from "country-state-city";
+import { Plus, Trash2, Search, Filter, Globe, Loader2, MapPin } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { getRegions, createRegion, updateRegion, deleteRegion } from "@/api/RegionApi";
 import { useToast } from "@/hooks/use-toast";
 import { Region } from "@/types";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const RegionsPage = () => {
   const { toast } = useToast();
@@ -37,13 +38,15 @@ const RegionsPage = () => {
 
   // Form states
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
-  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedCountry, setSelectedCountry] = useState<string>("IN");
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedCity, setSelectedCity] = useState<string>("");
+  const [areas, setAreas] = useState<string[]>([""]);
   const [saving, setSaving] = useState(false);
 
   const countries = Country.getAllCountries();
   const states = selectedCountry ? State.getStatesOfCountry(selectedCountry) : [];
+  const cities = (selectedCountry && selectedState) ? City.getCitiesOfState(selectedCountry, selectedState) : [];
 
   const fetchRegions = async () => {
     try {
@@ -77,9 +80,10 @@ const RegionsPage = () => {
 
   const handleOpenAdd = () => {
     setEditingRegion(null);
-    setSelectedCountry("");
+    setSelectedCountry("IN");
     setSelectedState("");
     setSelectedCity("");
+    setAreas([""]);
     setDrawerOpen(true);
   };
 
@@ -97,57 +101,77 @@ const RegionsPage = () => {
       const stateObj = regionStates.find(s => s.name === region.state);
       if (stateObj) {
         setSelectedState(stateObj.isoCode);
+        const stateCities = City.getCitiesOfState(countryObj.isoCode, stateObj.isoCode);
+        const cityObj = stateCities.find(c => c.name === region.city);
+        if (cityObj) {
+          setSelectedCity(cityObj.name);
+        } else {
+          setSelectedCity(region.city);
+        }
       }
     }
-
+    // Set areas if available, otherwise default to one empty input
+    setAreas(region.areas && region.areas.length > 0 ? region.areas : [""]);
     setDrawerOpen(true);
   };
 
+  const handleAddArea = () => {
+    setAreas([...areas, ""]);
+  };
+
+  const handleAreaChange = (index: number, value: string) => {
+    const updatedAreas = [...areas];
+    updatedAreas[index] = value;
+    setAreas(updatedAreas);
+  };
+
+  const handleRemoveArea = (index: number) => {
+    if (areas.length > 1) {
+      setAreas(areas.filter((_, i) => i !== index));
+    } else {
+      setAreas([""]);
+    }
+  };
+
   const handleSave = async () => {
-    if (!selectedCountry || !selectedState || !selectedCity) {
+    const countryName = countries.find(c => c.isoCode === selectedCountry)?.name || "";
+    const stateName = states.find(s => s.isoCode === selectedState)?.name || "";
+    
+    // Filter out empty areas
+    const filteredAreas = areas.filter(a => a.trim() !== "");
+
+    if (!countryName || !stateName || !selectedCity) {
       toast({
         title: "Validation Error",
-        description: "Please fill all fields",
+        description: "Please fill all required fields",
         variant: "destructive"
       });
       return;
     }
 
+    setSaving(true);
     try {
-      setSaving(true);
-      const countryName = countries.find(c => c.isoCode === selectedCountry)?.name || "";
-      const stateName = states.find(s => s.isoCode === selectedState)?.name || "";
-
       const payload = {
         country: countryName,
         state: stateName,
         city: selectedCity,
-        status: "active"
+        areas: filteredAreas,
+        status: "active" as const
       };
 
       if (editingRegion) {
-        const res = await updateRegion(editingRegion._id, payload);
-        toast({
-          title: "Success",
-          description: res.message || "Region updated successfully",
-          variant: "success"
-        });
+        await updateRegion(editingRegion._id, payload);
+        toast({ title: "Updated", description: "Region updated successfully", variant: "success" });
       } else {
-        const res = await createRegion(payload);
-        toast({
-          title: "Success",
-          description: res.message || "Region created successfully",
-          variant: "success"
-        });
+        await createRegion(payload);
+        toast({ title: "Created", description: "Region created successfully", variant: "success" });
       }
-
       setDrawerOpen(false);
       fetchRegions();
     } catch (error: any) {
-      const message = error.response?.data?.message || "Failed to save region";
       toast({
         title: "Error",
-        description: message,
+        description: error.response?.data?.message || "Failed to save region",
         variant: "destructive"
       });
     } finally {
@@ -186,7 +210,15 @@ const RegionsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && regions.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Mapping Business Regions..."
+          subtitle="Synchronizing regional nodes and member clusters"
+        />
+      )}
+
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         {/* Title Block */}
@@ -254,22 +286,16 @@ const RegionsPage = () => {
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Country</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">State</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">City</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Areas</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Members</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {loading ? (
+              {regions.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
-                    <span className="text-xs text-muted-foreground">Loading regions...</span>
-                  </td>
-                </tr>
-              ) : regions.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={7} className="px-6 py-12 text-center text-xs text-muted-foreground">
                     No regions found
                   </td>
                 </tr>
@@ -279,6 +305,24 @@ const RegionsPage = () => {
                     <td className="px-6 py-4 text-sm text-foreground font-medium">{r.country}</td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{r.state}</td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{r.city}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {r.areas && r.areas.length > 0 ? (
+                          r.areas.slice(0, 2).map((area, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 border-none font-medium">
+                              {area}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground italic">No areas defined</span>
+                        )}
+                        {r.areas && r.areas.length > 2 && (
+                          <Badge variant="secondary" className="text-[10px] bg-primary/5 text-primary border-none font-bold">
+                            +{r.areas.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-sm text-primary font-semibold hidden sm:table-cell">{r.memberCount || 0}</td>
                     <td className="px-6 py-4">
                       <Badge variant={r.status === "active" ? "default" : "secondary"} className={r.status === "active" ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20" : "bg-muted/50 text-muted-foreground"}>
@@ -358,25 +402,79 @@ const RegionsPage = () => {
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">City</label>
-            <Input
-              value={selectedCity}
-              onChange={(e) => setSelectedCity(e.target.value)}
-              placeholder="Enter city name"
-              className="h-11 bg-secondary/50 border-border rounded-xl focus:ring-primary/20"
-            />
+            <Select value={selectedCity} onValueChange={setSelectedCity}>
+              <SelectTrigger className="h-11 bg-secondary/50 border-border rounded-xl focus:ring-primary/20">
+                <SelectValue placeholder="Select City" />
+              </SelectTrigger>
+              <SelectContent>
+                {cities.map((city) => (
+                  <SelectItem key={city.name} value={city.name}>
+                    {city.name}
+                  </SelectItem>
+                ))}
+                {cities.length === 0 && (
+                  <p className="text-center py-2 text-xs text-muted-foreground italic">
+                    {!selectedState ? "Select a state first" : "No cities found"}
+                  </p>
+                )}
+              </SelectContent>
+            </Select>
           </div>
+
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Specific Areas / Localities
+              </label>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={handleAddArea}
+                className="h-7 px-2 rounded-lg text-[10px] font-bold border-primary/20 text-primary hover:bg-primary/5"
+              >
+                <Plus size={12} className="mr-1" /> Add Area
+              </Button>
+            </div>
+            
+            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+              {areas.map((area, index) => (
+                <div key={index} className="flex items-center gap-2 group">
+                  <div className="relative flex-1">
+                    <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
+                    <Input
+                      value={area}
+                      onChange={(e) => handleAreaChange(index, e.target.value)}
+                      placeholder={`Area ${index + 1} (e.g. T. Nagar, Adyar)`}
+                      className="h-10 pl-9 bg-white border-slate-200 rounded-xl focus:ring-primary/20 text-xs font-medium"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveArea(index)}
+                    className="h-9 w-9 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <Button
-            className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 mt-4 shadow-lg shadow-primary/20 font-medium"
+            className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 mt-6 shadow-lg shadow-primary/20 font-bold text-sm tracking-wide transition-all active:scale-[0.98]"
             onClick={handleSave}
             disabled={saving}
           >
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                Saving Region...
               </>
             ) : (
-              "Save Region"
+              editingRegion ? "Update Region Configuration" : "Create New Business Region"
             )}
           </Button>
         </div>

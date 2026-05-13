@@ -56,6 +56,7 @@ import {
 } from "@/api/MembersApi";
 import { uploadFiles } from "@/api/MediaApi";
 import { getCategories } from "@/api/CategoryApi";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -576,7 +577,15 @@ const MembersPage = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] mx-auto relative min-h-[600px]">
+      {isLoading && members.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Syncing Member Directory..."
+          subtitle="Establishing secure connection to member nodes"
+        />
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -635,16 +644,9 @@ const MembersPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading && members.length === 0 ? (
+              {members.length === 0 && !isLoading ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-64 text-center">
-                    <Loader2 className="animate-spin inline mr-2" />
-                    Loading members...
-                  </TableCell>
-                </TableRow>
-              ) : members.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-64 text-center text-muted-foreground">
                     No members found
                   </TableCell>
                 </TableRow>

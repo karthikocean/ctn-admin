@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, getAnnouncementDetails } from "@/api/AnnouncementsApi";
 import { uploadFiles } from "@/api/MediaApi";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -217,7 +218,15 @@ const AnnouncementsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {isLoading && announcements.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Synchronizing Announcements..."
+          subtitle="Broadcasting network updates to all global nodes"
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -248,12 +257,6 @@ const AnnouncementsPage = () => {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-64">
-          <Loader2 className="animate-spin text-primary mb-2" />
-          <p className="text-sm text-muted-foreground">Loading announcements...</p>
-        </div>
-      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {announcements.map((a, i) => (
             <motion.div key={a._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }} className="glass-card overflow-hidden flex flex-col">
@@ -307,8 +310,6 @@ const AnnouncementsPage = () => {
             </div>
           )}
         </div>
-      )}
-
       <FormDrawer
         open={drawerOpen}
         onOpenChange={(open) => { setDrawerOpen(open); if (!open) resetForm(); }}

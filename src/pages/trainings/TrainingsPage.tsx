@@ -24,6 +24,7 @@ import {
   deleteTraining
 } from "@/api/TrainingApi";
 import { uploadFiles } from "@/api/MediaApi";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const getFullUrl = (path: string | null) => {
   if (!path) return "";
@@ -375,7 +376,15 @@ const TrainingsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {isFetching && trainings.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Synchronizing Curriculum..."
+          subtitle="Establishing connection to educational network nodes"
+        />
+      )}
+
       {/* Header Section */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-border/60">
         <div className="flex items-center gap-3">
@@ -412,11 +421,7 @@ const TrainingsPage = () => {
 
       {/* Course Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isFetching ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-[350px] rounded-3xl bg-slate-100 animate-pulse" />
-          ))
-        ) : trainings.length > 0 ? (
+        {trainings.length > 0 ? (
           trainings.map((t, i) => (
             <motion.div key={t._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-card overflow-hidden group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300">
               <div className="aspect-video relative overflow-hidden bg-secondary">

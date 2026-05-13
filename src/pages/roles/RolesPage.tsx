@@ -580,683 +580,684 @@ const RolesPage = () => {
   };
 
 
-  // Modern Full Page Loader
-  if (loading && roles.length === 0) {
-    return (
-      <GlobalNetworkLoader
-        fullScreen={true}
-        title="CTN Admin Network Data..."
-        subtitle="Establishing secure connection to global nodes"
-      />
-    );
-  }
-
   return (
     <div className="page-container">
-      {/* Single Row Header */}
-      <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
-        {/* Page Title Block */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Shield size={16} className="text-primary" />
-          </div>
-          <div>
-            <h1 className="text-base font-semibold text-foreground">Roles & Permissions</h1>
-          </div>
+      {loading && roles.length === 0 ? (
+        <div className="page-container relative min-h-[600px]">
+          <GlobalNetworkLoader
+            fullScreen={false}
+            title="CTN Admin Network Data..."
+            subtitle="Establishing secure connection to global nodes"
+          />
         </div>
-
-        {/* Search, Filters, Add - aligned right on same row */}
-        <div className="flex flex-wrap items-center gap-2 ml-auto w-full md:w-auto">
-          {/* Search */}
-          <div className="relative flex-1 md:flex-initial">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
-            <input
-              type="text"
-              placeholder="Search roles..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-9 pl-8 pr-3 w-full md:w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
-            />
-          </div>
-
-          {/* Filters */}
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs flex-1 md:flex-initial">
-            <Filter size={14} className="mr-1.5" />
-            Filters
-          </Button>
-
-          {/* View All Users */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 rounded-lg text-xs flex-1 md:flex-initial"
-            onClick={() => {
-              setSelectedRole(null);
-              setSelectedRoleId(null);
-              fetchPaginatedUsers(null, 1);
-              setUsersDialogOpen(true);
-            }}
-          >
-            <Users size={14} className="mr-1.5" />
-            View All
-          </Button>
-
-          {/* Add Role */}
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs w-full md:w-auto"
-            onClick={() => {
-              setEditingRoleId(null);
-              setNewRole({ name: "", description: "" });
-              setPermissions(() => {
-                const initial: Record<string, Record<string, boolean>> = {};
-                permissionModules.forEach((mod) => {
-                  initial[mod] = { VIEW: false, ADD: false, EDIT: false, DELETE: false };
-                });
-                return initial;
-              });
-              setDrawerOpen(true);
-            }}
-          >
-            + Add Role
-          </Button>
-        </div>
-      </div>
-
-      <div className="relative w-full group -mx-1 px-1">
-        <div
-          ref={scrollContainerRef}
-          className={cn(
-            "grid gap-4 transition-all duration-300",
-            roles.length > 4
-              ? "flex overflow-x-auto pb-4 px-1 no-scrollbar snap-x snap-mandatory scroll-px-1"
-              : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-          )}
-        >
-          {loading ? (
-            Array(4).fill(0).map((_, i) => <RoleSkeleton key={i} />)
-          ) : (
-            roles.map((role, i) => (
-              <motion.div
-                key={role._id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.05 }}
-                className={cn(
-                  "glass-card p-5 transition-all",
-                  roles.length > 4 ? "min-w-[calc(25%-12px)] shrink-0 grow-0 snap-start" : "w-full"
-                )}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-foreground">{role.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-1 truncate max-w-[180px]">
-                      {role.description || `Role code: ${role.code}`}
-                    </p>
-                  </div>
-                  <ActionMenu
-                    onEdit={() => handleEditRole(role)}
-                    onDelete={() => { }}
-                    onAddUser={() => handleAddUserAction(role.name, role._id)}
-                  />
-
-                </div>
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-lg text-xs px-2 hover:bg-primary/10"
-                    onClick={() => handleRoleCountClick(role.name, role._id)}
-                  >
-                    <span className="font-semibold">{role.userCount || 0}</span> users
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg text-xs"
-                    onClick={() => handleOpenPermissions(role)}
-                  >
-                    Permissions
-                  </Button>
-                </div>
-              </motion.div>
-            ))
-          )}
-        </div>
-
-        {roles.length > 4 && (
-          <>
-            <button
-              onClick={() => scroll("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 w-10 h-10 rounded-full bg-background border border-border shadow-xl flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={() => scroll("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 w-10 h-10 rounded-full bg-background border border-border shadow-xl flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </>
-        )}
-      </div>
-
-
-      {/* Recent Users Table (always visible below roles) */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2 }}
-        className="mt-6"
-      >
-        <div className="glass-card overflow-hidden">
-          <div className="px-5 py-4 border-b border-border">
-            <h3 className="font-semibold text-foreground">Recently Created Users</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Showing the 10 most recently created users
-            </p>
-          </div>
-          <div className="table-responsive">
-            <table className="w-full min-w-[800px] md:min-w-full">
-              <thead>
-                <tr className="border-b border-border bg-secondary/50">
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User ID</th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Phone</th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {recentLoading ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-20">
-                      <PremiumLoader style="pulse" variant="centered" text="Loading recent updates..." />
-                    </td>
-                  </tr>
-                ) : memoizedRecentUsers.map((user, index) => (
-                  <tr key={user._id || user.id || index} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-primary/80">
-                      {user.userId || "N/A"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
-                        </div>
-                        <span className="font-medium text-sm text-foreground">{user.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{user.email || "N/A"}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">{user.resolvedRole}</td>
-                    <td className="px-6 py-4">
-                      <StatusBadge
-                        status={user.isActive ? "Active" : "Inactive"}
-                        onClick={() => handleStatusClick(user)}
-                      />
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <ActionMenu
-                        onEdit={() => handleEditUser(user._id || user.id)}
-                        onDelete={() => handleDeleteUser(user._id || user.id)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-                {memoizedRecentUsers.length === 0 && !recentLoading && (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
-                      No users found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-
-            </table>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Permissions Dialog */}
-      <Dialog open={permDialogOpen} onOpenChange={setPermDialogOpen}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-card border border-border shadow-2xl">
-          <div className="flex flex-col h-full">
-            <div className="px-6 py-5 border-b border-border bg-muted/30 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                  <Lock className="text-white w-5 h-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Role Permissions</DialogTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">Configure access levels for each module</p>
-                </div>
-              </div>
-            </div>
-
-
-
-            <div className="p-0">
-              {/* Static Header */}
-              <div className="px-6 pt-4 bg-card border-b border-border">
-                <table className="w-full table-fixed">
-                  <thead>
-                    <tr>
-                      <th className="py-3 text-left w-[40%]">
-                        <span className="text-[11px] font-extrabold text-foreground uppercase tracking-widest pl-3">Module Name</span>
-                      </th>
-                      {actions.map(action => (
-                        <th key={action} className="py-3 text-center">
-                          <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => handleToggleColumn(action)}>
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">
-                              {action}
-                            </span>
-                            <div className={cn(
-                              "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
-                              permissionModules.every(mod => permissions[mod][action])
-                                ? "bg-primary border-primary text-primary-foreground"
-                                : "border-muted-foreground/30 bg-card hover:border-primary/50"
-                            )}>
-                              {permissionModules.every(mod => permissions[mod][action]) && <CheckCircle2 size={12} />}
-                            </div>
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                </table>
-              </div>
-
-              {/* Scrollable Body */}
-              <div className="max-h-[50vh] overflow-y-auto no-scrollbar px-6 py-2">
-                <table className="w-full table-fixed border-separate border-spacing-y-3">
-                  <tbody>
-                    {permissionModules.map((mod) => (
-                      <tr key={mod} className="group hover:bg-secondary/40 transition-all rounded-xl">
-                        <td className="py-3 px-3 rounded-l-xl bg-card border-y border-l border-border group-hover:border-primary/20 w-[40%]">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                              <Shield size={14} className="text-primary/70" />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-sm font-semibold text-foreground">{mod}</span>
-                            </div>
-                          </div>
-                        </td>
-                        {actions.map(action => (
-                          <td key={action} className={cn(
-                            "py-3 px-2 text-center bg-card border-y border-border group-hover:border-primary/20",
-                            action === "DELETE" ? "rounded-r-xl border-r" : ""
-                          )}>
-                            <div
-                              className="flex justify-center cursor-pointer"
-                              onClick={() => handleTogglePermission(mod, action)}
-                            >
-                              <div className={cn(
-                                "w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200",
-                                permissions[mod][action]
-                                  ? "bg-primary/10 border-primary/30 text-primary scale-110 shadow-sm"
-                                  : "border-muted-foreground/20 bg-transparent opacity-40 hover:opacity-100 hover:border-primary/40"
-                              )}>
-                                {permissions[mod][action] ? (
-                                  <CheckCircle2 size={14} className="fill-primary text-white" />
-                                ) : (
-                                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-
-
-            <div className="px-6 py-5 bg-muted/30 border-t border-border flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={() => setPermDialogOpen(false)} className="rounded-xl bg-card">
-                Discard Changes
-              </Button>
-              <Button
-                className="rounded-xl bg-primary hover:bg-primary/90 px-6 shadow-lg shadow-primary/20 flex items-center gap-2"
-                onClick={handleUpdatePermissions}
-              >
-                <CheckCircle2 size={16} />
-                Save Permissions
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-
-      </Dialog>
-
-      {/* Users Dialog */}
-      <Dialog open={usersDialogOpen} onOpenChange={handleUsersDialogClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Users className="text-primary w-5 h-5" />
+      ) : (
+        <>
+          {/* Single Row Header */}
+          <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
+            {/* Page Title Block */}
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Shield size={16} className="text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-xl">
-                  {selectedRole ? `Users with "${selectedRole}" role` : "All Admin Users"}
-                </DialogTitle>
-                <DialogDescription>
-                  {usersLoading
-                    ? "Fetching users..."
-                    : `Showing ${roleUsers.length} user(s) assigned to this role`}
-                </DialogDescription>
+                <h1 className="text-base font-semibold text-foreground">Roles & Permissions</h1>
               </div>
             </div>
-          </DialogHeader>
 
-          <div className="table-responsive mt-4">
-            {usersLoading ? (
-              <div className="py-24">
-                <PremiumLoader variant="centered" style="tech-circle" text="Establishing member connection..." />
+            {/* Search, Filters, Add - aligned right on same row */}
+            <div className="flex flex-wrap items-center gap-2 ml-auto w-full md:w-auto">
+              {/* Search */}
+              <div className="relative flex-1 md:flex-initial">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
+                <input
+                  type="text"
+                  placeholder="Search roles..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-9 pl-8 pr-3 w-full md:w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+                />
               </div>
-            ) : (
-              <table className="w-full min-w-[700px] md:min-w-full">
-                <thead>
-                  <tr className="border-b border-border bg-secondary/50">
-                    <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User ID</th>
-                    <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
-                    <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
-                    <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Phone</th>
-                    {!selectedRoleId && <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>}
-                    <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                    <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {memoizedRoleUsers.map((user, index) => (
-                    <tr key={user._id || user.id || index} className="hover:bg-secondary/30 transition-colors">
-                      <td className="px-6 py-4 text-sm font-semibold text-primary/80">
-                        {user.userId || "N/A"}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
-                          </div>
-                          <span className="font-medium text-sm text-foreground">{user.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{user.email || "N/A"}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
-                      {!selectedRoleId && <td className="px-6 py-4 text-sm font-medium text-foreground">{user.resolvedRole}</td>}
-                      <td className="px-6 py-4">
-                        <StatusBadge
-                          status={user.isActive ? "Active" : "Inactive"}
-                          onClick={() => handleStatusClick(user)}
-                        />
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <ActionMenu
-                          onEdit={() => handleEditUser(user._id || user.id)}
-                          onDelete={() => handleDeleteUser(user._id || user.id)}
-                        />
 
-                      </td>
-                    </tr>
-                  ))}
-                  {roleUsers.length === 0 && !usersLoading && (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <Users size={32} className="text-muted-foreground/30" />
-                          <p className="text-muted-foreground font-medium">No users found for this role.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              {/* Filters */}
+              <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs flex-1 md:flex-initial">
+                <Filter size={14} className="mr-1.5" />
+                Filters
+              </Button>
+
+              {/* View All Users */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-lg text-xs flex-1 md:flex-initial"
+                onClick={() => {
+                  setSelectedRole(null);
+                  setSelectedRoleId(null);
+                  fetchPaginatedUsers(null, 1);
+                  setUsersDialogOpen(true);
+                }}
+              >
+                <Users size={14} className="mr-1.5" />
+                View All
+              </Button>
+
+              {/* Add Role */}
+              <Button
+                size="sm"
+                className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs w-full md:w-auto"
+                onClick={() => {
+                  setEditingRoleId(null);
+                  setNewRole({ name: "", description: "" });
+                  setPermissions(() => {
+                    const initial: Record<string, Record<string, boolean>> = {};
+                    permissionModules.forEach((mod) => {
+                      initial[mod] = { VIEW: false, ADD: false, EDIT: false, DELETE: false };
+                    });
+                    return initial;
+                  });
+                  setDrawerOpen(true);
+                }}
+              >
+                + Add Role
+              </Button>
+            </div>
+          </div>
+
+          <div className="relative w-full group -mx-1 px-1">
+            <div
+              ref={scrollContainerRef}
+              className={cn(
+                "grid gap-4 transition-all duration-300",
+                roles.length > 4
+                  ? "flex overflow-x-auto pb-4 px-1 no-scrollbar snap-x snap-mandatory scroll-px-1"
+                  : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+              )}
+            >
+              {loading ? (
+                Array(4).fill(0).map((_, i) => <RoleSkeleton key={i} />)
+              ) : (
+                roles.map((role, i) => (
+                  <motion.div
+                    key={role._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                    className={cn(
+                      "glass-card p-5 transition-all",
+                      roles.length > 4 ? "min-w-[calc(25%-12px)] shrink-0 grow-0 snap-start" : "w-full"
+                    )}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-foreground">{role.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-1 truncate max-w-[180px]">
+                          {role.description || `Role code: ${role.code}`}
+                        </p>
+                      </div>
+                      <ActionMenu
+                        onEdit={() => handleEditRole(role)}
+                        onDelete={() => { }}
+                        onAddUser={() => handleAddUserAction(role.name, role._id)}
+                      />
+
+                    </div>
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-lg text-xs px-2 hover:bg-primary/10"
+                        onClick={() => handleRoleCountClick(role.name, role._id)}
+                      >
+                        <span className="font-semibold">{role.userCount || 0}</span> users
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg text-xs"
+                        onClick={() => handleOpenPermissions(role)}
+                      >
+                        Permissions
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+
+            {roles.length > 4 && (
+              <>
+                <button
+                  onClick={() => scroll("left")}
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 w-10 h-10 rounded-full bg-background border border-border shadow-xl flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={() => scroll("right")}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 w-10 h-10 rounded-full bg-background border border-border shadow-xl flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
             )}
           </div>
 
-          {totalPages > 1 && (
-            <div className="mt-4 px-2">
-              <PaginationBar
-                currentPage={usersPage}
-                totalPages={totalPages}
-                onPageChange={(page) => fetchPaginatedUsers(selectedRoleId, page)}
-              />
-            </div>
-          )}
 
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setUsersDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-      {/* Add User Dialog */}
-      <Dialog open={addUserDialogOpen} onOpenChange={handleAddUserDialogClose}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{isEditMode ? "Edit User" : `Add User to ${selectedRole}`}</DialogTitle>
-            <DialogDescription>
-              {isEditMode
-                ? "Update the user's account details below."
-                : `Create a new user account and assign them to the ${selectedRole} role.`}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="name" className={cn(formErrors.name && "text-destructive")}>Full Name</Label>
-              <Input
-                id="name"
-                placeholder="John Doe"
-                value={newUser.name}
-                onChange={(e) => {
-                  setNewUser({ ...newUser, name: e.target.value });
-                  if (formErrors.name) setFormErrors({ ...formErrors, name: "" });
-                }}
-                className={cn(formErrors.name && "border-destructive focus-visible:ring-destructive")}
-              />
-              {formErrors.name && <span className="text-[10px] text-destructive font-medium">{formErrors.name}</span>}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email" className={cn(formErrors.email && "text-destructive")}>Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="john@example.com"
-                value={newUser.email}
-                onChange={(e) => {
-                  setNewUser({ ...newUser, email: e.target.value });
-                  if (formErrors.email) setFormErrors({ ...formErrors, email: "" });
-                }}
-                className={cn(formErrors.email && "border-destructive focus-visible:ring-destructive")}
-              />
-              {formErrors.email && <span className="text-[10px] text-destructive font-medium">{formErrors.email}</span>}
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone" className={cn(formErrors.phone && "text-destructive")}>Phone Number</Label>
-              <Input
-                id="phone"
-                placeholder="+91 98765 43210"
-                value={newUser.phone}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                  setNewUser({ ...newUser, phone: val });
-                  if (formErrors.phone) setFormErrors({ ...formErrors, phone: "" });
-                }}
-                className={cn(formErrors.phone && "border-destructive focus-visible:ring-destructive")}
-              />
-              {formErrors.phone && <span className="text-[10px] text-destructive font-medium">{formErrors.phone}</span>}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddUserDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={handleSaveUser}>
-              {isEditMode ? "Update User" : "Create User"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Update User Status</DialogTitle>
-            <DialogDescription>
-              Change the account status for {userToUpdateStatus?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="status">Account Status</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateStatus}>
-              Update Status
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <FormDrawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        title={editingRoleId ? "Edit Role" : "Add Role"}
-        description={editingRoleId ? "Update role details and permissions" : "Create a new user role and configure its permissions"}
-      >
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-foreground">Role Name</label>
-              <input
-                className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                placeholder="Enter role name"
-                value={newRole.name}
-                onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Description</label>
-              <textarea
-                className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px]"
-                placeholder="Describe this role"
-                value={newRole.description}
-                onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-border">
-            <div className="flex items-center gap-2 mb-4">
-              <Lock size={16} className="text-primary" />
-              <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Role Permissions</h3>
-            </div>
-
-            <div className="rounded-xl border border-border bg-secondary/10 overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+          {/* Recent Users Table (always visible below roles) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="mt-6"
+          >
+            <div className="glass-card overflow-hidden">
+              <div className="px-5 py-4 border-b border-border">
+                <h3 className="font-semibold text-foreground">Recently Created Users</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Showing the 10 most recently created users
+                </p>
+              </div>
+              <div className="table-responsive">
+                <table className="w-full min-w-[800px] md:min-w-full">
                   <thead>
-                    <tr className="bg-secondary/40 border-b border-border">
-                      <th className="px-4 py-3 text-left">
-                        <span className="text-[10px] font-bold text-foreground/80 uppercase tracking-widest">MODULE'S</span>
-                      </th>
-                      {actions.map(action => (
-                        <th key={action} className="px-2 py-3 text-center">
-                          <div className="flex flex-col items-center gap-1.5">
-                            <span className="text-[9px] font-bold text-foreground/70 uppercase tracking-tight">{action}</span>
-                            <Checkbox
-                              checked={permissionModules.every(mod => permissions[mod][action])}
-                              onCheckedChange={() => handleToggleColumn(action)}
-                              className="w-3.5 h-3.5 border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                            />
-                          </div>
-                        </th>
-                      ))}
+                    <tr className="border-b border-border bg-secondary/50">
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User ID</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Phone</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
+                      <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                      <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {permissionModules.map((mod) => (
-                      <tr key={mod} className="hover:bg-secondary/20 transition-colors group">
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                              {formatModuleName(mod)}
-                            </span>
+                    {recentLoading ? (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-20">
+                          <PremiumLoader style="pulse" variant="centered" text="Loading recent updates..." />
+                        </td>
+                      </tr>
+                    ) : memoizedRecentUsers.map((user, index) => (
+                      <tr key={user._id || user.id || index} className="hover:bg-secondary/30 transition-colors">
+                        <td className="px-6 py-4 text-sm font-semibold text-primary/80">
+                          {user.userId || "N/A"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
+                            </div>
+                            <span className="font-medium text-sm text-foreground">{user.name}</span>
                           </div>
                         </td>
-                        {actions.map(action => (
-                          <td key={action} className="px-2 py-3 text-center">
-                            <Checkbox
-                              checked={permissions[mod][action]}
-                              onCheckedChange={() => handleTogglePermission(mod, action)}
-                              className="w-4 h-4 rounded border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-sm"
-                            />
-                          </td>
-                        ))}
+                        <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{user.email || "N/A"}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-foreground">{user.resolvedRole}</td>
+                        <td className="px-6 py-4">
+                          <StatusBadge
+                            status={user.isActive ? "Active" : "Inactive"}
+                            onClick={() => handleStatusClick(user)}
+                          />
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <ActionMenu
+                            onEdit={() => handleEditUser(user._id || user.id)}
+                            onDelete={() => handleDeleteUser(user._id || user.id)}
+                          />
+                        </td>
                       </tr>
                     ))}
+                    {memoizedRecentUsers.length === 0 && !recentLoading && (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                          No users found.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
+
                 </table>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <Button
-            className="w-full rounded-xl bg-primary hover:bg-primary/90 mt-4 shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
-            onClick={handleSaveRole}
-          >
-            <CheckCircle2 size={18} />
-            {editingRoleId ? "Update Role" : "Save Role"}
-          </Button>
-        </div>
-      </FormDrawer>
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent className="rounded-2xl border-border shadow-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <X className="text-destructive w-4 h-4" />
+          {/* Permissions Dialog */}
+          <Dialog open={permDialogOpen} onOpenChange={setPermDialogOpen}>
+            <DialogContent className="max-w-4xl p-0 overflow-hidden bg-card border border-border shadow-2xl">
+              <div className="flex flex-col h-full">
+                <div className="px-6 py-5 border-b border-border bg-muted/30 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                      <Lock className="text-white w-5 h-5" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-bold tracking-tight text-foreground">Role Permissions</DialogTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">Configure access levels for each module</p>
+                    </div>
+                  </div>
+                </div>
+
+
+
+                <div className="p-0">
+                  {/* Static Header */}
+                  <div className="px-6 pt-4 bg-card border-b border-border">
+                    <table className="w-full table-fixed">
+                      <thead>
+                        <tr>
+                          <th className="py-3 text-left w-[40%]">
+                            <span className="text-[11px] font-extrabold text-foreground uppercase tracking-widest pl-3">Module Name</span>
+                          </th>
+                          {actions.map(action => (
+                            <th key={action} className="py-3 text-center">
+                              <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => handleToggleColumn(action)}>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">
+                                  {action}
+                                </span>
+                                <div className={cn(
+                                  "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
+                                  permissionModules.every(mod => permissions[mod][action])
+                                    ? "bg-primary border-primary text-primary-foreground"
+                                    : "border-muted-foreground/30 bg-card hover:border-primary/50"
+                                )}>
+                                  {permissionModules.every(mod => permissions[mod][action]) && <CheckCircle2 size={12} />}
+                                </div>
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                    </table>
+                  </div>
+
+                  {/* Scrollable Body */}
+                  <div className="max-h-[50vh] overflow-y-auto no-scrollbar px-6 py-2">
+                    <table className="w-full table-fixed border-separate border-spacing-y-3">
+                      <tbody>
+                        {permissionModules.map((mod) => (
+                          <tr key={mod} className="group hover:bg-secondary/40 transition-all rounded-xl">
+                            <td className="py-3 px-3 rounded-l-xl bg-card border-y border-l border-border group-hover:border-primary/20 w-[40%]">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
+                                  <Shield size={14} className="text-primary/70" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-semibold text-foreground">{mod}</span>
+                                </div>
+                              </div>
+                            </td>
+                            {actions.map(action => (
+                              <td key={action} className={cn(
+                                "py-3 px-2 text-center bg-card border-y border-border group-hover:border-primary/20",
+                                action === "DELETE" ? "rounded-r-xl border-r" : ""
+                              )}>
+                                <div
+                                  className="flex justify-center cursor-pointer"
+                                  onClick={() => handleTogglePermission(mod, action)}
+                                >
+                                  <div className={cn(
+                                    "w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200",
+                                    permissions[mod][action]
+                                      ? "bg-primary/10 border-primary/30 text-primary scale-110 shadow-sm"
+                                      : "border-muted-foreground/20 bg-transparent opacity-40 hover:opacity-100 hover:border-primary/40"
+                                  )}>
+                                    {permissions[mod][action] ? (
+                                      <CheckCircle2 size={14} className="fill-primary text-white" />
+                                    ) : (
+                                      <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+
+
+                <div className="px-6 py-5 bg-muted/30 border-t border-border flex items-center justify-end gap-3">
+                  <Button variant="outline" onClick={() => setPermDialogOpen(false)} className="rounded-xl bg-card">
+                    Discard Changes
+                  </Button>
+                  <Button
+                    className="rounded-xl bg-primary hover:bg-primary/90 px-6 shadow-lg shadow-primary/20 flex items-center gap-2"
+                    onClick={handleUpdatePermissions}
+                  >
+                    <CheckCircle2 size={16} />
+                    Save Permissions
+                  </Button>
+                </div>
               </div>
-              Confirm Deletion
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground pt-2">
-              Are you sure you want to delete this user? This action will mark the user as inactive and they will no longer have access to the portal.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-4">
-            <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
-            >
-              Delete User
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </DialogContent>
+
+          </Dialog>
+
+          {/* Users Dialog */}
+          <Dialog open={usersDialogOpen} onOpenChange={handleUsersDialogClose}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Users className="text-primary w-5 h-5" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-xl">
+                      {selectedRole ? `Users with "${selectedRole}" role` : "All Admin Users"}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {usersLoading
+                        ? "Fetching users..."
+                        : `Showing ${roleUsers.length} user(s) assigned to this role`}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="table-responsive mt-4">
+                {usersLoading ? (
+                  <div className="py-24">
+                    <PremiumLoader variant="centered" style="tech-circle" text="Establishing member connection..." />
+                  </div>
+                ) : (
+                  <table className="w-full min-w-[700px] md:min-w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-secondary/50">
+                        <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User ID</th>
+                        <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+                        <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
+                        <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Phone</th>
+                        {!selectedRoleId && <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>}
+                        <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {memoizedRoleUsers.map((user, index) => (
+                        <tr key={user._id || user.id || index} className="hover:bg-secondary/30 transition-colors">
+                          <td className="px-6 py-4 text-sm font-semibold text-primary/80">
+                            {user.userId || "N/A"}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
+                              </div>
+                              <span className="font-medium text-sm text-foreground">{user.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{user.email || "N/A"}</td>
+                          <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
+                          {!selectedRoleId && <td className="px-6 py-4 text-sm font-medium text-foreground">{user.resolvedRole}</td>}
+                          <td className="px-6 py-4">
+                            <StatusBadge
+                              status={user.isActive ? "Active" : "Inactive"}
+                              onClick={() => handleStatusClick(user)}
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <ActionMenu
+                              onEdit={() => handleEditUser(user._id || user.id)}
+                              onDelete={() => handleDeleteUser(user._id || user.id)}
+                            />
+
+                          </td>
+                        </tr>
+                      ))}
+                      {roleUsers.length === 0 && !usersLoading && (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-12 text-center">
+                            <div className="flex flex-col items-center gap-2">
+                              <Users size={32} className="text-muted-foreground/30" />
+                              <p className="text-muted-foreground font-medium">No users found for this role.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-4 px-2">
+                  <PaginationBar
+                    currentPage={usersPage}
+                    totalPages={totalPages}
+                    onPageChange={(page) => fetchPaginatedUsers(selectedRoleId, page)}
+                  />
+                </div>
+              )}
+
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => setUsersDialogOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+
+          {/* Add User Dialog */}
+          <Dialog open={addUserDialogOpen} onOpenChange={handleAddUserDialogClose}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>{isEditMode ? "Edit User" : `Add User to ${selectedRole}`}</DialogTitle>
+                <DialogDescription>
+                  {isEditMode
+                    ? "Update the user's account details below."
+                    : `Create a new user account and assign them to the ${selectedRole} role.`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name" className={cn(formErrors.name && "text-destructive")}>Full Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="John Doe"
+                    value={newUser.name}
+                    onChange={(e) => {
+                      setNewUser({ ...newUser, name: e.target.value });
+                      if (formErrors.name) setFormErrors({ ...formErrors, name: "" });
+                    }}
+                    className={cn(formErrors.name && "border-destructive focus-visible:ring-destructive")}
+                  />
+                  {formErrors.name && <span className="text-[10px] text-destructive font-medium">{formErrors.name}</span>}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email" className={cn(formErrors.email && "text-destructive")}>Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="john@example.com"
+                    value={newUser.email}
+                    onChange={(e) => {
+                      setNewUser({ ...newUser, email: e.target.value });
+                      if (formErrors.email) setFormErrors({ ...formErrors, email: "" });
+                    }}
+                    className={cn(formErrors.email && "border-destructive focus-visible:ring-destructive")}
+                  />
+                  {formErrors.email && <span className="text-[10px] text-destructive font-medium">{formErrors.email}</span>}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="phone" className={cn(formErrors.phone && "text-destructive")}>Phone Number</Label>
+                  <Input
+                    id="phone"
+                    placeholder="+91 98765 43210"
+                    value={newUser.phone}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setNewUser({ ...newUser, phone: val });
+                      if (formErrors.phone) setFormErrors({ ...formErrors, phone: "" });
+                    }}
+                    className={cn(formErrors.phone && "border-destructive focus-visible:ring-destructive")}
+                  />
+                  {formErrors.phone && <span className="text-[10px] text-destructive font-medium">{formErrors.phone}</span>}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddUserDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={handleSaveUser}>
+                  {isEditMode ? "Update User" : "Create User"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+
+          <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+            <DialogContent className="sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Update User Status</DialogTitle>
+                <DialogDescription>
+                  Change the account status for {userToUpdateStatus?.name}.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="status">Account Status</Label>
+                  <Select value={newStatus} onValueChange={setNewStatus}>
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateStatus}>
+                  Update Status
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <FormDrawer
+            open={drawerOpen}
+            onOpenChange={setDrawerOpen}
+            title={editingRoleId ? "Edit Role" : "Add Role"}
+            description={editingRoleId ? "Update role details and permissions" : "Create a new user role and configure its permissions"}
+          >
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Role Name</label>
+                  <input
+                    className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    placeholder="Enter role name"
+                    value={newRole.name}
+                    onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Description</label>
+                  <textarea
+                    className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px]"
+                    placeholder="Describe this role"
+                    value={newRole.description}
+                    onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-border">
+                <div className="flex items-center gap-2 mb-4">
+                  <Lock size={16} className="text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Role Permissions</h3>
+                </div>
+
+                <div className="rounded-xl border border-border bg-secondary/10 overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-secondary/40 border-b border-border">
+                          <th className="px-4 py-3 text-left">
+                            <span className="text-[10px] font-bold text-foreground/80 uppercase tracking-widest">MODULE'S</span>
+                          </th>
+                          {actions.map(action => (
+                            <th key={action} className="px-2 py-3 text-center">
+                              <div className="flex flex-col items-center gap-1.5">
+                                <span className="text-[9px] font-bold text-foreground/70 uppercase tracking-tight">{action}</span>
+                                <Checkbox
+                                  checked={permissionModules.every(mod => permissions[mod][action])}
+                                  onCheckedChange={() => handleToggleColumn(action)}
+                                  className="w-3.5 h-3.5 border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                />
+                              </div>
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {permissionModules.map((mod) => (
+                          <tr key={mod} className="hover:bg-secondary/20 transition-colors group">
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col">
+                                <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                                  {formatModuleName(mod)}
+                                </span>
+                              </div>
+                            </td>
+                            {actions.map(action => (
+                              <td key={action} className="px-2 py-3 text-center">
+                                <Checkbox
+                                  checked={permissions[mod][action]}
+                                  onCheckedChange={() => handleTogglePermission(mod, action)}
+                                  className="w-4 h-4 rounded border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-sm"
+                                />
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                className="w-full rounded-xl bg-primary hover:bg-primary/90 mt-4 shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                onClick={handleSaveRole}
+              >
+                <CheckCircle2 size={18} />
+                {editingRoleId ? "Update Role" : "Save Role"}
+              </Button>
+            </div>
+          </FormDrawer>
+          <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+            <AlertDialogContent className="rounded-2xl border-border shadow-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                    <X className="text-destructive w-4 h-4" />
+                  </div>
+                  Confirm Deletion
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-muted-foreground pt-2">
+                  Are you sure you want to delete this user? This action will mark the user as inactive and they will no longer have access to the portal.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-4">
+                <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDelete}
+                  className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
+                >
+                  Delete User
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 };

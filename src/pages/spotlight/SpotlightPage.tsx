@@ -20,6 +20,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const SpotlightPage = () => {
   const { toast } = useToast();
@@ -186,7 +187,15 @@ const SpotlightPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {isLoading && spotlights.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Synchronizing Spotlight Nodes..."
+          subtitle="Establishing connection to member highlights"
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -246,7 +255,7 @@ const SpotlightPage = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {spotlights.length === 0 ? (
+            {spotlights.length === 0 && !isLoading ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
                   No spotlight schedules found

@@ -24,6 +24,8 @@ import {
 import { getPointConfigs, createPointConfig, updatePointConfig, deletePointConfig } from "@/api/PointConfigApi";
 import { Plus, Edit, Trash2, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TableLoader, TableSkeleton } from "@/components/common/TableLoader";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const MODULE_OPTIONS = [
   "Ask",
@@ -135,7 +137,14 @@ const AllocatePointsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {isLoading && pointConfigs.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Syncing Rewards Network..."
+          subtitle="Establishing point allocation protocols"
+        />
+      )}
       <PageHeader
         title="Allocate Points"
         subtitle="Manage point rewards for different system modules"
@@ -233,8 +242,10 @@ const AllocatePointsPage = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card overflow-hidden border-slate-100"
+        className="glass-card overflow-hidden border-slate-100 relative"
       >
+        {isLoading && pointConfigs.length > 0 && <TableLoader text="Synchronizing Point Configurations..." />}
+        
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -251,11 +262,14 @@ const AllocatePointsPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {isLoading ? (
+              {isLoading && pointConfigs.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-8 py-16 text-center">
-                    <Loader2 className="animate-spin inline mr-3 text-primary" size={24} />
-                    <span className="text-slate-500 font-medium">Loading configurations...</span>
+                  <td colSpan={3} className="px-8 py-24">
+                    <GlobalNetworkLoader
+                      fullScreen={false}
+                      title="Syncing Rewards Network..."
+                      subtitle="Establishing point allocation protocols"
+                    />
                   </td>
                 </tr>
               ) : pointConfigs.length === 0 ? (
