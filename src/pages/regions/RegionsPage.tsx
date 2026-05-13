@@ -431,7 +431,7 @@ const RegionsPage = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={handleAddArea}
-                className="h-7 px-2 rounded-lg text-[10px] font-bold border-primary/20 text-primary hover:bg-primary/5"
+                className="h-7 px-2 rounded-lg text-[10px] font-bold border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
               >
                 <Plus size={12} className="mr-1" /> Add Area
               </Button>

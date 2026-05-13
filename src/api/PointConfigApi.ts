@@ -5,12 +5,12 @@ export const getPointConfigs = async () => {
   return response.data;
 };
 
-export const createPointConfig = async (data: { moduleName: string; points: number }) => {
+export const createPointConfig = async (data: { moduleName: string; type: string; points: number }) => {
   const response = await api.post("/point-configs", data);
   return response.data;
 };
 
-export const updatePointConfig = async (id: string, data: { moduleName?: string; points?: number }) => {
+export const updatePointConfig = async (id: string, data: { moduleName?: string; type?: string; points?: number }) => {
   const response = await api.put(`/point-configs/${id}`, data);
   return response.data;
 };
