@@ -27,6 +27,8 @@ import MemberAwardsPage from "@/pages/awards/MemberAwardsPage";
 import ConnectionsPage from "@/pages/connections/ConnectionsPage";
 import ContributionsPage from "@/pages/contributions/ContributionsPage";
 import ReportsPage from "@/pages/reports/ReportsPage";
+import ReportHistoryPage from "@/pages/reports/ReportHistoryPage";
+
 import SubscriptionPage from "@/pages/subscription/SubscriptionPage";
 import NotFound from "@/pages/NotFound";
 
@@ -78,6 +80,8 @@ const App = () => (
               <Route path="/connections" element={<ConnectionsPage />} />
               <Route path="/contributions" element={<ContributionsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/reports/history" element={<ReportHistoryPage />} />
+
               <Route path="/subscription" element={<SubscriptionPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />

@@ -496,7 +496,7 @@ const TrainingsPage = () => {
             <div className="px-6 py-4 bg-slate-50/50 backdrop-blur-sm border-b border-slate-100 shrink-0">
               <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                 <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2"><Video size={16} className="text-primary" /> Lessons ({form.lessons.length})</h3>
-                <Button variant="outline" size="sm" onClick={addLesson} className="h-9 rounded-xl border-primary text-primary font-bold"><Plus size={14} className="mr-1.5" /> Add Lesson</Button>
+                <Button size="sm" onClick={addLesson} className="h-9 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold shadow-sm shadow-primary/10"><Plus size={14} className="mr-1.5" /> Add Lesson</Button>
               </div>
             </div>
           )}

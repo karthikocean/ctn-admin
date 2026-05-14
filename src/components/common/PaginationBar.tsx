@@ -31,8 +31,8 @@ const PaginationBar = ({ currentPage, totalPages, onPageChange }: PaginationBarP
             size="sm"
             className={cn(
               "rounded-xl w-9 transition-all duration-300",
-              page === currentPage 
-                ? "bg-primary text-white shadow-md shadow-primary/20 hover:bg-primary/90" 
+              page === currentPage
+                ? "bg-primary text-white shadow-md shadow-primary/20 hover:bg-primary/90"
                 : "border-slate-200 hover:bg-primary/5 hover:text-primary"
             )}
             onClick={() => onPageChange(page)}

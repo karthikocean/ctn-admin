@@ -18,8 +18,10 @@ import {
   ShieldCheck,
   Building2,
   ArrowRight,
-  Shield
+  Shield,
+  Trash2
 } from "lucide-react";
+import { State, City } from "country-state-city";
 import StatusBadge from "@/components/common/StatusBadge";
 import ActionMenu from "@/components/common/ActionMenu";
 import PaginationBar from "@/components/common/PaginationBar";
@@ -161,6 +163,7 @@ const MembersPage = () => {
   const [showGstStep, setShowGstStep] = useState(true);
   const [gstLoading, setGstLoading] = useState(false);
   const [gstInput, setGstInput] = useState("");
+  const [selectedStateCode, setSelectedStateCode] = useState("");
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -172,7 +175,9 @@ const MembersPage = () => {
     subCategory: "",
     yearsOfExperience: null as number | null,
     companySize: "",
+    state: "",
     city: "",
+    areas: "",
     businessAddress: "",
     serviceLocations: [] as string[],
     productsServicesDescription: "",
@@ -191,6 +196,9 @@ const MembersPage = () => {
   const [subCategories, setSubCategories] = useState<any[]>([]);
 
   const [isSubCategoriesLoading, setIsSubCategoriesLoading] = useState(false);
+
+  const allStates = State.getStatesOfCountry("IN");
+  const citiesInState = selectedStateCode ? City.getCitiesOfState("IN", selectedStateCode) : [];
 
   useEffect(() => {
     const fetchMainCategories = async () => {
@@ -297,7 +305,9 @@ const MembersPage = () => {
       subCategory: "",
       yearsOfExperience: null,
       companySize: "",
+      state: "",
       city: "",
+      areas: "",
       businessAddress: "",
       serviceLocations: [],
       productsServicesDescription: "",
@@ -312,6 +322,7 @@ const MembersPage = () => {
       businessDocuments: []
     });
     setGstInput("");
+    setSelectedStateCode("");
     setShowGstStep(true);
     setEditingMemberId(null);
     setErrors({});
@@ -350,10 +361,20 @@ const MembersPage = () => {
           companySize: fullData.companySize || "",
           yearsOfExperience: fullData.yearsOfExperience || null,
           serviceLocations: fullData.serviceLocations || [],
+          state: fullData.state || "",
+          city: fullData.city || "",
+          areas: fullData.areas || "",
           workImages: fullData.workImages || [],
           certifications: fullData.certifications || [],
           businessDocuments: fullData.businessDocuments || []
         });
+
+        if (fullData.state) {
+          const allStates = State.getStatesOfCountry("IN");
+          const stateObj = allStates.find(s => s.name === fullData.state);
+          if (stateObj) setSelectedStateCode(stateObj.isoCode);
+        }
+
         setShowGstStep(false);
         setDrawerOpen(true);
       }
@@ -419,8 +440,22 @@ const MembersPage = () => {
           gstNumber: gstData.gstNumber,
           businessName: gstData.businessName,
           businessAddress: gstData.address,
+          state: gstData.state,
           city: gstData.district,
         }));
+
+        if (gstData.state) {
+          const allStates = State.getStatesOfCountry("IN");
+          const stateObj = allStates.find(s =>
+            s.name.toLowerCase() === gstData.state.toLowerCase() ||
+            s.isoCode === gstData.state
+          );
+          if (stateObj) {
+            setSelectedStateCode(stateObj.isoCode);
+            setFormData(prev => ({ ...prev, state: stateObj.name }));
+          }
+        }
+
         setShowGstStep(false);
         toast({
           title: "Success",
@@ -635,6 +670,7 @@ const MembersPage = () => {
           <Table>
             <TableHeader className="bg-secondary/30">
               <TableRow>
+                <TableHead className="px-6 py-4 w-16">S.No</TableHead>
                 <TableHead className="px-6 py-4">Member Details</TableHead>
                 <TableHead className="px-6 py-4">Business Name</TableHead>
                 <TableHead className="px-6 py-4">Category</TableHead>
@@ -651,11 +687,14 @@ const MembersPage = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                members.map((member) => (
+                members.map((member, index) => (
                   <TableRow
                     key={member._id}
                     className="hover:bg-secondary/10 transition-colors"
                   >
+                    <TableCell className="px-6 py-4 text-xs font-bold text-muted-foreground/60">
+                      {((page - 1) * 10) + index + 1}
+                    </TableCell>
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-border">
@@ -697,7 +736,7 @@ const MembersPage = () => {
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <MapPin size={14} className="text-primary/60" />
-                        <span>{member.city}</span>
+                        <span>{member.city}{member.state ? `, ${member.state}` : ""}</span>
                       </div>
                     </TableCell>
                     <TableCell className="px-6 py-4">
@@ -1051,13 +1090,59 @@ const MembersPage = () => {
                     </h3>
                   </div>
                   <div className="grid grid-cols-1 gap-5">
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <Label className="text-xs font-bold text-slate-700 mb-2 block">State</Label>
+                        <Select
+                          value={selectedStateCode}
+                          onValueChange={(val) => {
+                            setSelectedStateCode(val);
+                            const stateName = allStates.find(s => s.isoCode === val)?.name || "";
+                            setFormData(prev => ({ ...prev, state: stateName, city: "" }));
+                          }}
+                        >
+                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
+                            <SelectValue placeholder="Select State" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {allStates.map((s) => (
+                              <SelectItem key={s.isoCode} value={s.isoCode}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-bold text-slate-700 mb-2 block">City</Label>
+                        <Select
+                          value={formData.city}
+                          onValueChange={(val) => setFormData(prev => ({ ...prev, city: val }))}
+                          disabled={!selectedStateCode}
+                        >
+                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
+                            <SelectValue placeholder={selectedStateCode ? "Select City" : "Choose state first"} />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {citiesInState.map((c) => (
+                              <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
+                            ))}
+                            {citiesInState.length === 0 && selectedStateCode && (
+                              <div className="p-2 text-xs text-muted-foreground text-center italic">No cities found</div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                     <div>
-                      <Label htmlFor="city" className="text-xs font-bold text-slate-700 mb-2 block">City</Label>
+                      <Label htmlFor="areas" className="text-xs font-bold text-slate-700 mb-2 block">Areas / Localities</Label>
                       <Input
-                        id="city"
+                        id="areas"
+                        placeholder="e.g. T. Nagar, Adyar"
                         className="h-11 bg-white border-slate-300 font-medium"
-                        value={formData.city}
-                        onChange={handleInputChange}
+                        value={formData.areas}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          areas: e.target.value
+                        }))}
                       />
                     </div>
                     <div>

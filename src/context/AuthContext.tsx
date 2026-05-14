@@ -43,8 +43,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const response = await api.get(`/roles/${roleId}`);
       if (response.data && response.data.permissions) {
         setPermissions(response.data.permissions);
-        localStorage.setItem("permissions", JSON.stringify(response.data.permissions));
       }
+
     } catch (error) {
       console.error("Failed to fetch permissions:", error);
     }
@@ -55,26 +55,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initializeAuth = async () => {
       const storedUser = localStorage.getItem("user");
       const storedToken = localStorage.getItem("accessToken");
-      const storedPermissions = localStorage.getItem("permissions");
 
       if (storedUser && storedToken) {
+
         try {
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
           setAccessToken(storedToken);
-          
+
           // Connect socket on restore with token
           socketService.connect(parsedUser.id, storedToken);
-          
-          if (storedPermissions) {
-            setPermissions(JSON.parse(storedPermissions));
+
+          // Fetch fresh user data to see if role or status changed
+
+          const userResponse = await api.get(`/admin-users/${parsedUser.id}`);
+          const freshUser = userResponse.data;
+
+          if (freshUser) {
+            setUser(freshUser);
+            localStorage.setItem("user", JSON.stringify(freshUser));
+
+            // Now fetch fresh permissions for the current role
+            await fetchPermissions(freshUser.roleId);
           } else {
-            // If no permissions stored but we have user, fetch them
+            // Fallback to stored roleId if profile fetch fails
             await fetchPermissions(parsedUser.roleId);
           }
-        } catch (error) {
-          console.error("Failed to restore session:", error);
-          logout();
+
+        } catch (error: any) {
+          console.error("Failed to restore session or sync data:", error);
+          // Only logout if it's a 401 unauthorized error
+          if (error.response?.status === 401) {
+            logout();
+          }
         }
       }
       setIsLoading(false);
@@ -82,6 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initializeAuth();
   }, [fetchPermissions]);
+
 
   const login = async (phoneNumber: string, pin: string): Promise<{ success: boolean; message: string }> => {
     try {
@@ -92,30 +106,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (response.data.accessToken) {
         const { accessToken, user } = response.data;
-        
+
         // Store in state
         setUser(user);
         setAccessToken(accessToken);
-        
+
         // Persist session basic info
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("accessToken", accessToken);
-        
+
         // Connect socket on login with token
         socketService.connect(user.id, accessToken);
-        
+
         // Fetch granular permissions
         await fetchPermissions(user.roleId);
-        
+
         return { success: true, message: response.data.message || "Login successful" };
       }
       return { success: false, message: response.data.message || "Login failed" };
     } catch (error: any) {
       console.error("Login failed:", error);
       const errorMsg = error.response?.data?.message || "Login failed. Please try again.";
-      return { 
-        success: false, 
-        message: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg 
+      return {
+        success: false,
+        message: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg
       };
     }
   };
@@ -133,11 +147,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPermissions([]);
       localStorage.removeItem("user");
       localStorage.removeItem("accessToken");
-      localStorage.removeItem("permissions");
-      
+
       // Disconnect socket on logout
+
       socketService.disconnect();
-      
+
       navigate("/login", { replace: true });
     }
   };
@@ -151,21 +165,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hasPermission = useCallback((moduleId: string, action: string) => {
     // If no permissions loaded, deny by default
     if (!permissions.length) return false;
-    
+
     const modulePerm = permissions.find(p => p.moduleId === moduleId);
     if (!modulePerm) return false;
-    
+
     return modulePerm.actions.includes(action);
   }, [permissions]);
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      accessToken, 
+    <AuthContext.Provider value={{
+      user,
+      accessToken,
       permissions,
-      login, 
-      logout, 
-      isLoading, 
+      login,
+      logout,
+      isLoading,
       isAuthenticated: !!accessToken,
       hasPermission,
       refreshPermissions

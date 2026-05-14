@@ -136,7 +136,7 @@ const RegionsPage = () => {
   const handleSave = async () => {
     const countryName = countries.find(c => c.isoCode === selectedCountry)?.name || "";
     const stateName = states.find(s => s.isoCode === selectedState)?.name || "";
-    
+
     // Filter out empty areas
     const filteredAreas = areas.filter(a => a.trim() !== "");
 
@@ -283,6 +283,7 @@ const RegionsPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Country</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">State</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">City</th>
@@ -300,8 +301,9 @@ const RegionsPage = () => {
                   </td>
                 </tr>
               ) : (
-                regions.map((r) => (
+                regions.map((r, index) => (
                   <tr key={r._id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-6 py-4 text-xs font-bold text-muted-foreground/60">{(page * 10) + index + 1}</td>
                     <td className="px-6 py-4 text-sm text-foreground font-medium">{r.country}</td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{r.state}</td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">{r.city}</td>
@@ -426,17 +428,17 @@ const RegionsPage = () => {
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Specific Areas / Localities
               </label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={handleAddArea}
                 className="h-7 px-2 rounded-lg text-[10px] font-bold border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
               >
                 <Plus size={12} className="mr-1" /> Add Area
               </Button>
             </div>
-            
+
             <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
               {areas.map((area, index) => (
                 <div key={index} className="flex items-center gap-2 group">

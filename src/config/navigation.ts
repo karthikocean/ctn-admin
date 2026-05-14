@@ -50,7 +50,14 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { title: "Spotlight", path: "/spotlight", icon: Star, moduleId: "spotlight" },
   { title: "Connections", path: "/connections", icon: Link2, moduleId: "connections" },
   { title: "Contributions", path: "/contributions", icon: Gift, moduleId: "contributions" },
-  { title: "Reports", path: "/reports", icon: BarChart3, moduleId: "reports" },
+  {
+    title: "Reports", icon: BarChart3, moduleId: "reports",
+    children: [
+      { title: "Dashboard", path: "/reports", moduleId: "reports" },
+      { title: "Report History", path: "/reports/history", moduleId: "reports" },
+    ],
+  },
+
   { title: "Plan & Subscription", path: "/subscription", icon: CreditCard, moduleId: "subscription" },
 ];
 
