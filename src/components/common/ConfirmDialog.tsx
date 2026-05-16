@@ -14,7 +14,7 @@ interface ConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title?: string;
-  description?: string;
+  description?: React.ReactNode;
   onConfirm: () => void;
   confirmLabel?: string;
   cancelLabel?: string;
@@ -37,15 +37,13 @@ const ConfirmDialog = ({
     <DialogContent className="sm:max-w-[420px] rounded-[24px] border-none shadow-2xl p-0 overflow-hidden bg-card/95 backdrop-blur-xl">
       <div className="p-8 flex flex-col items-center text-center gap-6">
         {/* Icon Section */}
-        <div className={`w-20 h-20 rounded-full flex items-center justify-center relative ${
-          variant === "destructive" ? "bg-red-50" : "bg-primary/5"
-        }`}>
-          <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${
-            variant === "destructive" ? "bg-red-200" : "bg-primary/20"
-          }`} />
-          <AlertTriangle 
-            size={40} 
-            className={variant === "destructive" ? "text-red-500" : "text-primary"} 
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center relative ${variant === "destructive" ? "bg-red-50" : "bg-primary/5"
+          }`}>
+          <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${variant === "destructive" ? "bg-red-200" : "bg-primary/20"
+            }`} />
+          <AlertTriangle
+            size={40}
+            className={variant === "destructive" ? "text-red-500" : "text-primary"}
           />
         </div>
 
@@ -70,11 +68,10 @@ const ConfirmDialog = ({
             {cancelLabel}
           </Button>
           <Button
-            className={`flex-1 h-12 rounded-2xl font-bold shadow-lg transition-all order-1 sm:order-2 ${
-              variant === "destructive" 
-                ? "bg-red-500 hover:bg-red-600 shadow-red-500/20 text-white" 
-                : "bg-primary hover:bg-primary/90 shadow-primary/20 text-white"
-            }`}
+            className={`flex-1 h-12 rounded-2xl font-bold shadow-lg transition-all order-1 sm:order-2 ${variant === "destructive"
+              ? "bg-red-500 hover:bg-red-600 shadow-red-500/20 text-white"
+              : "bg-primary hover:bg-primary/90 shadow-primary/20 text-white"
+              }`}
             onClick={onConfirm}
             disabled={isLoading}
           >

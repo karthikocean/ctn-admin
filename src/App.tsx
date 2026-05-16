@@ -30,6 +30,9 @@ import ReportsPage from "@/pages/reports/ReportsPage";
 import ReportHistoryPage from "@/pages/reports/ReportHistoryPage";
 
 import SubscriptionPage from "@/pages/subscription/SubscriptionPage";
+import PlansPage from "@/pages/plans/PlansPage";
+import ReferralsPage from "@/pages/referrals/ReferralsPage";
+import BillingsPage from "@/pages/billings/BillingsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -83,6 +86,9 @@ const App = () => (
               <Route path="/reports/history" element={<ReportHistoryPage />} />
 
               <Route path="/subscription" element={<SubscriptionPage />} />
+              <Route path="/plans" element={<PlansPage />} />
+              <Route path="/referrals" element={<ReferralsPage />} />
+              <Route path="/billings" element={<BillingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -59,5 +59,8 @@ export const sidebarNavItems: SidebarNavItem[] = [
   },
 
   { title: "Plan & Subscription", path: "/subscription", icon: CreditCard, moduleId: "subscription" },
+  { title: "Plans", path: "/plans", icon: Layers, moduleId: "plans" },
+  { title: "Referrals", path: "/referrals", icon: Users, moduleId: "members" },
+  { title: "Billings", path: "/billings", icon: CreditCard, moduleId: "members" },
 ];
 
