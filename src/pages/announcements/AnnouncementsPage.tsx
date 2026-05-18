@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, getAnnouncementDetails } from "@/api/AnnouncementsApi";
 import { uploadFiles } from "@/api/MediaApi";
+import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const getFullUrl = (path: string) => {
@@ -56,6 +57,10 @@ const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?:
 
 const AnnouncementsPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("announcements", "create");
+  const canEdit = hasPermission("announcements", "edit");
+  const canDelete = hasPermission("announcements", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -247,13 +252,15 @@ const AnnouncementsPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
-            onClick={() => { resetForm(); setDrawerOpen(true); }}
-          >
-            + New Announcement
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
+              onClick={() => { resetForm(); setDrawerOpen(true); }}
+            >
+              + New Announcement
+            </Button>
+          )}
         </div>
       </div>
 
@@ -280,25 +287,29 @@ const AnnouncementsPage = () => {
                 </div>
 
                 <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
-                    onClick={() => handleEdit(a)}
-                  >
-                    <Pencil size={12} className="mr-1.5" /> Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
-                    onClick={() => {
-                      setDeletingId(a._id);
-                      setDeleteConfirmOpen(true);
-                    }}
-                  >
-                    <Trash2 size={12} className="mr-1.5" /> Delete
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
+                      onClick={() => handleEdit(a)}
+                    >
+                      <Pencil size={12} className="mr-1.5" /> Edit
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
+                      onClick={() => {
+                        setDeletingId(a._id);
+                        setDeleteConfirmOpen(true);
+                      }}
+                    >
+                      <Trash2 size={12} className="mr-1.5" /> Delete
+                    </Button>
+                  )}
                 </div>
               </div>
             </motion.div>

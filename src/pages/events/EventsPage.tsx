@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getEvents, createEvent, updateEvent, deleteEvent, getEventDetails } from "@/api/EventsApi";
 import { uploadFiles } from "@/api/MediaApi";
+import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const getFullUrl = (path: string) => {
@@ -56,6 +57,10 @@ const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?:
 
 const EventsPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("events", "create");
+  const canEdit = hasPermission("events", "edit");
+  const canDelete = hasPermission("events", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -275,13 +280,15 @@ const EventsPage = () => {
               className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
             />
           </div>
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
-            onClick={() => { resetForm(); setDrawerOpen(true); }}
-          >
-            + New Event
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
+              onClick={() => { resetForm(); setDrawerOpen(true); }}
+            >
+              + New Event
+            </Button>
+          )}
         </div>
       </div>
 
@@ -342,25 +349,29 @@ const EventsPage = () => {
                 </div>
 
                 <div className="flex gap-2 mt-auto pt-3 border-t border-slate-100/50">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
-                    onClick={() => handleEdit(e)}
-                  >
-                    <Pencil size={12} className="mr-1.5" /> Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-500"
-                    onClick={() => {
-                      setDeletingId(e._id);
-                      setDeleteConfirmOpen(true);
-                    }}
-                  >
-                    <Trash2 size={12} className="mr-1.5" /> Delete
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
+                      onClick={() => handleEdit(e)}
+                    >
+                      <Pencil size={12} className="mr-1.5" /> Edit
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-500"
+                      onClick={() => {
+                        setDeletingId(e._id);
+                        setDeleteConfirmOpen(true);
+                      }}
+                    >
+                      <Trash2 size={12} className="mr-1.5" /> Delete
+                    </Button>
+                  )}
                 </div>
               </div>
             </motion.div>

@@ -37,12 +37,11 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { permissionModules } from "@/data/mockData";
 import PremiumLoader from "@/components/common/PremiumLoader";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface Role {
   _id: string;
@@ -85,6 +84,11 @@ const TableSkeleton = () => (
 );
 
 const RolesPage = () => {
+  const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("roles_permissions", "create");
+  const canEdit = hasPermission("roles_permissions", "edit");
+  const canDelete = hasPermission("roles_permissions", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [permDialogOpen, setPermDialogOpen] = useState(false);
   const [usersDialogOpen, setUsersDialogOpen] = useState(false);
@@ -126,7 +130,8 @@ const RolesPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
 
-
+  const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
+  const [deleteRoleConfirmOpen, setDeleteRoleConfirmOpen] = useState(false);
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -144,18 +149,8 @@ const RolesPage = () => {
 
   // Permission state and actions
   const actions = ["VIEW", "ADD", "EDIT", "DELETE"];
-  const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>(() => {
-    const initial: Record<string, Record<string, boolean>> = {};
-    permissionModules.forEach((mod) => {
-      initial[mod] = {
-        VIEW: false,
-        ADD: false,
-        EDIT: false,
-        DELETE: false,
-      };
-    });
-    return initial;
-  });
+  const [permissionModules, setPermissionModules] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>({});
 
   const formatModuleName = (mod: string) => {
     return mod
@@ -226,9 +221,31 @@ const RolesPage = () => {
     }
   };
 
+  const fetchPermissionModules = async () => {
+    try {
+      const response = await api.get('/roles/modules');
+      if (response.data && response.data.data) {
+        const mods = response.data.data.map((m: any) => m.name);
+        setPermissionModules(mods);
+        setPermissions((prev) => {
+          const initial: Record<string, Record<string, boolean>> = { ...prev };
+          mods.forEach((mod: string) => {
+            if (!initial[mod]) {
+              initial[mod] = { VIEW: false, ADD: false, EDIT: false, DELETE: false };
+            }
+          });
+          return initial;
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching permission modules:", error);
+    }
+  };
+
   useEffect(() => {
     fetchRoles();
     fetchRecentUsers();
+    fetchPermissionModules();
   }, [searchTerm]);
 
   const handleTogglePermission = (mod: string, action: string) => {
@@ -269,9 +286,11 @@ const RolesPage = () => {
 
 
   const handleEditRole = (role: Role) => {
+    console.log(role);
     // Map existing permissions to the state
     const nextPerms: Record<string, Record<string, boolean>> = {};
     permissionModules.forEach(mod => {
+      console.log(mod);
       const roleMod = role.permissions.find(p => p.moduleId === mod.toLowerCase());
       nextPerms[mod] = {
         VIEW: roleMod?.actions?.includes("view") || false,
@@ -336,17 +355,38 @@ const RolesPage = () => {
     if (!userToDelete) return;
     try {
       const response = await api.delete(`/admin-users/${userToDelete}`);
-      toast.success(response.data?.message || "User deleted successfully");
+      toast({ title: "Success", description: response.data?.message || "User deleted successfully", variant: "success" });
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
       else fetchPaginatedUsers(null, usersPage);
       fetchRoles();
     } catch (error: any) {
       console.error("Error deleting user:", error);
       const errorMsg = error.response?.data?.message || "Failed to delete user";
-      toast.error(Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg);
+      toast({ title: "Error", description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg, variant: "destructive" });
     } finally {
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
+    }
+  };
+
+  const handleDeleteRoleClick = (roleId: string) => {
+    setRoleToDelete(roleId);
+    setDeleteRoleConfirmOpen(true);
+  };
+
+  const confirmDeleteRole = async () => {
+    if (!roleToDelete) return;
+    try {
+      const response = await api.delete(`/roles/${roleToDelete}`);
+      toast({ title: "Success", description: response.data?.message || "Role deleted successfully", variant: "success" });
+      fetchRoles();
+    } catch (error: any) {
+      console.error("Error deleting role:", error);
+      const errorMsg = error.response?.data?.message || "Failed to delete role";
+      toast({ title: "Error", description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg, variant: "destructive" });
+    } finally {
+      setDeleteRoleConfirmOpen(false);
+      setRoleToDelete(null);
     }
   };
 
@@ -366,7 +406,7 @@ const RolesPage = () => {
 
       const response = await api.patch(`/admin-users/${userId}/status`, { isActive });
 
-      toast.success(response.data?.message || `User status updated to ${newStatus}`);
+      toast({ title: "Success", description: response.data?.message || `User status updated to ${newStatus}`, variant: "success" });
 
       // Refresh data
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
@@ -378,7 +418,7 @@ const RolesPage = () => {
     } catch (error: any) {
       console.error("Error updating status:", error);
       const errorMsg = error.response?.data?.message || "Failed to update status";
-      toast.error(Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg);
+      toast({ title: "Error", description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg, variant: "destructive" });
     }
   };
 
@@ -408,7 +448,7 @@ const RolesPage = () => {
         .filter(p => p !== null);
 
       const response = await api.patch(`/roles/${editingRoleId}`, { permissions: rolePermissions });
-      toast.success(response.data?.message || "Permissions updated successfully");
+      toast({ title: "Success", description: response.data?.message || "Permissions updated successfully", variant: "success" });
 
       setPermDialogOpen(false);
       setEditingRoleId(null);
@@ -416,7 +456,7 @@ const RolesPage = () => {
     } catch (error: any) {
       console.error("Error updating permissions:", error);
       const errorMsg = error.response?.data?.message || "Failed to update permissions";
-      toast.error(Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg);
+      toast({ title: "Error", description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg, variant: "destructive" });
     }
   };
 
@@ -424,7 +464,7 @@ const RolesPage = () => {
     try {
       // Validate
       if (!newRole.name) {
-        toast.error("Role name is required");
+        toast({ title: "Error", description: "Role name is required", variant: "destructive" });
         return;
       }
 
@@ -460,10 +500,10 @@ const RolesPage = () => {
 
       if (editingRoleId) {
         const response = await api.patch(`/roles/${editingRoleId}`, payload);
-        toast.success(response.data?.message || "Role updated successfully");
+        toast({ title: "Success", description: response.data?.message || "Role updated successfully", variant: "success" });
       } else {
         const response = await api.post("/roles", payload);
-        toast.success(response.data?.message || "Role created successfully");
+        toast({ title: "Success", description: response.data?.message || "Role created successfully", variant: "success" });
       }
 
       // Reset and close
@@ -483,7 +523,7 @@ const RolesPage = () => {
     } catch (error: any) {
       console.error("Error saving role:", error);
       const errorMsg = error.response?.data?.message || "Failed to save role";
-      toast.error(Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg);
+      toast({ title: "Error", description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg, variant: "destructive" });
     }
   };
 
@@ -502,7 +542,7 @@ const RolesPage = () => {
     try {
       if (!selectedRoleId) {
         console.error("No role ID selected for user save");
-        toast.error("Role information is missing. Please try again.");
+        toast({ title: "Error", description: "Role information is missing. Please try again.", variant: "destructive" });
         return;
       }
 
@@ -519,7 +559,7 @@ const RolesPage = () => {
 
       if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
-        toast.error("Please fix the errors in the form");
+        toast({ title: "Error", description: "Please fix the errors in the form", variant: "destructive" });
         return;
       }
 
@@ -538,11 +578,11 @@ const RolesPage = () => {
       if (isEditMode && editingUserId) {
         console.log("Triggering PATCH for user:", editingUserId);
         const response = await api.patch(`/admin-users/${editingUserId}`, payload);
-        toast.success(response.data?.message || "User updated successfully");
+        toast({ title: "Success", description: response.data?.message || "User updated successfully", variant: "success" });
       } else {
         console.log("Triggering POST for new user");
         const response = await api.post("/admin-users", payload);
-        toast.success(response.data?.message || "User created successfully");
+        toast({ title: "Success", description: response.data?.message || "User created successfully", variant: "success" });
       }
 
 
@@ -556,7 +596,7 @@ const RolesPage = () => {
     } catch (error: any) {
       console.error("Error saving user:", error);
       const errorMsg = error.response?.data?.message || "Failed to save user";
-      toast.error(Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg);
+      toast({ title: "Error", description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg, variant: "destructive" });
     }
   };
 
@@ -641,24 +681,26 @@ const RolesPage = () => {
               </Button>
 
               {/* Add Role */}
-              <Button
-                size="sm"
-                className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs w-full md:w-auto"
-                onClick={() => {
-                  setEditingRoleId(null);
-                  setNewRole({ name: "", description: "" });
-                  setPermissions(() => {
-                    const initial: Record<string, Record<string, boolean>> = {};
-                    permissionModules.forEach((mod) => {
-                      initial[mod] = { VIEW: false, ADD: false, EDIT: false, DELETE: false };
+              {canCreate && (
+                <Button
+                  size="sm"
+                  className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs w-full md:w-auto"
+                  onClick={() => {
+                    setEditingRoleId(null);
+                    setNewRole({ name: "", description: "" });
+                    setPermissions(() => {
+                      const initial: Record<string, Record<string, boolean>> = {};
+                      permissionModules.forEach((mod) => {
+                        initial[mod] = { VIEW: false, ADD: false, EDIT: false, DELETE: false };
+                      });
+                      return initial;
                     });
-                    return initial;
-                  });
-                  setDrawerOpen(true);
-                }}
-              >
-                + Add Role
-              </Button>
+                    setDrawerOpen(true);
+                  }}
+                >
+                  + Add Role
+                </Button>
+              )}
             </div>
           </div>
 
@@ -694,9 +736,9 @@ const RolesPage = () => {
                         </p>
                       </div>
                       <ActionMenu
-                        onEdit={() => handleEditRole(role)}
-                        onDelete={() => { }}
-                        onAddUser={() => handleAddUserAction(role.name, role._id)}
+                        onEdit={canEdit ? () => handleEditRole(role) : undefined}
+                        onDelete={canDelete ? () => handleDeleteRoleClick(role._id) : undefined}
+                        onAddUser={canCreate ? () => handleAddUserAction(role.name, role._id) : undefined}
                       />
 
                     </div>
@@ -800,8 +842,8 @@ const RolesPage = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <ActionMenu
-                            onEdit={() => handleEditUser(user._id || user.id)}
-                            onDelete={() => handleDeleteUser(user._id || user.id)}
+                            onEdit={canEdit ? () => handleEditUser(user._id || user.id) : undefined}
+                            onDelete={canDelete ? () => handleDeleteUser(user._id || user.id) : undefined}
                           />
                         </td>
                       </tr>
@@ -999,8 +1041,8 @@ const RolesPage = () => {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <ActionMenu
-                              onEdit={() => handleEditUser(user._id || user.id)}
-                              onDelete={() => handleDeleteUser(user._id || user.id)}
+                              onEdit={canEdit ? () => handleEditUser(user._id || user.id) : undefined}
+                              onDelete={canDelete ? () => handleDeleteUser(user._id || user.id) : undefined}
                             />
 
                           </td>
@@ -1252,6 +1294,31 @@ const RolesPage = () => {
                   className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
                 >
                   Delete User
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog open={deleteRoleConfirmOpen} onOpenChange={setDeleteRoleConfirmOpen}>
+            <AlertDialogContent className="rounded-2xl border-border shadow-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-xl font-bold flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                    <X className="text-destructive w-4 h-4" />
+                  </div>
+                  Confirm Role Deletion
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-muted-foreground pt-2">
+                  Are you sure you want to delete this role? This action cannot be undone. You can only delete roles that have no users assigned.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-4">
+                <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDeleteRole}
+                  className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
+                >
+                  Delete Role
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -58,6 +58,7 @@ import {
 } from "@/api/MembersApi";
 import { uploadFiles } from "@/api/MediaApi";
 import { getCategories } from "@/api/CategoryApi";
+import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const getFullUrl = (path: string) => {
@@ -139,6 +140,10 @@ const ErrorMsg = ({ message }: { message?: string }) => {
 
 const MembersPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("members", "create");
+  const canEdit = hasPermission("members", "edit");
+  const canDelete = hasPermission("members", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<any>(null);
@@ -647,16 +652,18 @@ const MembersPage = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Button
-            className="rounded-xl shadow-lg shadow-primary/20 h-10 px-6 font-bold"
-            onClick={() => {
-              resetForm();
-              setDrawerOpen(true);
-            }}
-          >
-            <Plus size={18} className="mr-2" />
-            Add Member
-          </Button>
+          {canCreate && (
+            <Button
+              className="rounded-xl shadow-lg shadow-primary/20 h-10 px-6 font-bold"
+              onClick={() => {
+                resetForm();
+                setDrawerOpen(true);
+              }}
+            >
+              <Plus size={18} className="mr-2" />
+              Add Member
+            </Button>
+          )}
         </div>
       </div>
 
@@ -752,8 +759,8 @@ const MembersPage = () => {
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
                       <ActionMenu
-                        onEdit={() => handleEdit(member)}
-                        onDelete={() => handleDeleteClick(member)}
+                        onEdit={canEdit ? () => handleEdit(member) : undefined}
+                        onDelete={canDelete ? () => handleDeleteClick(member) : undefined}
                       />
                     </TableCell>
                   </TableRow>

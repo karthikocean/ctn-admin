@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Phone, ArrowRight, Loader2, Globe, CheckCircle2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { toast } = useToast();
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState<string[]>(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
@@ -70,12 +71,20 @@ const LoginPage = () => {
 
     if (result.success) {
       setIsSuccess(true);
-      toast.success(result.message);
+      toast({
+        title: "Success",
+        description: result.message,
+        variant: "success"
+      });
       setTimeout(() => {
         navigate("/", { replace: true });
       }, 800);
     } else {
-      toast.error(result.message);
+      toast({
+        title: "Error",
+        description: result.message,
+        variant: "destructive"
+      });
       setPin(["", "", "", ""]);
       inputRefs[0].current?.focus();
       setLoading(false);

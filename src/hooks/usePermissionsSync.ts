@@ -15,7 +15,6 @@ export const usePermissionsSync = () => {
 
     const handlePermissionsUpdate = async (data: any) => {
       console.log("Real-time update: Permissions modified", data);
-      
       try {
         await refreshPermissions();
         toast.info("Your permissions have been updated.", {

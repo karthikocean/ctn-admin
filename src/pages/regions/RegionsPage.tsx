@@ -19,10 +19,15 @@ import { Input } from "@/components/ui/input";
 import { getRegions, createRegion, updateRegion, deleteRegion } from "@/api/RegionApi";
 import { useToast } from "@/hooks/use-toast";
 import { Region } from "@/types";
+import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const RegionsPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("business_regions", "create");
+  const canEdit = hasPermission("business_regions", "edit");
+  const canDelete = hasPermission("business_regions", "delete");
   const [regions, setRegions] = useState<Region[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -268,13 +273,15 @@ const RegionsPage = () => {
           </Select>
 
           {/* Add Region */}
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
-            onClick={handleOpenAdd}
-          >
-            + Add Region
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
+              onClick={handleOpenAdd}
+            >
+              + Add Region
+            </Button>
+          )}
         </div>
       </div>
 
@@ -333,8 +340,8 @@ const RegionsPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
-                        onEdit={() => handleEdit(r)}
-                        onDelete={() => handleDeleteClick(r._id)}
+                        onEdit={canEdit ? () => handleEdit(r) : undefined}
+                        onDelete={canDelete ? () => handleDeleteClick(r._id) : undefined}
                       />
                     </td>
                   </tr>

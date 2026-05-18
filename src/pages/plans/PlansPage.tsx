@@ -14,6 +14,7 @@ import PaginationBar from "@/components/common/PaginationBar";
 import StatusBadge from "@/components/common/StatusBadge";
 import * as PlansApi from "@/api/PlansApi";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { useAuth } from "@/context/AuthContext";
 
 const MODULE_OPTIONS = [
   "Ask",
@@ -29,6 +30,10 @@ const MODULE_OPTIONS = [
 
 const PlansPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("plans", "create");
+  const canEdit = hasPermission("plans", "edit");
+  const canDelete = hasPermission("plans", "delete");
   const [loading, setLoading] = useState(false);
   const [plans, setPlans] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -219,17 +224,19 @@ const PlansPage = () => {
             Filters
           </Button>
 
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
-            onClick={() => {
-              resetForm();
-              setDrawerOpen(true);
-            }}
-          >
-            <Plus size={14} className="mr-1.5" />
-            Add Plan
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
+              onClick={() => {
+                resetForm();
+                setDrawerOpen(true);
+              }}
+            >
+              <Plus size={14} className="mr-1.5" />
+              Add Plan
+            </Button>
+          )}
         </div>
       </div>
 
@@ -295,8 +302,8 @@ const PlansPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
-                        onEdit={() => handleEdit(plan)}
-                        onDelete={() => confirmDelete(plan._id)}
+                        onEdit={canEdit ? () => handleEdit(plan) : undefined}
+                        onDelete={canDelete ? () => confirmDelete(plan._id) : undefined}
                       />
                     </td>
                   </tr>
