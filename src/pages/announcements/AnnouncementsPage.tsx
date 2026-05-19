@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, getAnnouncementDetails } from "@/api/AnnouncementsApi";
 import { uploadFiles } from "@/api/MediaApi";
+import { useAuth } from "@/context/AuthContext";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -55,6 +57,10 @@ const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?:
 
 const AnnouncementsPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("announcements", "create");
+  const canEdit = hasPermission("announcements", "edit");
+  const canDelete = hasPermission("announcements", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -217,7 +223,15 @@ const AnnouncementsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {isLoading && announcements.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Synchronizing Announcements..."
+          subtitle="Broadcasting network updates to all global nodes"
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -238,22 +252,18 @@ const AnnouncementsPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
-            onClick={() => { resetForm(); setDrawerOpen(true); }}
-          >
-            + New Announcement
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
+              onClick={() => { resetForm(); setDrawerOpen(true); }}
+            >
+              + New Announcement
+            </Button>
+          )}
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-64">
-          <Loader2 className="animate-spin text-primary mb-2" />
-          <p className="text-sm text-muted-foreground">Loading announcements...</p>
-        </div>
-      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {announcements.map((a, i) => (
             <motion.div key={a._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }} className="glass-card overflow-hidden flex flex-col">
@@ -277,25 +287,29 @@ const AnnouncementsPage = () => {
                 </div>
 
                 <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
-                    onClick={() => handleEdit(a)}
-                  >
-                    <Pencil size={12} className="mr-1.5" /> Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
-                    onClick={() => {
-                      setDeletingId(a._id);
-                      setDeleteConfirmOpen(true);
-                    }}
-                  >
-                    <Trash2 size={12} className="mr-1.5" /> Delete
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
+                      onClick={() => handleEdit(a)}
+                    >
+                      <Pencil size={12} className="mr-1.5" /> Edit
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
+                      onClick={() => {
+                        setDeletingId(a._id);
+                        setDeleteConfirmOpen(true);
+                      }}
+                    >
+                      <Trash2 size={12} className="mr-1.5" /> Delete
+                    </Button>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -307,8 +321,6 @@ const AnnouncementsPage = () => {
             </div>
           )}
         </div>
-      )}
-
       <FormDrawer
         open={drawerOpen}
         onOpenChange={(open) => { setDrawerOpen(open); if (!open) resetForm(); }}

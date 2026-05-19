@@ -19,9 +19,14 @@ import {
 import { mockAwards, mockMembers } from "@/data/mockData";
 import type { AwardEntry } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 const AwardsPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("awards", "create");
+  const canEdit = hasPermission("awards", "edit");
+  const canDelete = hasPermission("awards", "delete");
   const [awards, setAwards] = useState<AwardEntry[]>(() => {
     const stored = localStorage.getItem("awards");
     return stored ? JSON.parse(stored) : mockAwards;
@@ -168,14 +173,16 @@ const AwardsPage = () => {
             Filters
           </Button>
 
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
-            onClick={() => handleOpenDrawer()}
-          >
-            <Plus size={14} className="mr-1.5" />
-            Issue Award
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
+              onClick={() => handleOpenDrawer()}
+            >
+              <Plus size={14} className="mr-1.5" />
+              Issue Award
+            </Button>
+          )}
         </div>
       </div>
 
@@ -219,9 +226,9 @@ const AwardsPage = () => {
                     <td className="px-6 py-4"><StatusBadge status={a.status} /></td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu 
-                        onAssign={() => handleOpenAssign(a)}
-                        onEdit={() => handleOpenDrawer(a)}
-                        onDelete={() => handleDelete(a.id)}
+                        onAssign={canEdit ? () => handleOpenAssign(a) : undefined}
+                        onEdit={canEdit ? () => handleOpenDrawer(a) : undefined}
+                        onDelete={canDelete ? () => handleDelete(a.id) : undefined}
                       />
                     </td>
                   </tr>

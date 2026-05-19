@@ -22,8 +22,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getPointConfigs, createPointConfig, updatePointConfig, deletePointConfig } from "@/api/PointConfigApi";
-import { Plus, Edit, Trash2, Loader2, CheckCircle2 } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, CheckCircle2, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TableLoader } from "@/components/common/TableLoader";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+import { Badge } from "@/components/ui/badge";
 
 const MODULE_OPTIONS = [
   "Ask",
@@ -37,6 +40,11 @@ const MODULE_OPTIONS = [
   "Thank you Slip"
 ];
 
+const TYPE_OPTIONS = [
+  { label: "Creation", value: "creation" },
+  { label: "Response", value: "response" }
+];
+
 const AllocatePointsPage = () => {
   const { toast } = useToast();
   const [pointConfigs, setPointConfigs] = useState<any[]>([]);
@@ -46,6 +54,7 @@ const AllocatePointsPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [moduleName, setModuleName] = useState("");
+  const [type, setType] = useState("creation");
   const [pointsValue, setPointsValue] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteName, setDeleteName] = useState("");
@@ -69,15 +78,15 @@ const AllocatePointsPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!moduleName || pointsValue === "") {
-      toast({ title: "Validation Error", description: "Please select a module and enter points", variant: "destructive" });
+    if (!moduleName || !type || pointsValue === "") {
+      toast({ title: "Validation Error", description: "Please select a module, type and enter points", variant: "destructive" });
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const payload = { moduleName, points: parseInt(pointsValue) };
-      
+      const payload = { moduleName, type, points: parseInt(pointsValue) };
+
       if (editingId) {
         const res = await updatePointConfig(editingId, payload);
         toast({ title: "Updated", description: res.message || "Point configuration updated successfully", variant: "success" });
@@ -85,17 +94,18 @@ const AllocatePointsPage = () => {
         const res = await createPointConfig(payload);
         toast({ title: "Created", description: res.message || "Point configuration created successfully", variant: "success" });
       }
-      
+
       setShowForm(false);
       setModuleName("");
+      setType("creation");
       setPointsValue("");
       setEditingId(null);
       fetchConfigs();
     } catch (error: any) {
-      toast({ 
-        title: "Error", 
-        description: error.response?.data?.message || "Failed to save configuration", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to save configuration",
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
@@ -105,6 +115,7 @@ const AllocatePointsPage = () => {
   const handleEdit = (config: any) => {
     setEditingId(config._id);
     setModuleName(config.moduleName);
+    setType(config.type || "creation");
     setPointsValue(config.points.toString());
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -112,7 +123,7 @@ const AllocatePointsPage = () => {
 
   const handleDeleteClick = (config: any) => {
     setDeleteId(config._id);
-    setDeleteName(config.moduleName);
+    setDeleteName(`${config.moduleName} (${config.type})`);
     setShowDeleteDialog(true);
   };
 
@@ -124,10 +135,10 @@ const AllocatePointsPage = () => {
       fetchConfigs();
       setShowDeleteDialog(false);
     } catch (error: any) {
-      toast({ 
-        title: "Error", 
-        description: error.response?.data?.message || "Failed to delete configuration", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete configuration",
+        variant: "destructive"
       });
     } finally {
       setDeleteId(null);
@@ -135,7 +146,14 @@ const AllocatePointsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {isLoading && pointConfigs.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Syncing Rewards Network..."
+          subtitle="Establishing point allocation protocols"
+        />
+      )}
       <PageHeader
         title="Allocate Points"
         subtitle="Manage point rewards for different system modules"
@@ -144,12 +162,13 @@ const AllocatePointsPage = () => {
           className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
           onClick={() => {
             if (showForm && !editingId) {
-                setShowForm(false);
+              setShowForm(false);
             } else {
-                setShowForm(true);
-                setEditingId(null);
-                setModuleName("");
-                setPointsValue("");
+              setShowForm(true);
+              setEditingId(null);
+              setModuleName("");
+              setType("creation");
+              setPointsValue("");
             }
           }}
         >
@@ -169,15 +188,15 @@ const AllocatePointsPage = () => {
               <Plus size={18} />
             </div>
             <h3 className="font-bold text-slate-800">
-              {editingId ? `Edit Points for "${moduleName}"` : "Add New Module Points"}
+              {editingId ? `Edit Points for "${moduleName}" (${type})` : "Add New Module Points"}
             </h3>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="moduleName" className="text-xs font-bold uppercase tracking-wider text-slate-500">Module Name</Label>
-                <Select value={moduleName} onValueChange={setModuleName} disabled={!!editingId}>
+                <Select value={moduleName} onValueChange={setModuleName}>
                   <SelectTrigger id="moduleName" className="h-12 bg-white border-slate-200 rounded-xl">
                     <SelectValue placeholder="Select Module" />
                   </SelectTrigger>
@@ -188,6 +207,21 @@ const AllocatePointsPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type" className="text-xs font-bold uppercase tracking-wider text-slate-500">Allocation Type</Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger id="type" className="h-12 bg-white border-slate-200 rounded-xl">
+                    <SelectValue placeholder="Select Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TYPE_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="points" className="text-xs font-bold uppercase tracking-wider text-slate-500">Points Allocation</Label>
                 <Input
@@ -211,6 +245,7 @@ const AllocatePointsPage = () => {
                   setShowForm(false);
                   setEditingId(null);
                   setModuleName("");
+                  setType("creation");
                   setPointsValue("");
                 }}
               >
@@ -233,14 +268,19 @@ const AllocatePointsPage = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card overflow-hidden border-slate-100"
+        className="glass-card overflow-hidden border-slate-100 relative"
       >
+        {isLoading && pointConfigs.length > 0 && <TableLoader text="Synchronizing Point Configurations..." />}
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/50">
                 <th className="text-left px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   Module Name
+                </th>
+                <th className="text-left px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Type
                 </th>
                 <th className="text-left px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   Points Allocation
@@ -251,19 +291,22 @@ const AllocatePointsPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {isLoading ? (
+              {isLoading && pointConfigs.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-8 py-16 text-center">
-                    <Loader2 className="animate-spin inline mr-3 text-primary" size={24} />
-                    <span className="text-slate-500 font-medium">Loading configurations...</span>
+                  <td colSpan={4} className="px-8 py-24">
+                    <GlobalNetworkLoader
+                      fullScreen={false}
+                      title="Syncing Rewards Network..."
+                      subtitle="Establishing point allocation protocols"
+                    />
                   </td>
                 </tr>
               ) : pointConfigs.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-8 py-16 text-center">
+                  <td colSpan={4} className="px-8 py-16 text-center">
                     <div className="flex flex-col items-center gap-2 opacity-40">
-                        <Plus size={48} className="text-slate-300" />
-                        <p className="text-slate-500 font-medium">No modules configured yet</p>
+                      <Plus size={48} className="text-slate-300" />
+                      <p className="text-slate-500 font-medium">No modules configured yet</p>
                     </div>
                   </td>
                 </tr>
@@ -274,6 +317,14 @@ const AllocatePointsPage = () => {
                       <div className="flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
                         <span className="text-sm font-bold text-slate-700">{config.moduleName}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2">
+                        <Layers size={14} className="text-slate-400" />
+                        <Badge variant="outline" className={`capitalize font-semibold text-[10px] px-2 py-0 border-primary/20 bg-primary/5 text-primary`}>
+                          {config.type || "-"}
+                        </Badge>
                       </div>
                     </td>
                     <td className="px-8 py-5">
@@ -315,14 +366,14 @@ const AllocatePointsPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-bold text-slate-800">Delete Module Configuration?</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-medium pt-2 leading-relaxed">
-              Are you sure you want to delete the point configuration for <span className="font-bold text-slate-700">"{deleteName}"</span>? 
+              Are you sure you want to delete the point configuration for <span className="font-bold text-slate-700">"{deleteName}"</span>?
               This will remove its points allocation rules from the system. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3 pt-6">
             <AlertDialogCancel className="rounded-xl border-slate-200 !bg-white !text-slate-700 font-bold h-12 flex-1 hover:!bg-slate-50 hover:!text-slate-900 transition-all">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
+            <AlertDialogAction
+              onClick={confirmDelete}
               className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 flex-1 shadow-lg shadow-red-200"
             >
               Confirm Delete

@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { mockPoints, mockMembers, modulePoints } from "@/data/mockData";
 import type { PointEntry } from "@/types";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const PointsPage = () => {
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("points", "create");
   const [points, setPoints] = useState<PointEntry[]>(() => {
     const stored = localStorage.getItem("points");
     return stored ? JSON.parse(stored) : mockPoints;
@@ -70,14 +73,16 @@ const PointsPage = () => {
             Filters
           </Button>
 
-          <Link to="/allocate-points">
-            <Button
-              size="sm"
-              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
-            >
-              Allocate Points
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link to="/allocate-points">
+              <Button
+                size="sm"
+                className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
+              >
+                Allocate Points
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

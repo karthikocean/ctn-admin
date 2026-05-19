@@ -43,6 +43,7 @@ export interface Region {
   country: string;
   state: string;
   city: string;
+  areas?: string[];
   memberCount: number;
   status: "active" | "inactive";
 }
@@ -109,6 +110,27 @@ export interface Activity {
   isLiked: boolean;
   content: string;
   replies: Reply[];
+}
+
+export interface Post {
+  _id: string;
+  type: "PROMOTION" | "GIVE" | "ASK" | "REQUIREMENT";
+  title: string;
+  description: string;
+  location: string;
+  period: string;
+  media: string[];
+  memberId: string;
+  sharedCount: number;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+  member: {
+    _id: string;
+    fullName: string;
+    profilePhoto: string;
+    businessName: string;
+  };
 }
 
 export interface PointEntry {

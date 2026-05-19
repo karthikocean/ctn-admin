@@ -15,21 +15,32 @@ interface ActionMenuProps {
   onAssign?: () => void;
 }
 
-const ActionMenu = ({ onView, onEdit, onDelete, onAddUser, onAssign }: ActionMenuProps) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-        <MoreHorizontal size={16} />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent align="end">
-      {onAddUser && <DropdownMenuItem onClick={onAddUser}><UserPlus size={14} className="mr-2" /> Add User</DropdownMenuItem>}
-      {onAssign && <DropdownMenuItem onClick={onAssign}><UserPlus size={14} className="mr-2" /> Assign Member</DropdownMenuItem>}
-      {onView && <DropdownMenuItem onClick={onView}><Eye size={14} className="mr-2" /> View</DropdownMenuItem>}
-      {onEdit && <DropdownMenuItem onClick={onEdit}><Pencil size={14} className="mr-2" /> Edit</DropdownMenuItem>}
-      {onDelete && <DropdownMenuItem onClick={onDelete} className="text-accent"><Trash2 size={14} className="mr-2" /> Delete</DropdownMenuItem>}
-    </DropdownMenuContent>
-  </DropdownMenu>
-);
+const ActionMenu = ({ onView, onEdit, onDelete, onAddUser, onAssign }: ActionMenuProps) => {
+  const hasAnyAction = !!(onView || onEdit || onDelete || onAddUser || onAssign);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={!hasAnyAction}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-8 w-8 p-0 rounded-xl border border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-all duration-300 shadow-sm disabled:opacity-40 disabled:pointer-events-none"
+          disabled={!hasAnyAction}
+        >
+          <MoreHorizontal size={16} />
+        </Button>
+      </DropdownMenuTrigger>
+      {hasAnyAction && (
+        <DropdownMenuContent align="end" className="w-40">
+          {onAddUser && <DropdownMenuItem onClick={onAddUser} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Add User</DropdownMenuItem>}
+          {onAssign && <DropdownMenuItem onClick={onAssign} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Assign Member</DropdownMenuItem>}
+          {onView && <DropdownMenuItem onClick={onView} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Eye size={14} className="mr-2" /> View</DropdownMenuItem>}
+          {onEdit && <DropdownMenuItem onClick={onEdit} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Pencil size={14} className="mr-2" /> Edit</DropdownMenuItem>}
+          {onDelete && <DropdownMenuItem onClick={onDelete} className="focus:bg-red-50 focus:text-red-600 cursor-pointer text-red-600"><Trash2 size={14} className="mr-2" /> Delete</DropdownMenuItem>}
+        </DropdownMenuContent>
+      )}
+    </DropdownMenu>
+  );
+};
 
 export default ActionMenu;

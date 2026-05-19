@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface PaginationBarProps {
   currentPage: number;
@@ -17,7 +18,7 @@ const PaginationBar = ({ currentPage, totalPages, onPageChange }: PaginationBarP
         <Button
           variant="outline"
           size="sm"
-          className="rounded-xl"
+          className="rounded-xl border-slate-200 hover:bg-primary/5 hover:text-primary transition-all duration-300"
           disabled={currentPage <= 1}
           onClick={() => onPageChange(currentPage - 1)}
         >
@@ -28,7 +29,12 @@ const PaginationBar = ({ currentPage, totalPages, onPageChange }: PaginationBarP
             key={page}
             variant={page === currentPage ? "default" : "outline"}
             size="sm"
-            className="rounded-xl w-9"
+            className={cn(
+              "rounded-xl w-9 transition-all duration-300",
+              page === currentPage
+                ? "bg-primary text-white shadow-md shadow-primary/20 hover:bg-primary/90"
+                : "border-slate-200 hover:bg-primary/5 hover:text-primary"
+            )}
             onClick={() => onPageChange(page)}
           >
             {page}
@@ -37,7 +43,7 @@ const PaginationBar = ({ currentPage, totalPages, onPageChange }: PaginationBarP
         <Button
           variant="outline"
           size="sm"
-          className="rounded-xl"
+          className="rounded-xl border-slate-200 hover:bg-primary/5 hover:text-primary transition-all duration-300"
           disabled={currentPage >= totalPages}
           onClick={() => onPageChange(currentPage + 1)}
         >

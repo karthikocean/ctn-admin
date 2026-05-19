@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getEvents, createEvent, updateEvent, deleteEvent, getEventDetails } from "@/api/EventsApi";
 import { uploadFiles } from "@/api/MediaApi";
+import { useAuth } from "@/context/AuthContext";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -55,6 +57,10 @@ const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?:
 
 const EventsPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("events", "create");
+  const canEdit = hasPermission("events", "edit");
+  const canDelete = hasPermission("events", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -244,7 +250,15 @@ const EventsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {isLoading && !events.length && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Synchronizing Global Events..."
+          subtitle="Establishing secure connection to event clusters"
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -266,22 +280,18 @@ const EventsPage = () => {
               className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
             />
           </div>
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
-            onClick={() => { resetForm(); setDrawerOpen(true); }}
-          >
-            + New Event
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs font-bold"
+              onClick={() => { resetForm(); setDrawerOpen(true); }}
+            >
+              + New Event
+            </Button>
+          )}
         </div>
       </div>
 
-      {isLoading && !events.length ? (
-        <div className="flex flex-col items-center justify-center h-64">
-          <Loader2 className="animate-spin text-primary mb-2" />
-          <p className="text-sm text-muted-foreground">Loading events...</p>
-        </div>
-      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {events.map((e, i) => (
             <motion.div
@@ -339,25 +349,29 @@ const EventsPage = () => {
                 </div>
 
                 <div className="flex gap-2 mt-auto pt-3 border-t border-slate-100/50">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
-                    onClick={() => handleEdit(e)}
-                  >
-                    <Pencil size={12} className="mr-1.5" /> Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-500"
-                    onClick={() => {
-                      setDeletingId(e._id);
-                      setDeleteConfirmOpen(true);
-                    }}
-                  >
-                    <Trash2 size={12} className="mr-1.5" /> Delete
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
+                      onClick={() => handleEdit(e)}
+                    >
+                      <Pencil size={12} className="mr-1.5" /> Edit
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-500"
+                      onClick={() => {
+                        setDeletingId(e._id);
+                        setDeleteConfirmOpen(true);
+                      }}
+                    >
+                      <Trash2 size={12} className="mr-1.5" /> Delete
+                    </Button>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -369,8 +383,6 @@ const EventsPage = () => {
             </div>
           )}
         </div>
-      )}
-
       <FormDrawer
         open={drawerOpen}
         onOpenChange={(open) => { setDrawerOpen(open); if (!open) resetForm(); }}

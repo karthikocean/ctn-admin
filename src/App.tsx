@@ -14,12 +14,14 @@ import MembersPage from "@/pages/members/MembersPage";
 import { AskPage, GivePage, PostPage, RequirementPage } from "@/pages/activities/ActivitiesPage";
 import SpotlightPage from "@/pages/spotlight/SpotlightPage";
 import RegionsPage from "@/pages/regions/RegionsPage";
+import FranchisesPage from "@/pages/regions/FranchisesPage";
 import CategoriesPage from "@/pages/categories/CategoriesPage";
 import { SubCategoriesPage } from "@/pages/categories/CategoriesPage";
 import ReferralCategoriesPage from "@/pages/categories/ReferralCategoriesPage";
 import AnnouncementsPage from "@/pages/announcements/AnnouncementsPage";
 import EventsPage from "@/pages/events/EventsPage";
 import TrainingsPage from "@/pages/trainings/TrainingsPage";
+import TrainingCategoriesPage from "@/pages/trainings/TrainingCategoriesPage";
 import PointsPage from "@/pages/points/PointsPage";
 import AllocatePointsPage from "@/pages/points/AllocatePointsPage";
 import AwardsPage from "@/pages/awards/AwardsPage";
@@ -27,7 +29,12 @@ import MemberAwardsPage from "@/pages/awards/MemberAwardsPage";
 import ConnectionsPage from "@/pages/connections/ConnectionsPage";
 import ContributionsPage from "@/pages/contributions/ContributionsPage";
 import ReportsPage from "@/pages/reports/ReportsPage";
+import ReportHistoryPage from "@/pages/reports/ReportHistoryPage";
+
 import SubscriptionPage from "@/pages/subscription/SubscriptionPage";
+import PlansPage from "@/pages/plans/PlansPage";
+import ReferralsPage from "@/pages/referrals/ReferralsPage";
+import BillingsPage from "@/pages/billings/BillingsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,12 +71,14 @@ const App = () => (
               <Route path="/activities/post" element={<PostPage />} />
               <Route path="/activities/requirement" element={<RequirementPage />} />
               <Route path="/regions" element={<RegionsPage />} />
+              <Route path="/franchises" element={<FranchisesPage />} />
               <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/categories/sub" element={<SubCategoriesPage />} />
               <Route path="/categories/referrals" element={<ReferralCategoriesPage />} />
               <Route path="/announcements" element={<AnnouncementsPage />} />
               <Route path="/events" element={<EventsPage />} />
               <Route path="/trainings" element={<TrainingsPage />} />
+              <Route path="/trainings/categories" element={<TrainingCategoriesPage />} />
               <Route path="/points" element={<PointsPage />} />
               <Route path="/allocate-points" element={<AllocatePointsPage />} />
               <Route path="/allocate-points/edit/:id" element={<AllocatePointsPage />} />
@@ -78,7 +87,12 @@ const App = () => (
               <Route path="/connections" element={<ConnectionsPage />} />
               <Route path="/contributions" element={<ContributionsPage />} />
               <Route path="/reports" element={<ReportsPage />} />
+              <Route path="/reports/history" element={<ReportHistoryPage />} />
+
               <Route path="/subscription" element={<SubscriptionPage />} />
+              <Route path="/plans" element={<PlansPage />} />
+              <Route path="/referrals" element={<ReferralsPage />} />
+              <Route path="/billings" element={<BillingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

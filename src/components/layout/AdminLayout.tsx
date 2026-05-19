@@ -14,7 +14,12 @@ const AdminLayout = () => {
   usePermissionsSync();
   
   return (
-    <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
+    <div 
+      className="min-h-screen flex w-full bg-background overflow-x-hidden"
+      style={{ 
+        ['--sidebar-width' as any]: mobileOpen ? '0px' : (isCollapsed ? '80px' : '260px') 
+      }}
+    >
       <AdminSidebar
         mobileOpen={mobileOpen}
         isCollapsed={isCollapsed}
