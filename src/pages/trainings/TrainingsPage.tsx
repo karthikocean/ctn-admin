@@ -10,6 +10,7 @@ import ActionMenu from "@/components/common/ActionMenu";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,7 @@ import {
   updateTraining,
   deleteTraining
 } from "@/api/TrainingApi";
+import { getTrainingCategories } from "@/api/TrainingCategoryApi";
 import { uploadFiles } from "@/api/MediaApi";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
@@ -61,6 +63,7 @@ interface TrainingForm {
   authorImageFile?: File | null;
   authorBio: string;
   lessons: Lesson[];
+  categoryId: string | null;
 }
 
 const TrainingsPage = () => {
@@ -96,11 +99,26 @@ const TrainingsPage = () => {
     authorBio: "",
     lessons: [
       { id: Date.now().toString(), title: "", description: "", thumbnail: null, videoUrl: null, points: 0, duration: "" }
-    ]
+    ],
+    categoryId: null
   };
 
   const [form, setForm] = useState<TrainingForm>(initialForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // --- Load Categories ---
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await getTrainingCategories({ limit: 100, status: "active" });
+        setCategories(res.data || []);
+      } catch (error) {
+        console.error("Failed to load training categories", error);
+      }
+    };
+    loadCategories();
+  }, []);
 
   // --- Fetch Data ---
   const fetchTrainings = async () => {
@@ -139,6 +157,7 @@ const TrainingsPage = () => {
     const newErrors: Record<string, string> = {};
 
     if (!form.title.trim()) newErrors.title = "Training title is required";
+    if (!form.categoryId) newErrors.categoryId = "Training category is required";
     if (!form.thumbnail && !form.thumbnailFile) newErrors.thumbnail = "Thumbnail is required";
     if (!form.banner && !form.bannerFile) newErrors.banner = "Banner is required";
 
@@ -302,7 +321,8 @@ const TrainingsPage = () => {
         authorName: form.authorName,
         authorImage,
         authorBio: form.authorBio,
-        lessons
+        lessons,
+        categoryId: form.categoryId
       };
 
       if (editingId) {
@@ -344,7 +364,8 @@ const TrainingsPage = () => {
         id: i.toString(),
         ...l,
         _id: l._id
-      }))
+      })),
+      categoryId: training.categoryId || (training.category?._id || null)
     });
     setDrawerOpen(true);
     setActiveTab("basic");
@@ -433,7 +454,14 @@ const TrainingsPage = () => {
               </div>
               <div className="p-5">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-foreground text-lg leading-tight group-hover:text-primary transition-colors line-clamp-1">{t.title}</h3>
+                  <div className="space-y-1.5">
+                    {t.category && (
+                      <Badge variant="secondary" className="bg-primary/5 text-primary text-[10px] font-bold border-primary/10 hover:bg-primary/10 px-2 py-0.5">
+                        {t.category.name}
+                      </Badge>
+                    )}
+                    <h3 className="font-bold text-foreground text-lg leading-tight group-hover:text-primary transition-colors line-clamp-1">{t.title}</h3>
+                  </div>
                   {(canEdit || canDelete) && (
                     <ActionMenu
                       onEdit={canEdit ? () => handleEdit(t) : undefined}
@@ -504,6 +532,29 @@ const TrainingsPage = () => {
           <div className="flex-1 overflow-hidden relative">
             {activeTab === "basic" && (
               <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="h-full overflow-y-auto px-6 py-6 space-y-6 pb-32">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Training Category <span className="text-red-500">*</span></Label>
+                  <Select value={form.categoryId || ""} onValueChange={(val) => {
+                    setForm(prev => ({ ...prev, categoryId: val }));
+                    setErrors(prev => {
+                      const next = { ...prev };
+                      delete next.categoryId;
+                      return next;
+                    });
+                  }}>
+                    <SelectTrigger className={cn("h-12 rounded-2xl", errors.categoryId && "border-red-500")}>
+                      <SelectValue placeholder="Select Training Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat._id} value={cat._id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.categoryId && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.categoryId}</p>}
+                </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Training Title <span className="text-red-500">*</span></Label>
                   <Input placeholder="e.g. Mastering Client Relationships" className={cn("h-12 rounded-2xl", errors.title && "border-red-500 focus-visible:ring-red-500")} value={form.title} onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))} />

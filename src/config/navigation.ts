@@ -1,4 +1,4 @@
-import { LucideIcon, Users, Shield, MapPin, Megaphone, Calendar, GraduationCap, BarChart3, Layers, Link2, Gift, Trophy, Medal, LayoutDashboard, UserCheck, Activity, CreditCard, Star } from "lucide-react";
+import { LucideIcon, Users, Shield, MapPin, Megaphone, Calendar, GraduationCap, BarChart3, Layers, Link2, Gift, Trophy, Medal, LayoutDashboard, UserCheck, Activity, CreditCard, Star, Globe } from "lucide-react";
 
 export interface SidebarNavItem {
   title: string;
@@ -12,6 +12,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard, moduleId: "dashboard" },
   { title: "User Roles & Permissions", path: "/roles", icon: Shield, moduleId: "roles_permissions" },
   { title: "Business Regions", path: "/regions", icon: MapPin, moduleId: "business_regions" },
+  { title: "Franchises", path: "/franchises", icon: Globe, moduleId: "franchises" },
   {
     title: "Categories", path: "/categories", icon: Layers, moduleId: "categories",
     children: [
@@ -22,7 +23,13 @@ export const sidebarNavItems: SidebarNavItem[] = [
   },
   { title: "Announcements", path: "/announcements", icon: Megaphone, moduleId: "announcements" },
   { title: "Events", path: "/events", icon: Calendar, moduleId: "events" },
-  { title: "Trainings", path: "/trainings", icon: GraduationCap, moduleId: "trainings" },
+  {
+    title: "Trainings", icon: GraduationCap, moduleId: "trainings",
+    children: [
+      { title: "Trainings Management", path: "/trainings", moduleId: "trainings" },
+      { title: "Training Categories", path: "/trainings/categories", moduleId: "trainings" },
+    ],
+  },
   {
     title: "Points", path: "/points", icon: Trophy, moduleId: "points",
     children: [
