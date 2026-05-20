@@ -98,10 +98,10 @@ const SpotlightPage = () => {
   };
 
   const handleSave = async () => {
-    if (formData.selectedMembers.length === 0) {
+    if (formData.selectedMembers.length !== 4) {
       toast({
-        title: "Missing Fields",
-        description: "Please select at least one member",
+        title: "Validation Error",
+        description: "Please select exactly 4 members",
         variant: "destructive"
       });
       return;
@@ -179,6 +179,14 @@ const SpotlightPage = () => {
         selectedMembers: prev.selectedMembers.filter(m => m._id !== member._id)
       }));
     } else {
+      if (formData.selectedMembers.length >= 4) {
+        toast({
+          title: "Selection Limit",
+          description: "You can select a maximum of 4 members",
+          variant: "destructive"
+        });
+        return;
+      }
       setFormData(prev => ({
         ...prev,
         selectedMembers: [...prev.selectedMembers, { _id: member._id, fullName: member.fullName }]
@@ -314,14 +322,14 @@ const SpotlightPage = () => {
         <div className="flex flex-col h-full bg-slate-50/50 p-6 space-y-6">
 
           <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Select Members</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Select Members (Select 4 members)</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full h-11 justify-start font-normal rounded-xl border-slate-200">
                   <Users className="mr-2 h-4 w-4 opacity-50" />
                   {formData.selectedMembers.length > 0
-                    ? `${formData.selectedMembers.length} member(s) selected`
-                    : "Choose members"}
+                    ? `${formData.selectedMembers.length} of 4 member(s) selected`
+                    : "Choose 4 members"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">

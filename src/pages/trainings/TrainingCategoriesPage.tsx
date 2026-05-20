@@ -32,13 +32,6 @@ interface TrainingCategory {
   createdAt: string;
 }
 
-const initialCategories: TrainingCategory[] = [
-  { _id: "tc_1", name: "Orientation Training", status: "active", createdAt: "2026-05-18T10:00:00.000Z" },
-  { _id: "tc_2", name: "Leadership Development", status: "active", createdAt: "2026-05-18T11:00:00.000Z" },
-  { _id: "tc_3", name: "Sales & Marketing", status: "inactive", createdAt: "2026-05-19T08:30:00.000Z" },
-  { _id: "tc_4", name: "Business Networking Skill", status: "active", createdAt: "2026-05-19T09:00:00.000Z" },
-];
-
 const TrainingCategoriesPage = () => {
   const { toast } = useToast();
   const { hasPermission } = useAuth();
@@ -94,9 +87,6 @@ const TrainingCategoriesPage = () => {
     fetchCategories();
   }, [page, searchTerm, statusFilter]);
 
-  const filteredData = categories;
-  const paginatedData = categories;
-  const calculatedTotalPages = totalPages;
 
   const handleOpenAdd = () => {
     setEditingCategory(null);
@@ -262,14 +252,14 @@ const TrainingCategoriesPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredData.length === 0 && !loading ? (
+              {categories.length === 0 && !loading ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-xs text-muted-foreground">
                     No categories found
                   </td>
                 </tr>
               ) : (
-                paginatedData.map((c, index) => (
+                categories.map((c, index) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
                     <td className="px-6 py-4 text-xs font-bold text-muted-foreground/60">{(page * 10) + index + 1}</td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">{c.name}</td>
@@ -293,7 +283,7 @@ const TrainingCategoriesPage = () => {
         <div className="px-6 pb-4">
           <PaginationBar
             currentPage={page + 1}
-            totalPages={calculatedTotalPages}
+            totalPages={totalPages}
             onPageChange={(p) => setPage(p - 1)}
           />
         </div>
