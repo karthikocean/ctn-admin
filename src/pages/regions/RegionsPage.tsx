@@ -46,7 +46,7 @@ const RegionsPage = () => {
   const [selectedCountry, setSelectedCountry] = useState<string>("IN");
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedCity, setSelectedCity] = useState<string>("");
-  const [areas, setAreas] = useState<string[]>([""]);
+  const [areas, setAreas] = useState<{ _id?: string; name: string }[]>([{ name: "" }]);
   const [saving, setSaving] = useState(false);
 
   const countries = Country.getAllCountries();
@@ -88,7 +88,7 @@ const RegionsPage = () => {
     setSelectedCountry("IN");
     setSelectedState("");
     setSelectedCity("");
-    setAreas([""]);
+    setAreas([{ name: "" }]);
     setDrawerOpen(true);
   };
 
@@ -116,17 +116,17 @@ const RegionsPage = () => {
       }
     }
     // Set areas if available, otherwise default to one empty input
-    setAreas(region.areas && region.areas.length > 0 ? region.areas : [""]);
+    setAreas(region.areas && region.areas.length > 0 ? region.areas : [{ name: "" }]);
     setDrawerOpen(true);
   };
 
   const handleAddArea = () => {
-    setAreas([...areas, ""]);
+    setAreas([...areas, { name: "" }]);
   };
 
   const handleAreaChange = (index: number, value: string) => {
     const updatedAreas = [...areas];
-    updatedAreas[index] = value;
+    updatedAreas[index] = { ...updatedAreas[index], name: value };
     setAreas(updatedAreas);
   };
 
@@ -134,7 +134,7 @@ const RegionsPage = () => {
     if (areas.length > 1) {
       setAreas(areas.filter((_, i) => i !== index));
     } else {
-      setAreas([""]);
+      setAreas([{ name: "" }]);
     }
   };
 
@@ -143,7 +143,7 @@ const RegionsPage = () => {
     const stateName = states.find(s => s.isoCode === selectedState)?.name || "";
 
     // Filter out empty areas
-    const filteredAreas = areas.filter(a => a.trim() !== "");
+    const filteredAreas = areas.filter(a => a.name.trim() !== "");
 
     if (!countryName || !stateName || !selectedCity) {
       toast({
@@ -294,7 +294,7 @@ const RegionsPage = () => {
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Country</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">State</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">City</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Areas</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Regions</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Members</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
@@ -319,11 +319,11 @@ const RegionsPage = () => {
                         {r.areas && r.areas.length > 0 ? (
                           r.areas.slice(0, 2).map((area, idx) => (
                             <Badge key={idx} variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 border-none font-medium">
-                              {area}
+                              {typeof area === "string" ? area : area.name}
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-[10px] text-muted-foreground italic">No areas defined</span>
+                          <span className="text-[10px] text-muted-foreground italic">No regions defined</span>
                         )}
                         {r.areas && r.areas.length > 2 && (
                           <Badge variant="secondary" className="text-[10px] bg-primary/5 text-primary border-none font-bold">
@@ -433,7 +433,7 @@ const RegionsPage = () => {
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Specific Areas / Localities
+                Business Regions
               </label>
               <Button
                 type="button"
@@ -442,7 +442,7 @@ const RegionsPage = () => {
                 onClick={handleAddArea}
                 className="h-7 px-2 rounded-lg text-[10px] font-bold border-primary text-primary hover:bg-primary hover:text-white transition-all duration-300"
               >
-                <Plus size={12} className="mr-1" /> Add Area
+                <Plus size={12} className="mr-1" /> Add Region
               </Button>
             </div>
 
@@ -452,9 +452,9 @@ const RegionsPage = () => {
                   <div className="relative flex-1">
                     <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" />
                     <Input
-                      value={area}
+                      value={area.name}
                       onChange={(e) => handleAreaChange(index, e.target.value)}
-                      placeholder={`Area ${index + 1} (e.g. T. Nagar, Adyar)`}
+                      placeholder={`Region ${index + 1} (e.g. T. Nagar, Adyar)`}
                       className="h-10 pl-9 bg-white border-slate-200 rounded-xl focus:ring-primary/20 text-xs font-medium"
                     />
                   </div>

@@ -183,7 +183,7 @@ const MembersPage = () => {
     companySize: "",
     state: "",
     city: "",
-    areas: "",
+    businessRegion: "",
     businessAddress: "",
     serviceLocations: [] as string[],
     productsServicesDescription: "",
@@ -206,7 +206,8 @@ const MembersPage = () => {
   const allStates = State.getStatesOfCountry("IN");
   const citiesInState = selectedStateCode ? City.getCitiesOfState("IN", selectedStateCode) : [];
 
-  const [areasOptions, setAreasOptions] = useState<string[]>([]);
+  const [areasOptions, setAreasOptions] = useState<any[]>([]);
+  const [selectedAreaName, setSelectedAreaName] = useState<string>("");
   const [areasLoading, setAreasLoading] = useState(false);
 
   useEffect(() => {
@@ -332,6 +333,7 @@ const MembersPage = () => {
   };
 
   const resetForm = () => {
+    setSelectedAreaName("");
     setFormData({
       fullName: "",
       mobileNumber: "",
@@ -344,7 +346,7 @@ const MembersPage = () => {
       companySize: "",
       state: "",
       city: "",
-      areas: "",
+      businessRegion: "",
       businessAddress: "",
       serviceLocations: [],
       productsServicesDescription: "",
@@ -391,6 +393,12 @@ const MembersPage = () => {
           }
         }
 
+        if (fullData.businessRegion && typeof fullData.businessRegion === 'object') {
+          setSelectedAreaName(fullData.businessRegion.name || "");
+        } else {
+          setSelectedAreaName("");
+        }
+
         setFormData({
           ...fullData,
           businessCategory: fullData.businessCategory?._id || fullData.businessCategory || "",
@@ -400,7 +408,8 @@ const MembersPage = () => {
           serviceLocations: fullData.serviceLocations || [],
           state: fullData.state || "",
           city: fullData.city || "",
-          areas: fullData.areas || "",
+          businessRegion: fullData.businessRegion?._id?.toString() ||
+            (typeof fullData.businessRegion === 'string' ? fullData.businessRegion : "") || "",
           workImages: fullData.workImages || [],
           certifications: fullData.certifications || [],
           businessDocuments: fullData.businessDocuments || []
@@ -603,6 +612,10 @@ const MembersPage = () => {
       } = formData as any;
 
       const payload = { ...dataToSave };
+
+      if (!payload.businessRegion || !payload.businessRegion.trim()) {
+        payload.businessRegion = null;
+      }
 
       const [profileUrls, workUrls, certUrls, docUrls] = await Promise.all([
         filesToUpload.profilePhoto
@@ -1141,7 +1154,7 @@ const MembersPage = () => {
                               ...prev,
                               state: stateName,
                               city: "",
-                              areas: ""
+                              businessRegion: ""
                             }));
                             setAreasOptions([]);
                           }}
@@ -1160,7 +1173,7 @@ const MembersPage = () => {
                         <Label className="text-xs font-bold text-slate-700 mb-2 block">City</Label>
                         <Select
                           value={formData.city}
-                          onValueChange={(val) => setFormData(prev => ({ ...prev, city: val, areas: "" }))}
+                          onValueChange={(val) => setFormData(prev => ({ ...prev, city: val, businessRegion: "" }))}
                           disabled={!selectedStateCode}
                         >
                           <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
@@ -1178,41 +1191,44 @@ const MembersPage = () => {
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="areas" className="text-xs font-bold text-slate-700 mb-2 block">
-                        Areas / Localities {areasLoading && <Loader2 size={10} className="animate-spin inline ml-1" />}
+                      <Label htmlFor="businessRegion" className="text-xs font-bold text-slate-700 mb-2 block">
+                        Business Region {areasLoading && <Loader2 size={10} className="animate-spin inline ml-1" />}
                       </Label>
                       <Select
-                        value={formData.areas}
-                        // onValueChange={(val) => setFormData(prev => ({ ...prev, areas: val }))}
-                        onValueChange={(val) =>
+                        value={formData.businessRegion}
+                        onValueChange={(val) => {
                           setFormData((prev) => ({
                             ...prev,
-                            areas: val === "none" ? "" : val
-                          }))
-                        }
+                            businessRegion: val === "none" ? "" : val
+                          }));
+                          const selectedObj = areasOptions.find((a: any) => a._id === val);
+                          if (selectedObj) {
+                            setSelectedAreaName(selectedObj.name);
+                          }
+                        }}
                         disabled={!formData.state || !formData.city || areasLoading}
                       >
                         <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
-                          <SelectValue placeholder={!formData.state || !formData.city ? "Choose state and city first" : "Select Area"} />
+                          <SelectValue placeholder={!formData.state || !formData.city ? "Choose state and city first" : "Select Business Region"} />
                         </SelectTrigger>
                         <SelectContent className="max-h-60">
 
                           <SelectItem value="none">
-                            Select Area
+                            Select Business Region
                           </SelectItem>
 
-                          {formData.areas && !areasOptions.includes(formData.areas) && (
-                            <SelectItem key={formData.areas} value={formData.areas}>
-                              {formData.areas}
+                          {formData.businessRegion && !areasOptions.some((a: any) => a._id === formData.businessRegion) && (
+                            <SelectItem key={formData.businessRegion} value={formData.businessRegion}>
+                              {selectedAreaName || "Selected Region"}
                             </SelectItem>
                           )}
-                          {areasOptions.map((area) => (
-                            <SelectItem key={area} value={area}>
-                              {area}
+                          {areasOptions.map((area: any) => (
+                            <SelectItem key={area._id} value={area._id}>
+                              {area.name}
                             </SelectItem>
                           ))}
-                          {areasOptions.length === 0 && !formData.areas && (
-                            <div className="p-2 text-xs text-muted-foreground text-center italic">No areas found</div>
+                          {areasOptions.length === 0 && !formData.businessRegion && (
+                            <div className="p-2 text-xs text-muted-foreground text-center italic">No regions found</div>
                           )}
                         </SelectContent>
                       </Select>
