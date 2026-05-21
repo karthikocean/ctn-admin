@@ -54,7 +54,8 @@ import {
   getMembers,
   updateMember,
   getMemberDetails,
-  deleteMember
+  deleteMember,
+  getBusinessRegion
 } from "@/api/MembersApi";
 import { uploadFiles } from "@/api/MediaApi";
 import { getCategories } from "@/api/CategoryApi";
@@ -205,6 +206,9 @@ const MembersPage = () => {
   const allStates = State.getStatesOfCountry("IN");
   const citiesInState = selectedStateCode ? City.getCitiesOfState("IN", selectedStateCode) : [];
 
+  const [areasOptions, setAreasOptions] = useState<string[]>([]);
+  const [areasLoading, setAreasLoading] = useState(false);
+
   useEffect(() => {
     const fetchMainCategories = async () => {
       try {
@@ -237,6 +241,26 @@ const MembersPage = () => {
     }
   };
 
+  const fetchAreas = async (state: string, city: string) => {
+    if (!state || !city) {
+      setAreasOptions([]);
+      return;
+    }
+    setAreasLoading(true);
+    try {
+      const result = await getBusinessRegion(state, city);
+      if (result.status) {
+        setAreasOptions(result.data?.areas || []);
+      } else {
+        setAreasOptions([]);
+      }
+    } catch {
+      setAreasOptions([]);
+    } finally {
+      setAreasLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchMembers();
   }, [page]);
@@ -248,6 +272,14 @@ const MembersPage = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    if (formData.state && formData.city) {
+      fetchAreas(formData.state, formData.city);
+    } else {
+      setAreasOptions([]);
+    }
+  }, [formData.state, formData.city]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -1105,7 +1137,13 @@ const MembersPage = () => {
                           onValueChange={(val) => {
                             setSelectedStateCode(val);
                             const stateName = allStates.find(s => s.isoCode === val)?.name || "";
-                            setFormData(prev => ({ ...prev, state: stateName, city: "" }));
+                            setFormData(prev => ({
+                              ...prev,
+                              state: stateName,
+                              city: "",
+                              areas: ""
+                            }));
+                            setAreasOptions([]);
                           }}
                         >
                           <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
@@ -1122,7 +1160,7 @@ const MembersPage = () => {
                         <Label className="text-xs font-bold text-slate-700 mb-2 block">City</Label>
                         <Select
                           value={formData.city}
-                          onValueChange={(val) => setFormData(prev => ({ ...prev, city: val }))}
+                          onValueChange={(val) => setFormData(prev => ({ ...prev, city: val, areas: "" }))}
                           disabled={!selectedStateCode}
                         >
                           <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
@@ -1140,17 +1178,44 @@ const MembersPage = () => {
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="areas" className="text-xs font-bold text-slate-700 mb-2 block">Areas / Localities</Label>
-                      <Input
-                        id="areas"
-                        placeholder="e.g. T. Nagar, Adyar"
-                        className="h-11 bg-white border-slate-300 font-medium"
+                      <Label htmlFor="areas" className="text-xs font-bold text-slate-700 mb-2 block">
+                        Areas / Localities {areasLoading && <Loader2 size={10} className="animate-spin inline ml-1" />}
+                      </Label>
+                      <Select
                         value={formData.areas}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          areas: e.target.value
-                        }))}
-                      />
+                        // onValueChange={(val) => setFormData(prev => ({ ...prev, areas: val }))}
+                        onValueChange={(val) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            areas: val === "none" ? "" : val
+                          }))
+                        }
+                        disabled={!formData.state || !formData.city || areasLoading}
+                      >
+                        <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
+                          <SelectValue placeholder={!formData.state || !formData.city ? "Choose state and city first" : "Select Area"} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+
+                          <SelectItem value="none">
+                            Select Area
+                          </SelectItem>
+
+                          {formData.areas && !areasOptions.includes(formData.areas) && (
+                            <SelectItem key={formData.areas} value={formData.areas}>
+                              {formData.areas}
+                            </SelectItem>
+                          )}
+                          {areasOptions.map((area) => (
+                            <SelectItem key={area} value={area}>
+                              {area}
+                            </SelectItem>
+                          ))}
+                          {areasOptions.length === 0 && !formData.areas && (
+                            <div className="p-2 text-xs text-muted-foreground text-center italic">No areas found</div>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label htmlFor="businessAddress" className="text-xs font-bold text-slate-700 mb-2 block">

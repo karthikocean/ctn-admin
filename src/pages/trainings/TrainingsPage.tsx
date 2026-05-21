@@ -532,6 +532,12 @@ const TrainingsPage = () => {
           <div className="flex-1 overflow-hidden relative">
             {activeTab === "basic" && (
               <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="h-full overflow-y-auto px-6 py-6 space-y-6 pb-32">
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Training Title <span className="text-red-500">*</span></Label>
+                  <Input placeholder="e.g. Mastering Client Relationships" className={cn("h-12 rounded-2xl", errors.title && "border-red-500 focus-visible:ring-red-500")} value={form.title} onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))} />
+                  {errors.title && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.title}</p>}
+                </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Training Category <span className="text-red-500">*</span></Label>
                   <Select value={form.categoryId || ""} onValueChange={(val) => {
@@ -554,11 +560,6 @@ const TrainingsPage = () => {
                     </SelectContent>
                   </Select>
                   {errors.categoryId && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.categoryId}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Training Title <span className="text-red-500">*</span></Label>
-                  <Input placeholder="e.g. Mastering Client Relationships" className={cn("h-12 rounded-2xl", errors.title && "border-red-500 focus-visible:ring-red-500")} value={form.title} onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))} />
-                  {errors.title && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.title}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Description</Label>

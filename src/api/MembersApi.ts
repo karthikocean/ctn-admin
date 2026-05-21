@@ -29,3 +29,8 @@ export const deleteMember = async (id: string) => {
   const response = await api.delete(`/members/${id}`);
   return response.data;
 };
+
+export const getBusinessRegion = async (state: string, city: string) => {
+  const response = await api.get(`/common/business-region`, { params: { state, city } })
+  return response.data;
+}
