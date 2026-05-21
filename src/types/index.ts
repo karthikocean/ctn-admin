@@ -43,7 +43,7 @@ export interface Region {
   country: string;
   state: string;
   city: string;
-  areas?: string[];
+  areas?: { _id: string; name: string }[];
   memberCount: number;
   status: "active" | "inactive";
 }

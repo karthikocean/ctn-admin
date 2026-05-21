@@ -435,9 +435,9 @@ const FranchisesPage = () => {
                   Region Areas
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {selectedRegion.areas.map((area: string, i: number) => (
+                  {selectedRegion.areas.map((area: any, i: number) => (
                     <Badge key={i} variant="outline" className="bg-background text-[11px] font-semibold text-slate-600 border-border/80">
-                      {area}
+                      {typeof area === "string" ? area : area.name}
                     </Badge>
                   ))}
                 </div>
