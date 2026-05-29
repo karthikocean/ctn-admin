@@ -13,6 +13,7 @@ import RolesPage from "@/pages/roles/RolesPage";
 import MembersPage from "@/pages/members/MembersPage";
 import { AskPage, GivePage, PostPage, RequirementPage } from "@/pages/activities/ActivitiesPage";
 import SpotlightPage from "@/pages/spotlight/SpotlightPage";
+import SpotlightRequestsPage from "@/pages/spotlight/SpotlightRequestsPage";
 import RegionsPage from "@/pages/regions/RegionsPage";
 import FranchisesPage from "@/pages/regions/FranchisesPage";
 import CategoriesPage from "@/pages/categories/CategoriesPage";
@@ -64,6 +65,11 @@ const App = () => (
               <Route path="/spotlight" element={
                 <PermissionRoute module="spotlight" action="view">
                   <SpotlightPage />
+                </PermissionRoute>
+              } />
+              <Route path="/spotlight/requests" element={
+                <PermissionRoute module="spotlight" action="view">
+                  <SpotlightRequestsPage />
                 </PermissionRoute>
               } />
               <Route path="/activities/ask" element={<AskPage />} />

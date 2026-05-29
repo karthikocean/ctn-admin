@@ -36,3 +36,24 @@ export const deleteSpotlight = async (id: string) => {
   const response = await api.delete(`/spotlights/${id}`);
   return response.data;
 };
+
+export const getSpotlightRequests = async (params: SpotlightQueryParams) => {
+  const response = await api.get("/spotlights/requests", { params });
+  return response.data;
+};
+
+export const approveSpotlightRequest = async (id: string) => {
+  const response = await api.put(`/spotlights/requests/${id}/approve`);
+  return response.data;
+};
+
+export const rejectSpotlightRequest = async (id: string) => {
+  const response = await api.put(`/spotlights/requests/${id}/reject`);
+  return response.data;
+};
+
+export const deleteSpotlightRequest = async (id: string) => {
+  const response = await api.delete(`/spotlights/requests/${id}`);
+  return response.data;
+};
+

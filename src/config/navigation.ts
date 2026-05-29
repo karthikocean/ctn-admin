@@ -54,7 +54,16 @@ export const sidebarNavItems: SidebarNavItem[] = [
       { title: "Requirements", path: "/activities/requirement", moduleId: "activities" },
     ],
   },
-  { title: "Spotlight", path: "/spotlight", icon: Star, moduleId: "spotlight" },
+  {
+    title: "Spotlight",
+    icon: Star,
+    moduleId: "spotlight",
+    children: [
+      { title: "Spotlight Request", path: "/spotlight/requests", moduleId: "spotlight" },
+      { title: "Spotlight Creation", path: "/spotlight", moduleId: "spotlight" },
+
+    ],
+  },
   { title: "Connections", path: "/connections", icon: Link2, moduleId: "connections" },
   { title: "Contributions", path: "/contributions", icon: Gift, moduleId: "contributions" },
   {

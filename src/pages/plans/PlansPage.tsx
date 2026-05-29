@@ -50,7 +50,7 @@ const PlansPage = () => {
     title: "",
     description: "",
     amount: 0,
-    modules: [{ moduleName: "", countLimit: 0 }],
+    modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
     status: "active"
   });
 
@@ -94,7 +94,7 @@ const PlansPage = () => {
   const handleAddModule = () => {
     setFormData({
       ...formData,
-      modules: [...formData.modules, { moduleName: "", countLimit: 0 }]
+      modules: [...formData.modules, { moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }]
     });
   };
 
@@ -150,7 +150,7 @@ const PlansPage = () => {
       title: "",
       description: "",
       amount: 0,
-      modules: [{ moduleName: "", countLimit: 0 }],
+      modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
       status: "active"
     });
   };
@@ -163,7 +163,9 @@ const PlansPage = () => {
       amount: plan.amount,
       modules: plan.modules.map((m: any) => ({
         moduleName: m.moduleName,
-        countLimit: m.countLimit
+        countLimit: m.countLimit,
+        frequency: m.frequency || "monthly",
+        frequencyValue: m.frequencyValue !== undefined ? m.frequencyValue : 1
       })),
       status: plan.status || "active"
     });
@@ -292,7 +294,7 @@ const PlansPage = () => {
                       <div className="flex flex-wrap justify-center gap-1">
                         {plan.modules.map((m: any, i: number) => (
                           <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-secondary border border-border text-foreground">
-                            {m.moduleName}: {m.countLimit}
+                            {m.moduleName}: {m.countLimit} ({m.frequencyValue !== undefined ? m.frequencyValue : 1} {m.frequency || "monthly"})
                           </span>
                         ))}
                       </div>
@@ -400,8 +402,8 @@ const PlansPage = () => {
             <div className="space-y-2.5">
               {formData.modules.map((module, index) => (
                 <div key={index} className="group relative flex items-start gap-3 p-3 rounded-xl bg-secondary/20 border border-border/50 hover:border-primary/30 transition-all">
-                  <div className="flex-1 grid grid-cols-5 gap-3">
-                    <div className="col-span-3">
+                  <div className="flex-1 grid grid-cols-12 gap-3">
+                    <div className="col-span-4">
                       <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mb-1.5 block ml-0.5">Select Module</Label>
                       <select
                         className="w-full h-10 px-3 rounded-lg border border-border bg-background text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
@@ -419,8 +421,33 @@ const PlansPage = () => {
                       <Input
                         type="number"
                         placeholder="0"
+                        min={0}
                         value={module.countLimit}
-                        onChange={(e) => handleModuleChange(index, "countLimit", parseInt(e.target.value) || 0)}
+                        onChange={(e) => handleModuleChange(index, "countLimit", Math.max(0, parseInt(e.target.value) || 0))}
+                        className="h-10 rounded-lg border-border bg-background text-xs font-black focus:ring-primary/20 text-center"
+                      />
+                    </div>
+                    <div className="col-span-3 relative">
+                      <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mb-1.5 block ml-0.5 text-center">Frequency</Label>
+                      <select
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer text-center"
+                        value={module.frequency || "monthly"}
+                        onChange={(e) => handleModuleChange(index, "frequency", e.target.value)}
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                    <div className="col-span-3 relative">
+                      <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mb-1.5 block ml-0.5 text-center">Freq Value</Label>
+                      <Input
+                        type="number"
+                        placeholder="1"
+                        min={1}
+                        value={module.frequencyValue !== undefined ? module.frequencyValue : 1}
+                        onChange={(e) => handleModuleChange(index, "frequencyValue", Math.max(1, parseInt(e.target.value) || 1))}
                         className="h-10 rounded-lg border-border bg-background text-xs font-black focus:ring-primary/20 text-center"
                       />
                     </div>
