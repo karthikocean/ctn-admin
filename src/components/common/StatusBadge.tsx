@@ -21,6 +21,8 @@ const statusStyles: Record<string, string> = {
   cancelled: "bg-red-50 text-accent border-red-200",
   scheduled: "bg-blue-50 text-primary border-blue-200",
   pending: "bg-amber-50 text-amber-700 border-amber-200",
+  approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  rejected: "bg-red-50 text-accent border-red-200",
   earned: "bg-emerald-50 text-emerald-700 border-emerald-200",
   redeemed: "bg-blue-50 text-primary border-blue-200",
   closed: "bg-muted text-muted-foreground border-border",
