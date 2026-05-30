@@ -24,7 +24,10 @@ import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const SpotlightPage = () => {
   const { toast } = useToast();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
+  const isFranchise = user?.roleCode?.toUpperCase() === "FRANCHIES";
+  const maxLimit = isFranchise ? 4 : 2;
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,10 +101,10 @@ const SpotlightPage = () => {
   };
 
   const handleSave = async () => {
-    if (formData.selectedMembers.length !== 4) {
+    if (formData.selectedMembers.length !== maxLimit) {
       toast({
         title: "Validation Error",
-        description: "Please select exactly 4 members",
+        description: `Please select exactly ${maxLimit} members`,
         variant: "destructive"
       });
       return;
@@ -172,26 +175,30 @@ const SpotlightPage = () => {
   };
 
   const toggleMember = (member: any) => {
-    const exists = formData.selectedMembers.find(m => m._id === member._id);
-    if (exists) {
-      setFormData(prev => ({
-        ...prev,
-        selectedMembers: prev.selectedMembers.filter(m => m._id !== member._id)
-      }));
-    } else {
-      if (formData.selectedMembers.length >= 4) {
-        toast({
-          title: "Selection Limit",
-          description: "You can select a maximum of 4 members",
-          variant: "destructive"
-        });
-        return;
+    setFormData(prev => {
+      const exists = prev.selectedMembers.some(m => m._id === member._id);
+      if (exists) {
+        return {
+          ...prev,
+          selectedMembers: prev.selectedMembers.filter(m => m._id !== member._id)
+        };
+      } else {
+        if (prev.selectedMembers.length >= maxLimit) {
+          setTimeout(() => {
+            toast({
+              title: "Selection Limit",
+              description: `You can select a maximum of ${maxLimit} members`,
+              variant: "destructive"
+            });
+          }, 0);
+          return prev;
+        }
+        return {
+          ...prev,
+          selectedMembers: [...prev.selectedMembers, { _id: member._id, fullName: member.fullName }]
+        };
       }
-      setFormData(prev => ({
-        ...prev,
-        selectedMembers: [...prev.selectedMembers, { _id: member._id, fullName: member.fullName }]
-      }));
-    }
+    });
   };
 
   return (
@@ -322,14 +329,14 @@ const SpotlightPage = () => {
         <div className="flex flex-col h-full bg-slate-50/50 p-6 space-y-6">
 
           <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Select Members (Select 4 members)</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Select Members (Select {maxLimit} members)</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full h-11 justify-start font-normal rounded-xl border-slate-200">
                   <Users className="mr-2 h-4 w-4 opacity-50" />
                   {formData.selectedMembers.length > 0
-                    ? `${formData.selectedMembers.length} of 4 member(s) selected`
-                    : "Choose 4 members"}
+                    ? `${formData.selectedMembers.length} of ${maxLimit} member(s) selected`
+                    : `Choose ${maxLimit} members`}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
@@ -349,6 +356,7 @@ const SpotlightPage = () => {
                       <Checkbox
                         checked={formData.selectedMembers.some(m => m._id === member._id)}
                         onCheckedChange={() => toggleMember(member)}
+                        onClick={(e) => e.stopPropagation()}
                       />
                       <span className="text-xs font-medium">{member.fullName}</span>
                     </div>

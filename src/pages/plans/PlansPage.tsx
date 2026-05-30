@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle } from "lucide-react";
+import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Receipt, Layers, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,8 @@ import StatusBadge from "@/components/common/StatusBadge";
 import * as PlansApi from "@/api/PlansApi";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useAuth } from "@/context/AuthContext";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 const MODULE_OPTIONS = [
   "Ask",
@@ -45,6 +47,14 @@ const PlansPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
+
+  const [viewingPlan, setViewingPlan] = useState<any | null>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+
+  const handleView = (plan: any) => {
+    setViewingPlan(plan);
+    setViewDialogOpen(true);
+  };
 
   const [formData, setFormData] = useState({
     title: "",
@@ -304,6 +314,7 @@ const PlansPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
+                        onView={() => handleView(plan)}
                         onEdit={canEdit ? () => handleEdit(plan) : undefined}
                         onDelete={canDelete ? () => confirmDelete(plan._id) : undefined}
                       />
@@ -492,6 +503,123 @@ const PlansPage = () => {
         confirmLabel="Yes, Delete"
         variant="destructive"
       />
+
+      {/* Preview Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden bg-background border border-border rounded-2xl shadow-2xl">
+          {/* Glass background decoration blobs */}
+          <div className="absolute -top-24 -left-20 w-56 h-56 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -right-20 w-56 h-56 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
+
+          {viewingPlan && (
+            <div className="flex flex-col">
+              {/* Top Banner / Header Card */}
+              <div className="relative overflow-hidden p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-border/80">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center flex-shrink-0 text-primary shadow-inner">
+                    <PlanIcon size={24} />
+                  </div>
+                  <div className="space-y-1 pr-12">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-extrabold text-foreground tracking-tight">{viewingPlan.title}</h2>
+                      <StatusBadge status={viewingPlan.status} />
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed mt-1.5">
+                      {viewingPlan.description || "No description provided for this plan."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stats Card bar */}
+              <div className="grid grid-cols-2 border-b border-border divide-x divide-border bg-secondary/10">
+                <div className="p-4 text-center">
+                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Plan Amount</span>
+                  <span className="text-3xl font-black text-primary">₹{viewingPlan.amount}</span>
+                </div>
+                <div className="p-4 text-center">
+                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Included Modules</span>
+                  <span className="text-3xl font-black text-foreground">{viewingPlan.modules?.length || 0}</span>
+                </div>
+              </div>
+
+              {/* Modules Details */}
+              <div className="p-6">
+                <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+                  Resource Limits & Frequencies
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[300px] overflow-y-auto p-1">
+                  {viewingPlan.modules?.map((m: any, i: number) => {
+                    const iconMap: Record<string, any> = {
+                      "Ask": HelpCircle,
+                      "Give": Gift,
+                      "Requirement": ClipboardList,
+                      "Post": Send,
+                      "Milestones": Trophy,
+                      "Trainings": GraduationCap,
+                      "One to One": Users,
+                      "Referral": Share2,
+                      "Thank you Slip": Receipt,
+                    };
+                    const IconComponent = iconMap[m.moduleName] || Layers;
+                    const colorMap: Record<string, { hoverBorder: string, bg: string, text: string }> = {
+                      "Ask": { hoverBorder: "hover:border-sky-500", bg: "bg-sky-500/10", text: "text-sky-500" },
+                      "Give": { hoverBorder: "hover:border-emerald-500", bg: "bg-emerald-500/10", text: "text-emerald-500" },
+                      "Requirement": { hoverBorder: "hover:border-amber-500", bg: "bg-amber-500/10", text: "text-amber-500" },
+                      "Post": { hoverBorder: "hover:border-indigo-500", bg: "bg-indigo-500/10", text: "text-indigo-500" },
+                      "Milestones": { hoverBorder: "hover:border-yellow-500", bg: "bg-yellow-500/10", text: "text-yellow-600" },
+                      "Trainings": { hoverBorder: "hover:border-violet-500", bg: "bg-violet-500/10", text: "text-violet-500" },
+                      "One to One": { hoverBorder: "hover:border-rose-500", bg: "bg-rose-500/10", text: "text-rose-500" },
+                      "Referral": { hoverBorder: "hover:border-cyan-500", bg: "bg-cyan-500/10", text: "text-cyan-500" },
+                      "Thank you Slip": { hoverBorder: "hover:border-teal-500", bg: "bg-teal-500/10", text: "text-teal-500" },
+                    };
+                    const colors = colorMap[m.moduleName] || { hoverBorder: "hover:border-primary", bg: "bg-primary/10", text: "text-primary" };
+
+                    return (
+                      <div
+                        key={i}
+                        className={cn(
+                          "flex items-center gap-3 p-4 rounded-xl bg-secondary/15 border border-border/80 transition-all duration-300 hover:scale-[1.01] hover:shadow-md hover:bg-background group",
+                          colors.hoverBorder
+                        )}
+                      >
+                        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", colors.bg, colors.text)}>
+                          <IconComponent size={18} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-bold text-foreground truncate">{m.moduleName}</h4>
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <span>Every</span>
+                            <span className="font-bold text-foreground/75">{m.frequencyValue || 1} {m.frequency || "monthly"}</span>
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0 flex flex-col justify-center pl-2">
+                          <span className="text-xl font-black text-foreground tracking-tight leading-none">{m.countLimit}</span>
+                          <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1 block">LIMIT</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(!viewingPlan.modules || viewingPlan.modules.length === 0) && (
+                    <div className="col-span-2 text-center py-8 text-sm text-muted-foreground border border-dashed border-border rounded-xl">
+                      No modules configured for this plan.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-3 p-4 bg-secondary/10 border-t border-border">
+                <Button variant="outline" className="h-10 rounded-xl px-6 font-bold" onClick={() => setViewDialogOpen(false)}>
+                  Close Preview
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
