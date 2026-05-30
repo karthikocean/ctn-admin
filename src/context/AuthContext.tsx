@@ -15,6 +15,7 @@ interface User {
   email: string;
   roleId: string;
   isActive: number | boolean;
+  roleCode?: string | null;
 }
 
 interface AuthContextType {
@@ -41,10 +42,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchPermissions = useCallback(async (roleId: string) => {
     try {
       const response = await api.get(`/roles/${roleId}`);
-      if (response.data && response.data.permissions) {
-        setPermissions(response.data.permissions);
+      if (response.data) {
+        if (response.data.permissions) {
+          setPermissions(response.data.permissions);
+        }
+        if (response.data.code) {
+          setUser(prev => {
+            if (!prev) return null;
+            return { ...prev, roleCode: response.data.code };
+          });
+          const storedUser = localStorage.getItem("user");
+          if (storedUser) {
+            try {
+              const parsed = JSON.parse(storedUser);
+              parsed.roleCode = response.data.code;
+              localStorage.setItem("user", JSON.stringify(parsed));
+            } catch (e) {
+              console.error("Error updating cached roleCode:", e);
+            }
+          }
+        }
       }
-
     } catch (error) {
       console.error("Failed to fetch permissions:", error);
     }
