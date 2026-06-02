@@ -122,6 +122,7 @@ export interface Post {
   media: string[];
   memberId: string;
   sharedCount: number;
+  responsedCount: number;
   isDeleted: boolean;
   createdAt: string;
   updatedAt: string;

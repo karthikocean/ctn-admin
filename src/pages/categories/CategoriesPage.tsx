@@ -166,7 +166,14 @@ const CategoriesPage = () => {
 
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && categories.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Mapping Main Categories..."
+          subtitle="Synchronizing category hierarchy and relationships"
+        />
+      )}
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         {/* Title Block */}
@@ -523,7 +530,14 @@ export const SubCategoriesPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && subCategories.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Mapping Sub-Categories..."
+          subtitle="Synchronizing sub-category tree and hierarchy"
+        />
+      )}
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         {/* Title Block */}

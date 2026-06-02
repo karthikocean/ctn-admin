@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { BarChart as FileBarChart, Download } from "lucide-react";
@@ -6,12 +7,27 @@ import StatCard from "@/components/common/StatCard";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { regionData, categoryData, monthlyData } from "@/data/mockData";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const COLORS = ["hsl(210,97%,23%)", "hsl(0,72%,50%)", "hsl(142,71%,45%)", "hsl(38,92%,50%)", "hsl(262,83%,58%)", "hsl(210,60%,50%)"];
 
 const ReportsPage = () => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Loading Analytics & Reports..."
+          subtitle="Compiling network stats and performance indexes"
+        />
+      )}
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         {/* Title Block */}

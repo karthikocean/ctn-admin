@@ -1,9 +1,10 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
-import { useState } from "react";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const connectionHistory = [
   { id: "1", from: "Arjun Mehta", to: "Kavita Joshi", type: "Business Lead", status: "active", date: "2025-03-15", response: "Accepted" },
@@ -14,9 +15,22 @@ const connectionHistory = [
 
 const ConnectionsPage = () => {
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Loading Connections..."
+          subtitle="Establishing network mapping nodes"
+        />
+      )}
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         {/* Title Block */}

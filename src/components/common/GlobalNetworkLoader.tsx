@@ -29,8 +29,8 @@ const GlobalNetworkLoader: React.FC<GlobalNetworkLoaderProps> = ({
         className={cn(
           "flex flex-col items-center justify-center transition-all duration-700 overflow-hidden",
           fullScreen 
-            ? "fixed inset-0 z-[9999] bg-[#020617]/50 backdrop-blur-md" 
-            : "fixed top-0 bottom-0 right-0 z-50 bg-slate-900/5 dark:bg-[#020617]/10 backdrop-blur-md",
+            ? "fixed inset-0 z-[9999] bg-[#020d20]/95 backdrop-blur-md" 
+            : "fixed top-0 bottom-0 right-0 z-50 bg-[#020d20]/90 backdrop-blur-md",
           className
         )}
         style={!fullScreen ? { left: 'var(--sidebar-width, 260px)' } : {}}
@@ -81,7 +81,7 @@ const GlobalNetworkLoader: React.FC<GlobalNetworkLoaderProps> = ({
               }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               className={cn(
-                "relative z-10 flex items-center justify-center bg-slate-100 dark:bg-slate-900 border border-blue-500/20 rounded-full shadow-xl",
+                "relative z-10 flex items-center justify-center bg-slate-900 border border-blue-500/30 rounded-full shadow-2xl shadow-blue-500/10",
                 isSmall ? "w-8 h-8" : "w-14 h-14"
               )}
             >
@@ -119,10 +119,10 @@ const GlobalNetworkLoader: React.FC<GlobalNetworkLoaderProps> = ({
           {/* Minimal Typography */}
           {!isSmall && (
             <div className="mt-8 text-center space-y-1.5 relative z-10">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">
+              <h3 className="text-lg font-bold text-slate-100 tracking-tight">
                 {title}
               </h3>
-              <p className="text-slate-400 dark:text-blue-300/30 text-[9px] font-bold uppercase tracking-[0.3em]">
+              <p className="text-blue-400/60 text-[9px] font-bold uppercase tracking-[0.3em]">
                 {subtitle}
               </p>
             </div>
