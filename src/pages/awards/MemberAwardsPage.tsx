@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, Medal, Award, MoreHorizontal } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -6,10 +6,17 @@ import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { mockMembers, mockAwards } from "@/data/mockData";
 import { Link } from "react-router-dom";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const MemberAwardsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   const memberAwardsSummary = useMemo(() => {
     return mockMembers.map(member => {
@@ -34,7 +41,14 @@ const MemberAwardsPage = () => {
   }, [memberAwardsSummary, searchQuery]);
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Loading Member Awards..."
+          subtitle="Mapping community achievements and badges"
+        />
+      )}
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         {/* Title Block */}

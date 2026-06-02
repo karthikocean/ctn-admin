@@ -8,10 +8,17 @@ import { mockPoints, mockMembers, modulePoints } from "@/data/mockData";
 import type { PointEntry } from "@/types";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const PointsPage = () => {
   const { hasPermission } = useAuth();
   const canCreate = hasPermission("points", "create");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
   const [points, setPoints] = useState<PointEntry[]>(() => {
     const stored = localStorage.getItem("points");
     return stored ? JSON.parse(stored) : mockPoints;
@@ -42,7 +49,14 @@ const PointsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Loading Points Ledger..."
+          subtitle="Compiling points transactions and active configs"
+        />
+      )}
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         {/* Title Block */}

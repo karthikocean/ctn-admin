@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { LayoutDashboard, Search, Filter } from "lucide-react";
@@ -6,6 +7,7 @@ import StatCard from "@/components/common/StatCard";
 import ChartCard from "@/components/common/ChartCard";
 import StatusBadge from "@/components/common/StatusBadge";
 import { dashboardStats, monthlyData, regionData, categoryData, mockActivities } from "@/data/mockData";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const COLORS = ["hsl(210,97%,23%)", "hsl(0,72%,50%)", "hsl(142,71%,45%)", "hsl(38,92%,50%)", "hsl(262,83%,58%)", "hsl(210,60%,50%)"];
 const TRAINING_BAR_COLOR = "#1d4ed8";
@@ -29,8 +31,22 @@ const TrainingTooltip = ({ active, payload, label }: any) => {
 };
 
 const DashboardPage = () => {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Loading Dashboard Analytics..."
+          subtitle="Gathering member stats and network metrics"
+        />
+      )}
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-4 border-b border-border">
         {/* Title Block */}

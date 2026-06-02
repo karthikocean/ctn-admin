@@ -36,7 +36,7 @@ const PlansPage = () => {
   const canCreate = hasPermission("plans", "create");
   const canEdit = hasPermission("plans", "edit");
   const canDelete = hasPermission("plans", "delete");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [plans, setPlans] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -44,6 +44,8 @@ const PlansPage = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
@@ -56,10 +58,18 @@ const PlansPage = () => {
     setViewDialogOpen(true);
   };
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    amount: number;
+    trialDays: number | null;
+    modules: any[];
+    status: string;
+  }>({
     title: "",
     description: "",
     amount: 0,
+    trialDays: null,
     modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
     status: "active"
   });
@@ -104,7 +114,7 @@ const PlansPage = () => {
   const handleAddModule = () => {
     setFormData({
       ...formData,
-      modules: [...formData.modules, { moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }]
+      modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }, ...formData.modules]
     });
   };
 
@@ -120,14 +130,23 @@ const PlansPage = () => {
   };
 
   const handleSave = async () => {
+    const newErrors: Record<string, string> = {};
     if (!formData.title.trim()) {
-      toast({ title: "Validation Error", description: "Title is required", variant: "destructive" });
+      newErrors.title = "Title is required";
+    }
+    if (formData.amount <= 0) {
+      newErrors.amount = "Amount must be greater than zero";
+    }
+    const hasEmptyModule = formData.modules.some(m => !m.moduleName);
+    if (hasEmptyModule) {
+      newErrors.modules = "Please select a valid module name for all modules";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
-    if (formData.modules.some(m => !m.moduleName)) {
-      toast({ title: "Validation Error", description: "Please select a valid module name", variant: "destructive" });
-      return;
-    }
+    setErrors({});
 
     setFormLoading(true);
     try {
@@ -156,10 +175,12 @@ const PlansPage = () => {
 
   const resetForm = () => {
     setEditingId(null);
+    setErrors({});
     setFormData({
       title: "",
       description: "",
       amount: 0,
+      trialDays: null,
       modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
       status: "active"
     });
@@ -171,6 +192,7 @@ const PlansPage = () => {
       title: plan.title,
       description: plan.description,
       amount: plan.amount,
+      trialDays: plan.trialDays !== undefined && plan.trialDays !== null ? plan.trialDays : null,
       modules: plan.modules.map((m: any) => ({
         moduleName: m.moduleName,
         countLimit: m.countLimit,
@@ -207,7 +229,14 @@ const PlansPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && plans.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Syncing Plans..."
+          subtitle="Retrieving latest subscription tier data"
+        />
+      )}
       {/* Header Section */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">
@@ -254,36 +283,31 @@ const PlansPage = () => {
 
       {/* Table Section */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative glass-card overflow-hidden">
-        {loading && plans.length === 0 && (
-          <GlobalNetworkLoader
-            fullScreen={false}
-            title="Syncing Plans..."
-            subtitle="Retrieving latest subscription tier data"
-          />
-        )}
         {loading && plans.length > 0 && <TableLoader text="Syncing Plans..." />}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Plan Details</th>
-                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
-                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Modules</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16 whitespace-nowrap">S.No</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Plan</th>
+                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Amount</th>
+                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Member Count</th>
+                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Trial Days</th>
+                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Modules</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Status</th>
+                <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {loading && plans.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-0">
-                    <TableSkeleton rows={5} columns={6} />
+                  <td colSpan={8} className="p-0">
+                    <TableSkeleton rows={5} columns={8} />
                   </td>
                 </tr>
               ) : plans.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                     No plans found. Create one to get started.
                   </td>
                 </tr>
@@ -294,19 +318,35 @@ const PlansPage = () => {
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-foreground">{plan.title}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</div>
+                        {/* <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</div> */}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-sm font-bold text-primary">₹{plan.amount}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex flex-wrap justify-center gap-1">
-                        {plan.modules.map((m: any, i: number) => (
-                          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-secondary border border-border text-foreground">
+                      <span className="text-sm font-medium text-foreground">{plan.memberCount ?? 0}</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-medium text-foreground">
+                        {plan.trialDays !== null && plan.trialDays !== undefined ? `${plan.trialDays} days` : "None"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex flex-wrap justify-center gap-1 max-w-[280px] mx-auto">
+                        {(expandedPlans[plan._id] ? plan.modules : plan.modules.slice(0, 3)).map((m: any, i: number) => (
+                          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-secondary border border-border text-foreground whitespace-nowrap">
                             {m.moduleName}: {m.countLimit} ({m.frequencyValue !== undefined ? m.frequencyValue : 1} {m.frequency || "monthly"})
                           </span>
                         ))}
+                        {plan.modules.length > 3 && (
+                          <button 
+                            onClick={() => setExpandedPlans(prev => ({ ...prev, [plan._id]: !prev[plan._id] }))}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 border border-primary/20 text-primary whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors focus:outline-none"
+                          >
+                            {expandedPlans[plan._id] ? "Show less" : `+ ${plan.modules.length - 3} more`}
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -350,13 +390,22 @@ const PlansPage = () => {
         <div className="space-y-6 pb-20 px-4">
           <div className="space-y-4">
             <div>
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Plan Title</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Plan Title <span className="text-red-500">*</span>
+              </Label>
               <Input
                 placeholder="Enter plan title"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="mt-1.5 h-11 rounded-xl border-border bg-secondary/30 focus:ring-primary/20"
+                onChange={(e) => {
+                  setFormData({ ...formData, title: e.target.value });
+                  if (errors.title) setErrors((prev) => ({ ...prev, title: "" }));
+                }}
+                className={`mt-1.5 h-11 rounded-xl bg-secondary/30 focus:ring-primary/20 ${errors.title ? "border-red-500 border" : "border-border"
+                  }`}
               />
+              {errors.title && (
+                <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.title}</p>
+              )}
             </div>
 
             <div>
@@ -369,18 +418,44 @@ const PlansPage = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Amount <span className="text-red-500">*</span>
+                </Label>
                 <div className="relative mt-1.5">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">₹</span>
                   <Input
                     type="number"
                     value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                    className="h-11 pl-7 rounded-xl border-border bg-secondary/30 focus:ring-primary/20"
+                    onChange={(e) => {
+                      setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 });
+                      if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }));
+                    }}
+                    className={`h-11 pl-7 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${
+                      errors.amount ? "border-red-500" : "border-border"
+                    }`}
                   />
                 </div>
+                {errors.amount && (
+                  <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.amount}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Trial Days</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.trialDays ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({
+                      ...formData,
+                      trialDays: val === "" ? null : (isNaN(parseInt(val)) ? null : parseInt(val))
+                    });
+                  }}
+                  className="mt-1.5 h-11 rounded-xl border-border bg-secondary/30 focus:ring-primary/20"
+                />
               </div>
               <div>
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
@@ -415,11 +490,17 @@ const PlansPage = () => {
                 <div key={index} className="group relative flex items-start gap-3 p-3 rounded-xl bg-secondary/20 border border-border/50 hover:border-primary/30 transition-all">
                   <div className="flex-1 grid grid-cols-12 gap-3">
                     <div className="col-span-4">
-                      <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mb-1.5 block ml-0.5">Select Module</Label>
+                      <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest mb-1.5 block ml-0.5">
+                        Select Module <span className="text-red-500">*</span>
+                      </Label>
                       <select
-                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                        className={`w-full h-10 px-3 rounded-lg bg-background text-[11px] font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer ${!module.moduleName && errors.modules ? "border-red-500 border" : "border border-border"
+                          }`}
                         value={module.moduleName}
-                        onChange={(e) => handleModuleChange(index, "moduleName", e.target.value)}
+                        onChange={(e) => {
+                          handleModuleChange(index, "moduleName", e.target.value);
+                          if (errors.modules) setErrors((prev) => ({ ...prev, modules: "" }));
+                        }}
                       >
                         <option value="">Choose Module...</option>
                         {MODULE_OPTIONS.map(opt => (
@@ -476,6 +557,9 @@ const PlansPage = () => {
                 </div>
               ))}
             </div>
+            {errors.modules && (
+              <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.modules}</p>
+            )}
           </div>
 
           <Button
@@ -532,14 +616,24 @@ const PlansPage = () => {
               </div>
 
               {/* Stats Card bar */}
-              <div className="grid grid-cols-2 border-b border-border divide-x divide-border bg-secondary/10">
+              <div className="grid grid-cols-4 border-b border-border divide-x divide-border bg-secondary/10">
                 <div className="p-4 text-center">
                   <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Plan Amount</span>
-                  <span className="text-3xl font-black text-primary">₹{viewingPlan.amount}</span>
+                  <span className="text-xl font-extrabold text-primary">₹{viewingPlan.amount}</span>
+                </div>
+                <div className="p-4 text-center">
+                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Trial Days</span>
+                  <span className="text-xl font-extrabold text-foreground">
+                    {viewingPlan.trialDays !== null && viewingPlan.trialDays !== undefined ? viewingPlan.trialDays : "None"}
+                  </span>
                 </div>
                 <div className="p-4 text-center">
                   <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Included Modules</span>
-                  <span className="text-3xl font-black text-foreground">{viewingPlan.modules?.length || 0}</span>
+                  <span className="text-xl font-extrabold text-foreground">{viewingPlan.modules?.length || 0}</span>
+                </div>
+                <div className="p-4 text-center">
+                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Member Count</span>
+                  <span className="text-xl font-extrabold text-foreground">{viewingPlan.memberCount ?? 0}</span>
                 </div>
               </div>
 

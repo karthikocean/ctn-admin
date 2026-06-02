@@ -9,7 +9,8 @@ import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import PremiumLoader from "@/components/common/PremiumLoader";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+import { TableLoader, TableSkeleton } from "@/components/common/TableLoader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
@@ -213,7 +214,14 @@ export const ReferralCategoriesPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && categories.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Mapping Referral Categories..."
+          subtitle="Connecting referral paths and member nodes"
+        />
+      )}
       {/* Single Row Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         {/* Title Block */}
@@ -255,7 +263,8 @@ export const ReferralCategoriesPage = () => {
         </div>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card overflow-hidden">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card overflow-hidden relative">
+        {loading && categories.length > 0 && <TableLoader text="Syncing Referral Categories..." />}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
@@ -267,10 +276,10 @@ export const ReferralCategoriesPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {loading ? (
+              {loading && categories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-20">
-                    <PremiumLoader variant="centered" style="network" text="Fetching Referral Categories..." />
+                  <td colSpan={4} className="p-0">
+                    <TableSkeleton rows={8} columns={4} />
                   </td>
                 </tr>
               ) : categories.length === 0 ? (

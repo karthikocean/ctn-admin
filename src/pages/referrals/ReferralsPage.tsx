@@ -10,6 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { TableLoader, TableSkeleton } from "@/components/common/TableLoader";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import PaginationBar from "@/components/common/PaginationBar";
 
 // Mock Data
@@ -79,7 +80,14 @@ const ReferralsPage = () => {
   );
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && referrals.length === 0 && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Mapping Referral Paths..."
+          subtitle="Connecting chain nodes and member invitations"
+        />
+      )}
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">

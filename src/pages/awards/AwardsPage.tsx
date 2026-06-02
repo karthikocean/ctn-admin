@@ -20,9 +20,16 @@ import { mockAwards, mockMembers } from "@/data/mockData";
 import type { AwardEntry } from "@/types";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 const AwardsPage = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
   const { hasPermission } = useAuth();
   const canCreate = hasPermission("awards", "create");
   const canEdit = hasPermission("awards", "edit");
@@ -145,7 +152,14 @@ const AwardsPage = () => {
   };
 
   return (
-    <div className="page-container">
+    <div className="page-container relative min-h-[600px]">
+      {loading && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Loading Awards..."
+          subtitle="Fetching achievements and recognition ledger"
+        />
+      )}
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">
