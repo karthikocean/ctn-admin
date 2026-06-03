@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,6 +71,9 @@ const AnnouncementsPage = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const isMounted = useRef(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -89,8 +93,9 @@ const AnnouncementsPage = () => {
   const fetchAnnouncements = async () => {
     setIsLoading(true);
     try {
-      const result = await getAnnouncements({ page: 0, limit: 100, search: searchTerm });
+      const result = await getAnnouncements({ page: page - 1, limit: 9, search: searchTerm });
       setAnnouncements(result.data || []);
+      setTotalPages(result.totalPages || 1);
     } catch (error) {
       console.error("Error fetching announcements:", error);
     } finally {
@@ -99,8 +104,20 @@ const AnnouncementsPage = () => {
   };
 
   useEffect(() => {
+    fetchAnnouncements();
+  }, [page]);
+
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
     const delayDebounceFn = setTimeout(() => {
-      fetchAnnouncements();
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        fetchAnnouncements();
+      }
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
@@ -223,8 +240,8 @@ const AnnouncementsPage = () => {
   };
 
   return (
-    <div className="page-container relative min-h-[600px]">
-      {isLoading && announcements.length === 0 && (
+    <div className="flex flex-col h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 space-y-4 max-w-[1600px] mx-auto relative overflow-hidden">
+      {isLoading && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="Synchronizing Announcements..."
@@ -232,7 +249,8 @@ const AnnouncementsPage = () => {
         />
       )}
 
-      <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
+      {/* Single Row Header (fixed at top) */}
+      <div className="flex-shrink-0 flex flex-wrap items-center gap-3 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Megaphone size={16} className="text-primary" />
@@ -264,63 +282,78 @@ const AnnouncementsPage = () => {
         </div>
       </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {announcements.map((a, i) => (
-            <motion.div key={a._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }} className="glass-card overflow-hidden flex flex-col">
-              <div className="h-32 bg-secondary/50 relative overflow-hidden flex items-center justify-center">
-                {a.image ? (
-                  <img src={getFullUrl(a.image)} className="w-full h-full object-cover" />
-                ) : (
-                  <Megaphone size={40} className="text-primary/20" />
-                )}
-                <div className="absolute top-3 right-3">
-                  <StatusBadge status={a.status} />
-                </div>
-              </div>
-              <div className="p-5 flex-1 flex flex-col">
-                <h3 className="font-semibold text-foreground line-clamp-1">{a.title}</h3>
-                <p className="text-sm text-muted-foreground mt-2 line-clamp-2 flex-1">{a.content}</p>
-
-                <div className="mt-4 flex items-center gap-4 text-[10px] text-muted-foreground">
-                  {a.video && <div className="flex items-center gap-1 text-primary"><Video size={12} /> Video Attached</div>}
-                  <div className="flex items-center gap-1"><Calendar size={12} /> {new Date(a.createdAt).toLocaleDateString()}</div>
-                </div>
-
-                <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
-                  {canEdit && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
-                      onClick={() => handleEdit(a)}
-                    >
-                      <Pencil size={12} className="mr-1.5" /> Edit
-                    </Button>
+      {/* Scrollable Middle Area containing Grid of Cards */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-1 py-1">
+        {announcements.length === 0 ? (
+          <div className="py-20 text-center glass-card">
+            <Megaphone size={48} className="mx-auto text-muted-foreground/20 mb-4" />
+            <p className="text-muted-foreground">No announcements found</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {announcements.map((a, i) => (
+              <motion.div key={a._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }} className="glass-card overflow-hidden flex flex-col">
+                <div className="h-32 bg-secondary/50 relative overflow-hidden flex items-center justify-center">
+                  {a.image ? (
+                    <img src={getFullUrl(a.image)} className="w-full h-full object-cover" />
+                  ) : (
+                    <Megaphone size={40} className="text-primary/20" />
                   )}
-                  {canDelete && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
-                      onClick={() => {
-                        setDeletingId(a._id);
-                        setDeleteConfirmOpen(true);
-                      }}
-                    >
-                      <Trash2 size={12} className="mr-1.5" /> Delete
-                    </Button>
-                  )}
+                  <div className="absolute top-3 right-3">
+                    <StatusBadge status={a.status} />
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-          {announcements.length === 0 && (
-            <div className="col-span-full py-20 text-center glass-card">
-              <Megaphone size={48} className="mx-auto text-muted-foreground/20 mb-4" />
-              <p className="text-muted-foreground">No announcements found</p>
-            </div>
-          )}
+                <div className="p-5 flex-1 flex flex-col">
+                  <h3 className="font-semibold text-foreground line-clamp-1">{a.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-2 flex-1">{a.content}</p>
+
+                  <div className="mt-4 flex items-center gap-4 text-[10px] text-muted-foreground">
+                    {a.video && <div className="flex items-center gap-1 text-primary"><Video size={12} /> Video Attached</div>}
+                    <div className="flex items-center gap-1"><Calendar size={12} /> {new Date(a.createdAt).toLocaleDateString()}</div>
+                  </div>
+
+                  <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
+                    {canEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
+                        onClick={() => handleEdit(a)}
+                      >
+                        <Pencil size={12} className="mr-1.5" /> Edit
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
+                        onClick={() => {
+                          setDeletingId(a._id);
+                          setDeleteConfirmOpen(true);
+                        }}
+                      >
+                        <Trash2 size={12} className="mr-1.5" /> Delete
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer (fixed at bottom) */}
+      {!isLoading && announcements.length > 0 && (
+        <div className="flex-shrink-0 border-t border-border bg-background/80 backdrop-blur-sm z-10">
+          <PaginationBar
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
         </div>
+      )}
       <FormDrawer
         open={drawerOpen}
         onOpenChange={(open) => { setDrawerOpen(open); if (!open) resetForm(); }}

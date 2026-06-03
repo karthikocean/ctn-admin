@@ -260,10 +260,10 @@ const PlansPage = () => {
             />
           </div>
 
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
+          {/* <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
             <Filter size={14} className="mr-1.5" />
             Filters
-          </Button>
+          </Button> */}
 
           {canCreate && (
             <Button
@@ -340,7 +340,7 @@ const PlansPage = () => {
                           </span>
                         ))}
                         {plan.modules.length > 3 && (
-                          <button 
+                          <button
                             onClick={() => setExpandedPlans(prev => ({ ...prev, [plan._id]: !prev[plan._id] }))}
                             className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 border border-primary/20 text-primary whitespace-nowrap cursor-pointer hover:bg-primary/20 transition-colors focus:outline-none"
                           >
@@ -367,7 +367,7 @@ const PlansPage = () => {
         </div>
         {/* Pagination Section */}
         {!loading && plans.length > 0 && (
-          <div className="px-6 py-4 border-t border-border">
+          <div className="px-6 pb-4 border-t border-border">
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
@@ -432,9 +432,8 @@ const PlansPage = () => {
                       setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 });
                       if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }));
                     }}
-                    className={`h-11 pl-7 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${
-                      errors.amount ? "border-red-500" : "border-border"
-                    }`}
+                    className={`h-11 pl-7 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${errors.amount ? "border-red-500" : "border-border"
+                      }`}
                   />
                 </div>
                 {errors.amount && (

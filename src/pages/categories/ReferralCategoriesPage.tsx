@@ -313,7 +313,7 @@ export const ReferralCategoriesPage = () => {
           </table>
         </div>
         {!loading && (editingId || categories.length > 0) && (
-          <div className="px-6 py-4 border-t border-border">
+          <div className="px-6 pb-4 border-t border-border">
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}

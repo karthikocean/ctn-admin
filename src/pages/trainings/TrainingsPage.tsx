@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   GraduationCap, Search, Plus, Trash2, Video, User, Award,
@@ -75,8 +75,9 @@ const TrainingsPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const isMounted = useRef(false);
   const [trainings, setTrainings] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -125,8 +126,8 @@ const TrainingsPage = () => {
     try {
       setIsFetching(true);
       const result = await getTrainings({
-        page,
-        limit: 10,
+        page: page - 1,
+        limit: 9,
         search: searchTerm || undefined
       });
       setTrainings(result.data || []);
@@ -144,7 +145,22 @@ const TrainingsPage = () => {
 
   useEffect(() => {
     fetchTrainings();
-  }, [page, searchTerm]);
+  }, [page]);
+
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        fetchTrainings();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // --- Auto-calculate Overall Points ---
   useEffect(() => {
@@ -397,8 +413,8 @@ const TrainingsPage = () => {
   };
 
   return (
-    <div className="page-container relative min-h-[600px]">
-      {isFetching && trainings.length === 0 && (
+    <div className="flex flex-col h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 space-y-4 max-w-[1600px] mx-auto relative overflow-hidden">
+      {isFetching && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="Synchronizing Curriculum..."
@@ -407,7 +423,7 @@ const TrainingsPage = () => {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-border/60">
+      <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-border/60">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shadow-sm border border-primary/20">
             <GraduationCap size={24} className="text-primary" />
@@ -440,71 +456,74 @@ const TrainingsPage = () => {
         </div>
       </div>
 
-      {/* Course Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Scrollable Middle Area containing Course Cards Grid */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-1 py-1">
         {trainings.length > 0 ? (
-          trainings.map((t, i) => (
-            <motion.div key={t._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-card overflow-hidden group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300">
-              <div className="aspect-video relative overflow-hidden bg-secondary">
-                <img src={getFullUrl(t.thumbnail)} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
-                <div className="absolute top-3 right-3">
-                  <StatusBadge status={t.status} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {trainings.map((t, i) => (
+              <motion.div key={t._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-card overflow-hidden group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300">
+                <div className="aspect-video relative overflow-hidden bg-secondary">
+                  <img src={getFullUrl(t.thumbnail)} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+                  <div className="absolute top-3 right-3">
+                    <StatusBadge status={t.status} />
+                  </div>
                 </div>
-              </div>
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-1.5">
-                    {t.category && (
-                      <Badge variant="secondary" className="bg-primary/5 text-primary text-[10px] font-bold border-primary/10 hover:bg-primary/10 px-2 py-0.5">
-                        {t.category.name}
-                      </Badge>
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1.5">
+                      {t.category && (
+                        <Badge variant="secondary" className="bg-primary/5 text-primary text-[10px] font-bold border-primary/10 hover:bg-primary/10 px-2 py-0.5">
+                          {t.category.name}
+                        </Badge>
+                      )}
+                      <h3 className="font-bold text-foreground text-lg leading-tight group-hover:text-primary transition-colors line-clamp-1">{t.title}</h3>
+                    </div>
+                    {(canEdit || canDelete) && (
+                      <ActionMenu
+                        onEdit={canEdit ? () => handleEdit(t) : undefined}
+                        onDelete={canDelete ? () => handleDelete(t._id) : undefined}
+                      />
                     )}
-                    <h3 className="font-bold text-foreground text-lg leading-tight group-hover:text-primary transition-colors line-clamp-1">{t.title}</h3>
                   </div>
-                  {(canEdit || canDelete) && (
-                    <ActionMenu
-                      onEdit={canEdit ? () => handleEdit(t) : undefined}
-                      onDelete={canDelete ? () => handleDelete(t._id) : undefined}
-                    />
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-6 h-6 rounded-full bg-secondary border border-border overflow-hidden">
-                    <img src={getFullUrl(t.authorImage)} alt={t.authorName} className="w-full h-full object-cover" />
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-6 h-6 rounded-full bg-secondary border border-border overflow-hidden">
+                      <img src={getFullUrl(t.authorImage)} alt={t.authorName} className="w-full h-full object-cover" />
+                    </div>
+                    <p className="text-xs text-muted-foreground font-medium">by <span className="text-foreground">{t.authorName}</span></p>
                   </div>
-                  <p className="text-xs text-muted-foreground font-medium">by <span className="text-foreground">{t.authorName}</span></p>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-5">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 p-2 rounded-xl border border-border/40">
-                    <PlayCircle size={14} className="text-primary" />
-                    <span className="font-semibold text-foreground">{t.lessons?.length || 0} Lessons</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 p-2 rounded-xl border border-border/40">
-                    <Award size={14} className="text-amber-500" />
-                    <span className="font-semibold text-foreground">{t.overallPoints} Points</span>
+                  <div className="grid grid-cols-2 gap-4 mt-5">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 p-2 rounded-xl border border-border/40">
+                      <PlayCircle size={14} className="text-primary" />
+                      <span className="font-semibold text-foreground">{t.lessons?.length || 0} Lessons</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/50 p-2 rounded-xl border border-border/40">
+                      <Award size={14} className="text-amber-500" />
+                      <span className="font-semibold text-foreground">{t.overallPoints} Points</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))
+              </motion.div>
+            ))}
+          </div>
         ) : (
-          <div className="col-span-full py-20 text-center glass-card">
+          <div className="py-20 text-center glass-card">
             <GraduationCap size={40} className="mx-auto text-muted-foreground/30 mb-3" />
             <p className="text-muted-foreground font-medium">No training courses found</p>
           </div>
         )}
       </div>
 
-      {/* {!isFetching && trainings.length > 0 && (
-        <div className="mt-8">
+      {/* Footer (fixed at bottom) */}
+      {!isFetching && trainings.length > 0 && (
+        <div className="flex-shrink-0 pt-0 border-t border-border bg-background/80 backdrop-blur-sm z-10">
           <PaginationBar
-            currentPage={page + 1}
+            currentPage={page}
             totalPages={totalPages}
-            onPageChange={(p) => setPage(p - 1)}
+            onPageChange={setPage}
           />
         </div>
-      )} */}
+      )}
 
       <FormDrawer open={drawerOpen} onOpenChange={setDrawerOpen} title={form.title || (editingId ? "Edit Training Course" : "Create Training Course")} scrollable={false}>
         <div className="flex flex-col h-full bg-slate-50/40 relative">

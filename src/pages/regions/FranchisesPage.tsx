@@ -381,7 +381,7 @@ const FranchisesPage = () => {
             </tbody>
           </table>
         </div>
-        <div className="px-6 pb-4">
+        <div className="px-6 pb-4 border-t">
           <PaginationBar
             currentPage={page + 1}
             totalPages={totalPages}

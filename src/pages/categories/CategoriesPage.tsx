@@ -271,7 +271,7 @@ const CategoriesPage = () => {
           </table>
         </div>
         {!loading && (editingId || categories.length > 0) && (
-          <div className="px-6 py-4 border-t border-border">
+          <div className="px-6 pb-4 border-t border-border">
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
@@ -564,10 +564,10 @@ export const SubCategoriesPage = () => {
             />
           </div>
 
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
+          {/* <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
             <Filter size={14} className="mr-1.5" />
             Filters
-          </Button>
+          </Button> */}
 
           <Button
             size="sm"
@@ -627,7 +627,7 @@ export const SubCategoriesPage = () => {
           </table>
         </div>
         {!loading && (editingId || subCategories.length > 0) && (
-          <div className="px-6 py-4 border-t border-border">
+          <div className="px-6 pb-4 border-t border-border">
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}

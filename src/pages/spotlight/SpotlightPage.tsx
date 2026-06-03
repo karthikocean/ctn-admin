@@ -310,14 +310,15 @@ const SpotlightPage = () => {
             )}
           </TableBody>
         </Table>
-      </div>
-
-      <div className="mt-6">
-        <PaginationBar
-          currentPage={page + 1}
-          totalPages={totalPages}
-          onPageChange={(p) => setPage(p - 1)}
-        />
+        {!isLoading && spotlights.length > 0 && (
+          <div className="px-6 pb-4 border-t border-border">
+            <PaginationBar
+              currentPage={page + 1}
+              totalPages={totalPages}
+              onPageChange={(p) => setPage(p - 1)}
+            />
+          </div>
+        )}
       </div>
 
       <FormDrawer

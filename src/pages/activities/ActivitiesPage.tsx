@@ -139,7 +139,7 @@ const GenericActivityPage = ({
 
       {/* Footer (fixed at bottom) */}
       {!loading && posts.length > 0 && (
-        <div className="flex-shrink-0 pt-0 pb-1 border-t border-border bg-background/80 backdrop-blur-sm z-10">
+        <div className="flex-shrink-0 pt-0 border-t border-border bg-background/80 backdrop-blur-sm z-10">
           <PaginationBar
             currentPage={page}
             totalPages={totalPages}
