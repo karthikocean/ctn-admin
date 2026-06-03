@@ -725,7 +725,7 @@ const MembersPage = () => {
                 <TableHead className="px-6 py-4 w-16">S.No</TableHead>
                 <TableHead className="px-6 py-4">Member Details</TableHead>
                 <TableHead className="px-6 py-4">Business Name</TableHead>
-                <TableHead className="px-6 py-4">Category</TableHead>
+                <TableHead className="px-6 py-4 min-w-[220px]">Category</TableHead>
                 <TableHead className="px-6 py-4">Location</TableHead>
                 <TableHead className="px-6 py-4">Status</TableHead>
                 <TableHead className="px-6 py-4 text-right">Actions</TableHead>
@@ -777,7 +777,7 @@ const MembersPage = () => {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="px-6 py-4 min-w-[220px]">
                       <p className="text-xs font-medium">
                         {member.businessCategory?.name || "N/A"}
                       </p>
@@ -814,45 +814,15 @@ const MembersPage = () => {
             </TableBody>
           </Table>
         </div>
-        <div className="px-6 py-4 flex items-center justify-between border-t border-border bg-secondary/10">
-          <p className="text-xs text-muted-foreground font-medium">
-            Showing {members.length} of {totalMembers} members
-          </p>
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1 || isLoading}
-            >
-              Prev
-            </Button>
-            <div className="flex gap-1">
-              {[...Array(totalPages)].map((_, i) => (
-                <Button
-                  key={i}
-                  variant={page === i + 1 ? "default" : "ghost"}
-                  size="sm"
-                  className="w-8 h-8 p-0 text-xs"
-                  onClick={() => setPage(i + 1)}
-                  disabled={isLoading}
-                >
-                  {i + 1}
-                </Button>
-              ))}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || isLoading}
-            >
-              Next
-            </Button>
+        {!isLoading && members.length > 0 && (
+          <div className="px-6 pb-4 border-t border-border">
+            <PaginationBar
+              currentPage={page}
+              totalPages={totalPages || 1}
+              onPageChange={setPage}
+            />
           </div>
-        </div>
+        )}
       </motion.div>
 
       <FormDrawer

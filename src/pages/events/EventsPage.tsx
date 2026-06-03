@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Calendar, MapPin, Clock, Users, Search, Filter, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2 } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,6 +71,9 @@ const EventsPage = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const isMounted = useRef(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -94,8 +98,9 @@ const EventsPage = () => {
   const fetchEvents = async () => {
     setIsLoading(true);
     try {
-      const result = await getEvents({ page: 0, limit: 100, search: searchQuery });
+      const result = await getEvents({ page: page - 1, limit: 9, search: searchQuery });
       setEvents(result.data || []);
+      setTotalPages(result.totalPages || 1);
     } catch (error) {
       console.error("Error fetching events:", error);
     } finally {
@@ -104,8 +109,20 @@ const EventsPage = () => {
   };
 
   useEffect(() => {
+    fetchEvents();
+  }, [page]);
+
+  useEffect(() => {
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return;
+    }
     const timer = setTimeout(() => {
-      fetchEvents();
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        fetchEvents();
+      }
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -250,8 +267,8 @@ const EventsPage = () => {
   };
 
   return (
-    <div className="page-container relative min-h-[600px]">
-      {isLoading && !events.length && (
+    <div className="flex flex-col h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 space-y-4 max-w-[1600px] mx-auto relative overflow-hidden">
+      {isLoading && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="Synchronizing Global Events..."
@@ -259,7 +276,8 @@ const EventsPage = () => {
         />
       )}
 
-      <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
+      {/* Single Row Header (fixed at top) */}
+      <div className="flex-shrink-0 flex flex-wrap items-center gap-3 pb-4 border-b border-border">
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <Calendar size={16} className="text-primary" />
@@ -292,97 +310,112 @@ const EventsPage = () => {
         </div>
       </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {events.map((e, i) => (
-            <motion.div
-              key={e._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.05 }}
-              className="glass-card overflow-hidden flex flex-col group hover:shadow-lg hover:shadow-primary/5 transition-all duration-500 border-slate-100"
-            >
-              <div className="h-32 bg-secondary/30 relative overflow-hidden flex items-center justify-center">
-                {e.image ? (
-                  <img src={getFullUrl(e.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                ) : (
-                  <Calendar size={40} className="text-primary/10" />
-                )}
-                <div className="absolute top-2.5 right-2.5 shadow-sm">
-                  <StatusBadge status={e.status} />
-                </div>
-              </div>
-
-              <div className="p-4 flex-1 flex flex-col">
-                <h3 className="font-bold text-slate-800 line-clamp-1 text-[15px] group-hover:text-primary transition-colors leading-tight">{e.title}</h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 min-h-[1.5rem] leading-relaxed opacity-80">
-                  {e.description || "No description provided."}
-                </p>
-
-                <div className="mt-2.5 grid grid-cols-2 gap-y-2.5 gap-x-2 border-t border-slate-50 pt-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Date & Time</span>
-                    <div className="flex flex-col gap-1 text-[11px] font-semibold text-slate-600">
-                      <div className="flex items-center gap-1.5"><Calendar size={12} className="text-primary/60" /> {new Date(e.date).toLocaleDateString()}</div>
-                      <div className="flex items-center gap-1.5"><Clock size={12} className="text-primary/60" /> {e.time}</div>
-                    </div>
+      {/* Scrollable Middle Area containing Grid of Cards */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-1 py-1">
+        {events.length === 0 ? (
+          <div className="py-20 text-center glass-card">
+            <Calendar size={48} className="mx-auto text-muted-foreground/20 mb-4" />
+            <p className="text-muted-foreground">No events found</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {events.map((e, i) => (
+              <motion.div
+                key={e._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: i * 0.05 }}
+                className="glass-card overflow-hidden flex flex-col group hover:shadow-lg hover:shadow-primary/5 transition-all duration-500 border-slate-100"
+              >
+                <div className="h-32 bg-secondary/30 relative overflow-hidden flex items-center justify-center">
+                  {e.image ? (
+                    <img src={getFullUrl(e.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  ) : (
+                    <Calendar size={40} className="text-primary/10" />
+                  )}
+                  <div className="absolute top-2.5 right-2.5 shadow-sm">
+                    <StatusBadge status={e.status} />
                   </div>
+                </div>
 
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Rewards & Limit</span>
+                <div className="p-4 flex-1 flex flex-col">
+                  <h3 className="font-bold text-slate-800 line-clamp-1 text-[15px] group-hover:text-primary transition-colors leading-tight">{e.title}</h3>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 min-h-[1.5rem] leading-relaxed opacity-80">
+                    {e.description || "No description provided."}
+                  </p>
+
+                  <div className="mt-2.5 grid grid-cols-2 gap-y-2.5 gap-x-2 border-t border-slate-50 pt-3">
                     <div className="flex flex-col gap-1">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Date & Time</span>
+                      <div className="flex flex-col gap-1 text-[11px] font-semibold text-slate-600">
+                        <div className="flex items-center gap-1.5"><Calendar size={12} className="text-primary/60" /> {new Date(e.date).toLocaleDateString()}</div>
+                        <div className="flex items-center gap-1.5"><Clock size={12} className="text-primary/60" /> {e.time}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Rewards & Limit</span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+                          <Users size={12} className="text-indigo-500/60" /> {e.membersLimit || 'Unlimited'}
+                        </div>
+                        <div className="w-fit bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-emerald-100 flex items-center gap-1">
+                          <CheckCircle2 size={10} /> {e.points || 0} Pts
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="col-span-2 flex flex-col gap-1 pt-0.5">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Location</span>
                       <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-                        <Users size={12} className="text-indigo-500/60" /> {e.membersLimit || 'Unlimited'}
-                      </div>
-                      <div className="w-fit bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-emerald-100 flex items-center gap-1">
-                        <CheckCircle2 size={10} /> {e.points || 0} Pts
+                        <MapPin size={12} className="text-red-400 flex-shrink-0" />
+                        <span className="line-clamp-1">{e.location}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="col-span-2 flex flex-col gap-1 pt-0.5">
-                    <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Location</span>
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-                      <MapPin size={12} className="text-red-400 flex-shrink-0" />
-                      <span className="line-clamp-1">{e.location}</span>
-                    </div>
+                  <div className="flex gap-2 mt-auto pt-3 border-t border-slate-100/50">
+                    {canEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
+                        onClick={() => handleEdit(e)}
+                      >
+                        <Pencil size={12} className="mr-1.5" /> Edit
+                      </Button>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-500"
+                        onClick={() => {
+                          setDeletingId(e._id);
+                          setDeleteConfirmOpen(true);
+                        }}
+                      >
+                        <Trash2 size={12} className="mr-1.5" /> Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
 
-                <div className="flex gap-2 mt-auto pt-3 border-t border-slate-100/50">
-                  {canEdit && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
-                      onClick={() => handleEdit(e)}
-                    >
-                      <Pencil size={12} className="mr-1.5" /> Edit
-                    </Button>
-                  )}
-                  {canDelete && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg flex-1 text-xs h-8 font-bold border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-500"
-                      onClick={() => {
-                        setDeletingId(e._id);
-                        setDeleteConfirmOpen(true);
-                      }}
-                    >
-                      <Trash2 size={12} className="mr-1.5" /> Delete
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-          {events.length === 0 && (
-            <div className="col-span-full py-20 text-center glass-card">
-              <Calendar size={48} className="mx-auto text-muted-foreground/20 mb-4" />
-              <p className="text-muted-foreground">No events found</p>
-            </div>
-          )}
+      {/* Footer (fixed at bottom) */}
+      {!isLoading && events.length > 0 && (
+        <div className="flex-shrink-0 pt-1 border-t border-border bg-background/80 backdrop-blur-sm z-10">
+          <PaginationBar
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+          />
         </div>
+      )}
       <FormDrawer
         open={drawerOpen}
         onOpenChange={(open) => { setDrawerOpen(open); if (!open) resetForm(); }}

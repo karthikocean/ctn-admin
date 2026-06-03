@@ -55,10 +55,10 @@ const ContributionsPage = () => {
             />
           </div>
 
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
+          {/* <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
             <Filter size={14} className="mr-1.5" />
             Filters
-          </Button>
+          </Button> */}
 
           <Button
             size="sm"

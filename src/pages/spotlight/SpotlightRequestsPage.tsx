@@ -315,15 +315,15 @@ const SpotlightRequestsPage = () => {
             )}
           </TableBody>
         </Table>
-      </div>
-
-      {/* Pagination */}
-      <div className="mt-6">
-        <PaginationBar
-          currentPage={page + 1}
-          totalPages={totalPages}
-          onPageChange={(p) => setPage(p - 1)}
-        />
+        {!isLoading && requests.length > 0 && (
+          <div className="px-6 pb-4 border-t border-border">
+            <PaginationBar
+              currentPage={page + 1}
+              totalPages={totalPages}
+              onPageChange={(p) => setPage(p - 1)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Confirm Dialog */}
