@@ -5,26 +5,65 @@ import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
-
-const connectionHistory = [
-  { id: "1", from: "Arjun Mehta", to: "Kavita Joshi", type: "Business Lead", status: "active", date: "2025-03-15", response: "Accepted" },
-  { id: "2", from: "Manish Agarwal", to: "Suresh Nair", type: "Referral", status: "pending", date: "2025-03-14", response: "Pending" },
-  { id: "3", from: "Deepa Rao", to: "Arjun Mehta", type: "Service Request", status: "closed", date: "2025-03-12", response: "Completed" },
-  { id: "4", from: "Pooja Desai", to: "Manish Agarwal", type: "Business Lead", status: "active", date: "2025-03-10", response: "In Progress" },
-];
+import { getConnections } from "@/api/ConnectionsApi";
 
 const ConnectionsPage = () => {
+  const [connections, setConnections] = useState<any[]>([]);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalConnections, setTotalConnections] = useState(0);
+  const [search, setSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchConnections = async () => {
+    setIsLoading(true);
+    try {
+      const params: any = {
+        page: page - 1,
+        limit: 10,
+      };
+      if (search) params.search = search;
+
+      const result = await getConnections(params);
+      setConnections(result.data || []);
+      setTotalConnections(result.total || 0);
+      setTotalPages(result.totalPages || 1);
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
+    fetchConnections();
+  }, [page]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (page !== 1) setPage(1);
+      else fetchConnections();
+    }, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [search]);
+
+  const getStatusLabel = (status: string) => {
+    if (status === "ACCEPTED") return "active";
+    if (status === "PENDING") return "pending";
+    if (status === "REJECTED") return "rejected";
+    if (status === "CANCELLED") return "cancelled";
+    if (status === "BLOCKED") return "closed";
+    return status.toLowerCase();
+  };
+
+  const formatResponseText = (status: string) => {
+    if (!status) return "";
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  };
 
   return (
     <div className="page-container relative min-h-[600px]">
-      {loading && (
+      {isLoading && connections.length === 0 && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="Loading Connections..."
@@ -51,21 +90,23 @@ const ConnectionsPage = () => {
             <input
               type="text"
               placeholder="Search connections..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
             />
           </div>
 
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
+          {/* <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
             <Filter size={14} className="mr-1.5" />
             Filters
-          </Button>
+          </Button> */}
 
-          <Button
+          {/* <Button
             size="sm"
             className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
           >
             New Connection
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -76,27 +117,51 @@ const ConnectionsPage = () => {
               <tr className="border-b border-border bg-secondary/50">
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">From</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">To</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Type</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Response</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Date</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {connectionHistory.map((c) => (
-                <tr key={c.id} className="hover:bg-secondary/30 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-foreground">{c.from}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{c.to}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{c.type}</td>
-                  <td className="px-6 py-4 text-sm text-foreground">{c.response}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{c.date}</td>
-                  <td className="px-6 py-4"><StatusBadge status={c.status} /></td>
+              {connections.length === 0 && !isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-sm text-muted-foreground">
+                    No connections found
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                connections.map((c) => (
+                  <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-foreground">
+                      <div>
+                        <p className="font-semibold">{c.sender?.fullName || "Unknown"}</p>
+                        <p className="text-[10px] text-muted-foreground">{c.sender?.businessName || ""}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <div>
+                        <p className="font-semibold text-foreground">{c.receiver?.fullName || "Unknown"}</p>
+                        <p className="text-[10px] text-muted-foreground">{c.receiver?.businessName || ""}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-foreground">{formatResponseText(c.status)}</td>
+                    <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">
+                      {c.createdAt ? c.createdAt.split("T")[0] : ""}
+                    </td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={getStatusLabel(c.status)} />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        <div className="px-6 pb-4"><PaginationBar currentPage={page} totalPages={2} onPageChange={setPage} /></div>
+        {totalPages > 1 && (
+          <div className="px-6 pb-4">
+            <PaginationBar currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+          </div>
+        )}
       </motion.div>
     </div>
   );
