@@ -49,14 +49,16 @@ const BillingsPage = () => {
   const [formData, setFormData] = useState<{
     memberId: string;
     planId: string;
-    paymentType: string;
+    paymentMethod: string;
     amount: number;
+    transactionId: string;
     remarks: string;
   }>({
     memberId: "",
     planId: "",
-    paymentType: "",
+    paymentMethod: "",
     amount: 0,
+    transactionId: "",
     remarks: "",
   });
 
@@ -127,8 +129,9 @@ const BillingsPage = () => {
     setFormData({
       memberId: "",
       planId: "",
-      paymentType: "",
+      paymentMethod: "",
       amount: 0,
+      transactionId: "",
       remarks: "",
     });
   };
@@ -138,8 +141,9 @@ const BillingsPage = () => {
     setFormData({
       memberId: billing.memberId || "",
       planId: billing.planId || "",
-      paymentType: billing.paymentType || "",
+      paymentMethod: billing.paymentMethod || billing.paymentType || "",
       amount: billing.amount || 0,
+      transactionId: billing.transactionId || "",
       remarks: billing.remarks || "",
     });
     setDrawerOpen(true);
@@ -162,8 +166,11 @@ const BillingsPage = () => {
     if (!formData.planId) {
       newErrors.planId = "Please select a subscription plan";
     }
-    if (!formData.paymentType.trim()) {
-      newErrors.paymentType = "Payment type is required";
+    if (!formData.paymentMethod.trim()) {
+      newErrors.paymentMethod = "Payment method is required";
+    }
+    if (!formData.transactionId.trim()) {
+      newErrors.transactionId = "Transaction ID is required";
     }
     if (formData.amount <= 0) {
       newErrors.amount = "Amount must be greater than zero";
@@ -325,9 +332,21 @@ const BillingsPage = () => {
                       <span className="text-sm font-bold text-foreground">₹{b.amount}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-secondary border border-border text-foreground">
-                        {b.paymentType}
-                      </span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-secondary border border-border text-foreground">
+                          {b.paymentMethod || b.paymentType}
+                        </span>
+                        {b.transactionId && (
+                          <span className="text-[10px] font-medium text-muted-foreground">
+                            ID: {b.transactionId}
+                          </span>
+                        )}
+                        {b.source && (
+                          <span className="text-[9px] font-bold bg-primary/10 text-primary px-1 rounded uppercase tracking-wider scale-90 origin-left">
+                            {b.source}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-xs text-muted-foreground">
                       {new Date(b.createdAt).toLocaleDateString()}
@@ -444,18 +463,18 @@ const BillingsPage = () => {
 
               <div>
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Payment Type <span className="text-red-500">*</span>
+                  Payment Method <span className="text-red-500">*</span>
                 </Label>
                 <select
-                  className={`w-full mt-1.5 h-11 px-3 bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer border ${errors.paymentType ? "border-red-500" : "border-border"
+                  className={`w-full mt-1.5 h-11 px-3 bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer border ${errors.paymentMethod ? "border-red-500" : "border-border"
                     }`}
-                  value={formData.paymentType}
+                  value={formData.paymentMethod}
                   onChange={(e) => {
-                    setFormData({ ...formData, paymentType: e.target.value });
-                    if (errors.paymentType) setErrors((prev) => ({ ...prev, paymentType: "" }));
+                    setFormData({ ...formData, paymentMethod: e.target.value });
+                    if (errors.paymentMethod) setErrors((prev) => ({ ...prev, paymentMethod: "" }));
                   }}
                 >
-                  <option value="">Select Payment Type...</option>
+                  <option value="">Select Payment Method...</option>
                   <option value="Razorpay">Razorpay</option>
                   <option value="Stripe">Stripe</option>
                   <option value="Bank Transfer">Bank Transfer</option>
@@ -464,10 +483,29 @@ const BillingsPage = () => {
                   <option value="Cheque">Cheque</option>
                   <option value="Other">Other</option>
                 </select>
-                {errors.paymentType && (
-                  <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.paymentType}</p>
+                {errors.paymentMethod && (
+                  <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.paymentMethod}</p>
                 )}
               </div>
+            </div>
+
+            <div>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Transaction ID <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                placeholder="Enter transaction/receipt ID"
+                value={formData.transactionId}
+                onChange={(e) => {
+                  setFormData({ ...formData, transactionId: e.target.value });
+                  if (errors.transactionId) setErrors((prev) => ({ ...prev, transactionId: "" }));
+                }}
+                className={`mt-1.5 h-11 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${errors.transactionId ? "border-red-500" : "border-border"
+                  }`}
+              />
+              {errors.transactionId && (
+                <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.transactionId}</p>
+              )}
             </div>
 
             <div>
@@ -564,9 +602,25 @@ const BillingsPage = () => {
                   <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
                     <span className="font-bold text-muted-foreground">Payment Method</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-secondary border border-border text-foreground">
-                      {selectedBilling.paymentType}
+                      {selectedBilling.paymentMethod || selectedBilling.paymentType}
                     </span>
                   </div>
+
+                  <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
+                    <span className="font-bold text-muted-foreground">Transaction ID</span>
+                    <span className="font-medium text-foreground">
+                      {selectedBilling.transactionId || "None"}
+                    </span>
+                  </div>
+
+                  {selectedBilling.source && (
+                    <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
+                      <span className="font-bold text-muted-foreground">Source</span>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-primary/10 text-primary uppercase">
+                        {selectedBilling.source}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
                     <span className="font-bold text-muted-foreground">Transaction Date</span>

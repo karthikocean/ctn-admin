@@ -5,6 +5,7 @@ import { Phone, ArrowRight, Loader2, Globe, CheckCircle2, ChevronDown } from "lu
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import logoHorizontal from "@/assets/logo-horizontal.png";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -93,9 +94,13 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#0d2b6b]">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#001938]">
       {/* Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#0d2b6b] to-[#0a1f5c]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#001938] via-[#001227] to-[#000b18]" />
+
+      {/* Premium background decorative blobs */}
+      <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-[#d1962a]/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-[#d1962a]/5 blur-[120px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -104,18 +109,17 @@ const LoginPage = () => {
         className="relative z-10 w-full max-w-[480px] p-6"
       >
         {/* Main Card */}
-        <div className="bg-[#f4f5f7] rounded-[20px] shadow-2xl p-10 md:p-12 border border-white/20">
+        <div className="bg-white rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-10 md:p-12 border border-gray-100">
 
           {/* Logo Section */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-[#0a1f5c] rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-              <Globe className="text-white w-10 h-10" />
+            <div className="w-full max-w-[280px] h-16 flex items-center justify-center mb-5">
+              <img src={logoHorizontal} alt="Trusted Network Logo" className="w-full h-full object-contain" />
             </div>
 
-            <div className="text-center space-y-2">
-              <span className="text-[10px] font-bold text-gray-400 tracking-[0.2em] uppercase">CREATE TRUSTED NETWORK</span>
-              <h1 className="text-3xl font-bold text-[#0a1f5c] tracking-tight">Sign In</h1>
-              <p className="text-gray-400 text-sm font-medium">
+            <div className="text-center space-y-1.5">
+              <h1 className="text-2xl font-black text-[#001938] tracking-tight">Sign In</h1>
+              <p className="text-gray-600 text-xs font-semibold">
                 Enter your phone number and PIN to continue
               </p>
             </div>
@@ -132,7 +136,7 @@ const LoginPage = () => {
                     value={phone}
                     onChange={(e) => handlePhoneChange(e.target.value)}
                     maxLength={10}
-                    className="w-full px-6 py-4 rounded-[12px] bg-white border border-gray-100 text-[#0a1f5c] text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-gray-300"
+                    className="w-full px-6 py-4 rounded-[12px] bg-gray-50/50 border border-gray-300 text-[#001938] text-sm font-black focus:outline-none focus:ring-4 focus:ring-[#d1962a]/10 focus:border-[#d1962a] transition-all placeholder:text-gray-400"
                   />
                   {isPhoneValid && (
                     <div className="absolute right-4 text-green-500">
@@ -158,14 +162,14 @@ const LoginPage = () => {
                         onKeyDown={(e) => handleKeyDown(index, e)}
                         onPaste={index === 0 ? handlePaste : undefined}
                         className={`
-                          w-full h-full text-center text-2xl font-bold rounded-xl bg-white border transition-all focus:outline-none
-                          ${pin[index] ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-gray-200'}
-                          focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
+                          w-full h-full text-center text-2xl font-bold rounded-xl bg-gray-50/50 border border-gray-300 transition-all focus:outline-none
+                          ${pin[index] ? 'border-[#d1962a] ring-4 ring-[#d1962a]/15' : 'border-gray-300'}
+                          focus:border-[#d1962a] focus:ring-4 focus:ring-[#d1962a]/15
                         `}
                       />
                       {pin[index] && (
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                          <div className="w-3 h-3 bg-[#0a1f5c] rounded-full" />
+                          <div className="w-3 h-3 bg-[#001938] rounded-full" />
                         </div>
                       )}
                     </div>
@@ -173,7 +177,7 @@ const LoginPage = () => {
                 </div>
 
                 <div className="text-center">
-                  <a href="#" className="text-sm font-bold text-[#0a1f5c] hover:underline transition-all">
+                  <a href="#" className="text-xs font-black text-[#d1962a] hover:text-[#b88020] hover:underline transition-all">
                     Forgot PIN?
                   </a>
                 </div>
@@ -187,15 +191,15 @@ const LoginPage = () => {
                 className={`
                   w-full py-7 rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-lg
                   ${loading || !isPinComplete || !isPhoneValid
-                    ? 'bg-gray-300 text-gray-500 shadow-none cursor-not-allowed'
-                    : 'bg-gradient-to-r from-[#0d2b6b] to-[#0a1f5c] text-white hover:shadow-blue-900/20'}
+                    ? 'bg-gray-50 text-gray-400 border border-gray-300 shadow-none cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#d1962a] to-[#b88020] text-[#001938] hover:from-[#e0a234] hover:to-[#c68b25]'}
                 `}
                 disabled={loading || !isPinComplete || !isPhoneValid}
               >
                 {loading ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : isSuccess ? (
-                  <div className="flex items-center gap-2 text-green-200">
+                  <div className="flex items-center gap-2 text-[#001938]">
                     <CheckCircle2 size={18} />
                     <span>Login Successful</span>
                   </div>
@@ -208,8 +212,8 @@ const LoginPage = () => {
               </Button>
 
               <div className="text-center">
-                <p className="text-xs font-bold text-gray-400 tracking-wide cursor-pointer hover:text-[#0a1f5c] transition-colors">
-                  New to Globe Connect? <span className="text-[#0a1f5c]">Register Now</span>
+                <p className="text-xs font-semibold text-gray-600 tracking-wide cursor-pointer hover:text-[#001938] transition-colors">
+                  New to Globe Connect? <span className="text-[#d1962a] font-black hover:underline">Register Now</span>
                 </p>
               </div>
             </div>
@@ -218,13 +222,13 @@ const LoginPage = () => {
 
         {/* Footer info */}
         <div className="mt-10 text-center space-y-4">
-          <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">
+          <p className="text-[#d1962a]/80 text-[10px] font-extrabold uppercase tracking-[0.2em]">
             SECURE ADMINISTRATIVE PORTAL
           </p>
-          <div className="flex items-center justify-center gap-6 text-[10px] font-bold text-white/30 uppercase tracking-widest">
-            <span className="hover:text-white/60 cursor-pointer">Privacy Policy</span>
-            <div className="w-1 h-1 rounded-full bg-white/20" />
-            <span className="hover:text-white/60 cursor-pointer">Terms of Service</span>
+          <div className="flex items-center justify-center gap-6 text-[10px] font-bold text-white/50 uppercase tracking-widest">
+            <span className="hover:text-[#d1962a] cursor-pointer transition-colors">Privacy Policy</span>
+            <div className="w-1 h-1 rounded-full bg-[#d1962a]/40" />
+            <span className="hover:text-[#d1962a] cursor-pointer transition-colors">Terms of Service</span>
           </div>
         </div>
       </motion.div>
