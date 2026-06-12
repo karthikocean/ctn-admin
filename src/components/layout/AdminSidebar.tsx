@@ -5,7 +5,8 @@ import { ChevronDown, X, ChevronLeft, Globe } from "lucide-react";
 import { sidebarNavItems } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import logo from "@/assets/logo.png";
+import logoSquare from "@/assets/logo-square.png";
+import logoHorizontal from "@/assets/logo-horizontal.png";
 
 interface AdminSidebarProps {
   mobileOpen: boolean;
@@ -58,19 +59,20 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
       isCollapsed ? "w-20" : "w-[260px]"
     )}>
       {/* Logo & Toggle */}
-      <div className="flex items-center justify-between p-4 h-16 border-b border-sidebar-border relative">
-        <Link to="/" className="flex items-center gap-3 overflow-hidden">
-          <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-md overflow-hidden p-1.5">
-            <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-          </div>
-          {!isCollapsed && (
+      <div className="flex items-center justify-between p-4 h-16 border-b border-sidebar-border relative bg-white">
+        <Link to="/" className={cn("flex items-center overflow-hidden flex-1", isCollapsed && "justify-center")}>
+          {isCollapsed ? (
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-md overflow-hidden p-1.5">
+              <img src={logoSquare} alt="Logo" className="w-full h-full object-contain " style={{ objectFit: "cover" }} />
+            </div>
+          ) : (
             <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex flex-col"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className="w-full h-11 rounded-xl bg-white flex items-center justify-center shadow-sm overflow-hidden px-3 py-1"
             >
-              <span className="font-bold text-sm text-sidebar-foreground leading-none">Trusted</span>
-              <span className="text-[10px] font-bold text-primary uppercase tracking-wider mt-1">Admin Panel</span>
+              <img src={logoHorizontal} alt="Logo" className="w-full h-full object-contain" style={{ objectFit: "cover" }} />
             </motion.div>
           )}
         </Link>
@@ -105,10 +107,10 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
                     active
                       ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                      : "text-sidebar-foreground/85 hover:bg-white/10 hover:text-white"
                   )}
                 >
-                  <Icon size={20} className={cn("flex-shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-sidebar-foreground")} />
+                  <Icon size={20} className={cn("flex-shrink-0", active ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/60 group-hover:text-white")} />
                   {!isCollapsed && (
                     <>
                       <span className="flex-1 text-left text-[14px] font-semibold truncate">{item.title}</span>
@@ -132,10 +134,10 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
                     active
                       ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                      : "text-sidebar-foreground/85 hover:bg-white/10 hover:text-white"
                   )}
                 >
-                  <Icon size={20} className={cn("flex-shrink-0", active ? "text-primary" : "text-muted-foreground group-hover:text-sidebar-foreground")} />
+                  <Icon size={20} className={cn("flex-shrink-0", active ? "text-sidebar-accent-foreground" : "text-sidebar-foreground/60 group-hover:text-white")} />
                   {!isCollapsed && <span className="text-[14px] font-semibold truncate">{item.title}</span>}
                   {isCollapsed && (
                     <div className="absolute left-full ml-4 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-md whitespace-nowrap">
@@ -162,8 +164,8 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
                         className={cn(
                           "block px-3 py-2 rounded-lg text-[13px] transition-all duration-200",
                           isActive(child.path)
-                            ? "text-primary font-bold bg-primary/5"
-                            : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/30 font-medium"
+                            ? "text-sidebar-accent-foreground font-bold bg-sidebar-accent"
+                            : "text-sidebar-foreground/70 hover:text-white hover:bg-white/5 font-medium"
                         )}
                       >
                         {child.title}
@@ -180,9 +182,9 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
       {/* Support / Bottom Info */}
       {!isCollapsed && (
         <div className="p-4 border-t border-sidebar-border bg-sidebar-accent/10">
-          <div className="rounded-xl bg-[#0d2b6b]/5 p-3">
-            <p className="text-[11px] font-bold text-[#0d2b6b]/60 uppercase tracking-widest">Enterprise Support</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Need help? Contact our dedicated admin support team.</p>
+          <div className="rounded-xl bg-sidebar-accent/40 border border-sidebar-border/50 p-3">
+            <p className="text-[11px] font-bold text-sidebar-foreground uppercase tracking-widest">Enterprise Support</p>
+            <p className="text-[10px] text-sidebar-foreground/70 mt-1">Need help? Contact our dedicated admin support team.</p>
           </div>
         </div>
       )}
