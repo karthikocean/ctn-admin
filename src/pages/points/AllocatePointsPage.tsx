@@ -37,12 +37,16 @@ const MODULE_OPTIONS = [
   "Trainings",
   "One to One",
   "Referral",
-  "Thank you Slip"
+  "Thank you Slip",
+  "Spotlight",
+  "Online Stall",
+  "Meeting"
 ];
 
 const TYPE_OPTIONS = [
   { label: "Creation", value: "creation" },
-  { label: "Response", value: "response" }
+  { label: "Response", value: "response" },
+  { label: "Spent", value: "spent" }
 ];
 
 const AllocatePointsPage = () => {
