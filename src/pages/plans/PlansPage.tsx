@@ -65,13 +65,17 @@ const PlansPage = () => {
     trialDays: number | null;
     modules: any[];
     status: string;
+    billingType: string;
+    billingCycle: string;
   }>({
     title: "",
     description: "",
     amount: 0,
     trialDays: null,
     modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
-    status: "active"
+    status: "active",
+    billingType: "basic",
+    billingCycle: "monthly"
   });
 
   const fetchPlans = async (search: string = "", pageNum: number = 1) => {
@@ -182,7 +186,9 @@ const PlansPage = () => {
       amount: 0,
       trialDays: null,
       modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
-      status: "active"
+      status: "active",
+      billingType: "basic",
+      billingCycle: "monthly"
     });
   };
 
@@ -199,7 +205,9 @@ const PlansPage = () => {
         frequency: m.frequency || "monthly",
         frequencyValue: m.frequencyValue !== undefined ? m.frequencyValue : 1
       })),
-      status: plan.status || "active"
+      status: plan.status || "active",
+      billingType: plan.billingType || "basic",
+      billingCycle: plan.billingCycle || "monthly"
     });
     setDrawerOpen(true);
   };
@@ -318,7 +326,18 @@ const PlansPage = () => {
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-foreground">{plan.title}</div>
-                        {/* <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{plan.description}</div> */}
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {plan.billingType && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary capitalize border border-primary/20">
+                              {plan.billingType}
+                            </span>
+                          )}
+                          {plan.billingCycle && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-secondary text-muted-foreground capitalize border border-border">
+                              {plan.billingCycle}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -468,6 +487,32 @@ const PlansPage = () => {
                 </select>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Billing Type</Label>
+                <select
+                  className="w-full mt-1.5 h-11 px-3 rounded-xl border border-border bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 capitalize"
+                  value={formData.billingType}
+                  onChange={(e) => setFormData({ ...formData, billingType: e.target.value })}
+                >
+                  <option value="basic">Basic</option>
+                  <option value="standard">Standard</option>
+                  <option value="premium">Premium</option>
+                </select>
+              </div>
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Billing Cycle</Label>
+                <select
+                  className="w-full mt-1.5 h-11 px-3 rounded-xl border border-border bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 capitalize"
+                  value={formData.billingCycle}
+                  onChange={(e) => setFormData({ ...formData, billingCycle: e.target.value })}
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4 pt-4 border-t border-border">
@@ -603,9 +648,19 @@ const PlansPage = () => {
                     <PlanIcon size={24} />
                   </div>
                   <div className="space-y-1 pr-12">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-xl font-extrabold text-foreground tracking-tight">{viewingPlan.title}</h2>
                       <StatusBadge status={viewingPlan.status} />
+                      {viewingPlan.billingType && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary capitalize border border-primary/20">
+                          {viewingPlan.billingType}
+                        </span>
+                      )}
+                      {viewingPlan.billingCycle && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary text-secondary-foreground capitalize border border-border">
+                          {viewingPlan.billingCycle}
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed mt-1.5">
                       {viewingPlan.description || "No description provided for this plan."}
