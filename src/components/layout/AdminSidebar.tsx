@@ -180,14 +180,14 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
       </nav>
 
       {/* Support / Bottom Info */}
-      {!isCollapsed && (
+      {/* {!isCollapsed && (
         <div className="p-4 border-t border-sidebar-border bg-sidebar-accent/10">
           <div className="rounded-xl bg-sidebar-accent/40 border border-sidebar-border/50 p-3">
             <p className="text-[11px] font-bold text-sidebar-foreground uppercase tracking-widest">Enterprise Support</p>
             <p className="text-[10px] text-sidebar-foreground/70 mt-1">Need help? Contact our dedicated admin support team.</p>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 
