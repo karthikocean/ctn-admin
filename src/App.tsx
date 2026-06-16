@@ -20,7 +20,6 @@ import CategoriesPage from "@/pages/categories/CategoriesPage";
 import { SubCategoriesPage } from "@/pages/categories/CategoriesPage";
 import ReferralCategoriesPage from "@/pages/categories/ReferralCategoriesPage";
 import AnnouncementsPage from "@/pages/announcements/AnnouncementsPage";
-import EventsPage from "@/pages/events/EventsPage";
 import BlogsPage from "@/pages/blogs/BlogsPage";
 import TrainingsPage from "@/pages/trainings/TrainingsPage";
 import TrainingCategoriesPage from "@/pages/trainings/TrainingCategoriesPage";
@@ -83,7 +82,6 @@ const App = () => (
               <Route path="/categories/sub" element={<SubCategoriesPage />} />
               <Route path="/categories/referrals" element={<ReferralCategoriesPage />} />
               <Route path="/announcements" element={<AnnouncementsPage />} />
-              <Route path="/events" element={<EventsPage />} />
               <Route path="/blogs" element={<BlogsPage />} />
               <Route path="/trainings" element={<TrainingsPage />} />
               <Route path="/trainings/categories" element={<TrainingCategoriesPage />} />

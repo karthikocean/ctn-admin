@@ -150,5 +150,15 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: text;
 }
 
+/* Hide spin-button controls in number inputs globally */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 
 

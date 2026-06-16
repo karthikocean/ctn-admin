@@ -24,3 +24,8 @@ export const deleteAnnouncement = async (id: string) => {
   const response = await api.delete(`/announcements/${id}`);
   return response.data;
 };
+
+export const getAnnouncementBookings = async (id: string) => {
+  const response = await api.get(`/announcements/${id}/bookings`);
+  return response.data;
+};
