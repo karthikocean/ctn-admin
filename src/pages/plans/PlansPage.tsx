@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Receipt, Layers, Eye } from "lucide-react";
+import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Receipt, Layers, Eye, Calendar, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +27,10 @@ const MODULE_OPTIONS = [
   "Trainings",
   "One to One",
   "Referral",
-  "Thank you Slip"
+  "Thank you Slip",
+  "Event",
+  "Online Stall",
+  "Offline Stall"
 ];
 
 const PlansPage = () => {
@@ -558,9 +561,9 @@ const PlansPage = () => {
                         type="number"
                         placeholder="0"
                         min={0}
-                        value={module.countLimit}
+                        value={module.countLimit === 0 ? "" : module.countLimit}
                         onChange={(e) => handleModuleChange(index, "countLimit", Math.max(0, parseInt(e.target.value) || 0))}
-                        className="h-10 rounded-lg border-border bg-background text-xs font-black focus:ring-primary/20 text-center"
+                        className="h-10 rounded-lg border-border bg-background text-xs font-bold focus:ring-primary/20 text-center px-1.5"
                       />
                     </div>
                     <div className="col-span-3 relative">
@@ -584,7 +587,7 @@ const PlansPage = () => {
                         min={1}
                         value={module.frequencyValue !== undefined ? module.frequencyValue : 1}
                         onChange={(e) => handleModuleChange(index, "frequencyValue", Math.max(1, parseInt(e.target.value) || 1))}
-                        className="h-10 rounded-lg border-border bg-background text-xs font-black focus:ring-primary/20 text-center"
+                        className="h-10 rounded-lg border-border bg-background text-xs font-bold focus:ring-primary/20 text-center px-1.5"
                       />
                     </div>
                   </div>
@@ -710,6 +713,9 @@ const PlansPage = () => {
                       "One to One": Users,
                       "Referral": Share2,
                       "Thank you Slip": Receipt,
+                      "Event": Calendar,
+                      "Online Stall": Store,
+                      "Offline Stall": Store,
                     };
                     const IconComponent = iconMap[m.moduleName] || Layers;
                     const colorMap: Record<string, { hoverBorder: string, bg: string, text: string }> = {
@@ -722,6 +728,9 @@ const PlansPage = () => {
                       "One to One": { hoverBorder: "hover:border-rose-500", bg: "bg-rose-500/10", text: "text-rose-500" },
                       "Referral": { hoverBorder: "hover:border-cyan-500", bg: "bg-cyan-500/10", text: "text-cyan-500" },
                       "Thank you Slip": { hoverBorder: "hover:border-teal-500", bg: "bg-teal-500/10", text: "text-teal-500" },
+                      "Event": { hoverBorder: "hover:border-blue-500", bg: "bg-blue-500/10", text: "text-blue-500" },
+                      "Online Stall": { hoverBorder: "hover:border-fuchsia-500", bg: "bg-fuchsia-500/10", text: "text-fuchsia-500" },
+                      "Offline Stall": { hoverBorder: "hover:border-orange-500", bg: "bg-orange-500/10", text: "text-orange-500" },
                     };
                     const colors = colorMap[m.moduleName] || { hoverBorder: "hover:border-primary", bg: "bg-primary/10", text: "text-primary" };
 

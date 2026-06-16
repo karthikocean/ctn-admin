@@ -52,9 +52,9 @@ export const mockRegions: Region[] = [
 ];
 
 export const mockAnnouncements: Announcement[] = [
-  { id: "1", title: "Annual General Meeting 2025", content: "Join us for AGM on March 15th at Grand Hotel.", status: "published", createdAt: "2025-03-01", author: "Admin" },
-  { id: "2", title: "New Membership Benefits", content: "Exciting new benefits for premium members.", status: "published", createdAt: "2025-02-20", author: "Admin" },
-  { id: "3", title: "System Maintenance Notice", content: "Scheduled maintenance on March 25th.", status: "draft", createdAt: "2025-03-10", author: "System" },
+  { id: "1", title: "Annual General Meeting 2025", content: "Join us for AGM on March 15th at Grand Hotel.", status: "published", createdAt: "2025-03-01", author: "Admin", announcementType: "Event", date: "2025-03-15", time: "10:00 AM", location: "Grand Hotel", points: 100, membersLimit: 50, isOfflineStallExist: true },
+  { id: "2", title: "New Membership Benefits", content: "Exciting new benefits for premium members.", status: "published", createdAt: "2025-02-20", author: "Admin", announcementType: "Online Stall", date: "2025-02-25", time: "11:00 AM", location: "Online (Zoom)", points: 50, membersLimit: 100 },
+  { id: "3", title: "System Maintenance Notice", content: "Scheduled maintenance on March 25th.", status: "draft", createdAt: "2025-03-10", author: "System", announcementType: "Event", date: "2025-03-25", time: "12:00 PM", location: "Server Room", points: 0, membersLimit: 5, isOfflineStallExist: false },
 ];
 
 export const mockEvents: Event[] = [

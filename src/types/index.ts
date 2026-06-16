@@ -52,9 +52,17 @@ export interface Announcement {
   id: string;
   title: string;
   content: string;
-  status: "draft" | "published" | "archived";
+  status: "draft" | "published" | "scheduled";
   createdAt: string;
   author: string;
+  announcementType?: "Event" | "Online Stall";
+  date?: string;
+  time?: string;
+  location?: string;
+  points?: number;
+  membersLimit?: number;
+  scheduleDate?: string;
+  isOfflineStallExist?: boolean;
 }
 
 export interface Event {
