@@ -36,6 +36,7 @@ import SubscriptionPage from "@/pages/subscription/SubscriptionPage";
 import PlansPage from "@/pages/plans/PlansPage";
 import ReferralsPage from "@/pages/referrals/ReferralsPage";
 import BillingsPage from "@/pages/billings/BillingsPage";
+import CouponsPage from "@/pages/coupons/CouponsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -99,6 +100,11 @@ const App = () => (
               <Route path="/plans" element={<PlansPage />} />
               <Route path="/referrals" element={<ReferralsPage />} />
               <Route path="/billings" element={<BillingsPage />} />
+              <Route path="/coupons" element={
+                <PermissionRoute module="coupons" action="view">
+                  <CouponsPage />
+                </PermissionRoute>
+              } />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
