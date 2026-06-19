@@ -37,6 +37,8 @@ import PlansPage from "@/pages/plans/PlansPage";
 import ReferralsPage from "@/pages/referrals/ReferralsPage";
 import BillingsPage from "@/pages/billings/BillingsPage";
 import CouponsPage from "@/pages/coupons/CouponsPage";
+import MarketplaceCategoryPage from "@/pages/marketplace/MarketplaceCategoryPage";
+import ModulesPage from "@/pages/modules/ModulesPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,9 +81,21 @@ const App = () => (
               <Route path="/activities/requirement" element={<RequirementPage />} />
               <Route path="/regions" element={<RegionsPage />} />
               <Route path="/franchises" element={<FranchisesPage />} />
-              <Route path="/categories" element={<CategoriesPage />} />
-              <Route path="/categories/sub" element={<SubCategoriesPage />} />
-              <Route path="/categories/referrals" element={<ReferralCategoriesPage />} />
+              <Route path="/categories" element={
+                <PermissionRoute module="main_categories" action="view">
+                  <CategoriesPage />
+                </PermissionRoute>
+              } />
+              <Route path="/categories/sub" element={
+                <PermissionRoute module="sub_categories" action="view">
+                  <SubCategoriesPage />
+                </PermissionRoute>
+              } />
+              <Route path="/categories/referrals" element={
+                <PermissionRoute module="referral_categories" action="view">
+                  <ReferralCategoriesPage />
+                </PermissionRoute>
+              } />
               <Route path="/announcements" element={<AnnouncementsPage />} />
               <Route path="/blogs" element={<BlogsPage />} />
               <Route path="/trainings" element={<TrainingsPage />} />
@@ -103,6 +117,12 @@ const App = () => (
               <Route path="/coupons" element={
                 <PermissionRoute module="coupons" action="view">
                   <CouponsPage />
+                </PermissionRoute>
+              } />
+              <Route path="/marketplace-category" element={<MarketplaceCategoryPage />} />
+              <Route path="/modules" element={
+                <PermissionRoute module="modules" action="view">
+                  <ModulesPage />
                 </PermissionRoute>
               } />
             </Route>

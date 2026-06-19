@@ -8,6 +8,7 @@ import api from "@/services/api";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import PremiumLoader from "@/components/common/PremiumLoader";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
@@ -25,6 +26,10 @@ import {
 
 const CategoriesPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("main_categories", "create");
+  const canEdit = hasPermission("main_categories", "edit");
+  const canDelete = hasPermission("main_categories", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,13 +210,15 @@ const CategoriesPage = () => {
             Filters
           </Button>
 
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
-            onClick={() => setDrawerOpen(true)}
-          >
-            + Add Category
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
+              onClick={() => setDrawerOpen(true)}
+            >
+              + Add Category
+            </Button>
+          )}
         </div>
       </div>
 
@@ -260,8 +267,8 @@ const CategoriesPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
-                        onEdit={() => handleEdit(c)}
-                        onDelete={() => confirmDelete(c._id)}
+                        onEdit={canEdit ? () => handleEdit(c) : undefined}
+                        onDelete={canDelete ? () => confirmDelete(c._id) : undefined}
                       />
                     </td>
                   </tr>
@@ -356,6 +363,10 @@ export default CategoriesPage;
 
 export const SubCategoriesPage = () => {
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+  const canCreate = hasPermission("sub_categories", "create");
+  const canEdit = hasPermission("sub_categories", "edit");
+  const canDelete = hasPermission("sub_categories", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -569,13 +580,15 @@ export const SubCategoriesPage = () => {
             Filters
           </Button> */}
 
-          <Button
-            size="sm"
-            className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
-            onClick={() => setDrawerOpen(true)}
-          >
-            + Add Sub Category
-          </Button>
+          {canCreate && (
+            <Button
+              size="sm"
+              className="h-9 rounded-lg bg-primary hover:bg-primary/90 text-xs"
+              onClick={() => setDrawerOpen(true)}
+            >
+              + Add Sub Category
+            </Button>
+          )}
         </div>
       </div>
 
@@ -616,8 +629,8 @@ export const SubCategoriesPage = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
-                        onEdit={() => handleEdit(c)}
-                        onDelete={() => confirmDelete(c._id)}
+                        onEdit={canEdit ? () => handleEdit(c) : undefined}
+                        onDelete={canDelete ? () => confirmDelete(c._id) : undefined}
                       />
                     </td>
                   </tr>

@@ -1,4 +1,4 @@
-import { LucideIcon, Users, Shield, MapPin, Megaphone, Calendar, FileText, GraduationCap, BarChart3, Layers, Link2, Gift, Trophy, Medal, LayoutDashboard, UserCheck, Activity, CreditCard, Star, Globe, Ticket } from "lucide-react";
+import { LucideIcon, Users, Shield, MapPin, Megaphone, Calendar, FileText, GraduationCap, BarChart3, Layers, Link2, Gift, Trophy, Medal, LayoutDashboard, UserCheck, Activity, CreditCard, Star, Globe, Ticket, ShoppingBag } from "lucide-react";
 
 export interface SidebarNavItem {
   title: string;
@@ -16,9 +16,9 @@ export const sidebarNavItems: SidebarNavItem[] = [
   {
     title: "Categories", path: "/categories", icon: Layers, moduleId: "categories",
     children: [
-      { title: "Main Categories", path: "/categories", moduleId: "categories" },
-      { title: "Sub Categories", path: "/categories/sub", moduleId: "categories" },
-      { title: "Referral Categories", path: "/categories/referrals", moduleId: "categories" },
+      { title: "Main Categories", path: "/categories", moduleId: "main_categories" },
+      { title: "Sub Categories", path: "/categories/sub", moduleId: "sub_categories" },
+      { title: "Referral Categories", path: "/categories/referrals", moduleId: "referral_categories" },
     ],
   },
   { title: "Announcements", path: "/announcements", icon: Megaphone, moduleId: "announcements" },
@@ -79,5 +79,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { title: "Referrals", path: "/referrals", icon: Users, moduleId: "members" },
   { title: "Billings", path: "/billings", icon: CreditCard, moduleId: "billings" },
   { title: "Coupons", path: "/coupons", icon: Ticket, moduleId: "coupons" },
+  { title: "Marketplace Category", path: "/marketplace-category", icon: ShoppingBag, moduleId: "marketplace_category" },
+  { title: "Modules", path: "/modules", icon: Layers, moduleId: "modules" },
 ];
 

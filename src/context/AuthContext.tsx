@@ -36,26 +36,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [modulesList, setModulesList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   const fetchPermissions = useCallback(async (roleId: string) => {
     try {
-      const response = await api.get(`/roles/${roleId}`);
-      if (response.data) {
-        if (response.data.permissions) {
-          setPermissions(response.data.permissions);
+      const [roleResponse, modulesResponse] = await Promise.all([
+        api.get(`/roles/${roleId}`),
+        api.get('/roles/modules')
+      ]);
+
+      if (modulesResponse.data && modulesResponse.data.data) {
+        setModulesList(modulesResponse.data.data);
+      }
+
+      if (roleResponse.data) {
+        if (roleResponse.data.permissions) {
+          setPermissions(roleResponse.data.permissions);
         }
-        if (response.data.code) {
+        if (roleResponse.data.code) {
           setUser(prev => {
             if (!prev) return null;
-            return { ...prev, roleCode: response.data.code };
+            return { ...prev, roleCode: roleResponse.data.code };
           });
           const storedUser = localStorage.getItem("user");
           if (storedUser) {
             try {
               const parsed = JSON.parse(storedUser);
-              parsed.roleCode = response.data.code;
+              parsed.roleCode = roleResponse.data.code;
               localStorage.setItem("user", JSON.stringify(parsed));
             } catch (e) {
               console.error("Error updating cached roleCode:", e);
@@ -64,7 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch permissions:", error);
+      console.error("Failed to fetch permissions/modules:", error);
     }
   }, []);
 
@@ -184,11 +193,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // If no permissions loaded, deny by default
     if (!permissions.length) return false;
 
-    const modulePerm = permissions.find(p => p.moduleId === moduleId);
+    // Find the module in modulesList to get its identifier mapping
+    const targetModule = modulesList.find(
+      m => String(m.slugName).toLowerCase() === moduleId.toLowerCase() ||
+           String(m.name).toLowerCase() === moduleId.toLowerCase()
+    );
+
+    const modulePerm = permissions.find(p => {
+      // 1. Match by module's ObjectId (preferred format)
+      if (targetModule && String(p.moduleId) === String(targetModule._id)) {
+        return true;
+      }
+      // 2. Backward compatibility fallback matching using raw string comparisons
+      const pModStr = String(p.moduleId).toLowerCase();
+      const reqModStr = moduleId.toLowerCase();
+      return pModStr === reqModStr ||
+             pModStr === reqModStr.replace(/_/g, " ") ||
+             pModStr.replace(/ /g, "_") === reqModStr;
+    });
+
     if (!modulePerm) return false;
 
     return modulePerm.actions.includes(action);
-  }, [permissions]);
+  }, [permissions, modulesList]);
 
   return (
     <AuthContext.Provider value={{
