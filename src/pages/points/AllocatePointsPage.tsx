@@ -40,7 +40,8 @@ const MODULE_OPTIONS = [
   "Thank you Slip",
   "Spotlight",
   "Online Stall",
-  "Meeting"
+  "Meeting",
+  "MarketPlace"
 ];
 
 const TYPE_OPTIONS = [

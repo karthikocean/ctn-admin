@@ -35,7 +35,10 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
 
   const filteredNavItems = sidebarNavItems.filter(item => {
     if (!item.moduleId) return true;
-    const canViewParent = hasPermission(item.moduleId, "view");
+    const hasPermittedChild = item.children && item.children.some(child =>
+      !child.moduleId || hasPermission(child.moduleId, "view")
+    );
+    const canViewParent = hasPermission(item.moduleId, "view") || hasPermittedChild;
     if (item.children) {
       const accessibleChildren = item.children.filter(child =>
         !child.moduleId || hasPermission(child.moduleId, "view")

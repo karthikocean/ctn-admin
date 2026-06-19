@@ -140,6 +140,7 @@ const RolesPage = () => {
     name: "",
     email: "",
     phone: "",
+    pin: "",
   });
 
   const [newRole, setNewRole] = useState({
@@ -150,12 +151,14 @@ const RolesPage = () => {
   // Permission state and actions
   const actions = ["VIEW", "ADD", "EDIT", "DELETE"];
   const [permissionModules, setPermissionModules] = useState<string[]>([]);
+  const [modulesList, setModulesList] = useState<any[]>([]);
   const [permissions, setPermissions] = useState<Record<string, Record<string, boolean>>>({});
 
   const formatModuleName = (mod: string) => {
+    if (!mod) return "";
     return mod
-      .split("_")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .split(/[_\s]+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
   };
 
@@ -221,17 +224,26 @@ const RolesPage = () => {
     }
   };
 
+  const [moduleNames, setModuleNames] = useState<Record<string, string>>({});
+
   const fetchPermissionModules = async () => {
     try {
       const response = await api.get('/roles/modules');
       if (response.data && response.data.data) {
-        const mods = response.data.data.map((m: any) => m.name);
-        setPermissionModules(mods);
+        const list = response.data.data;
+        setModulesList(list);
+        const ids = list.map((m: any) => m._id);
+        const namesMap = list.reduce((acc: any, m: any) => {
+          acc[m._id] = m.name;
+          return acc;
+        }, {});
+        setPermissionModules(ids);
+        setModuleNames(namesMap);
         setPermissions((prev) => {
           const initial: Record<string, Record<string, boolean>> = { ...prev };
-          mods.forEach((mod: string) => {
-            if (!initial[mod]) {
-              initial[mod] = { VIEW: false, ADD: false, EDIT: false, DELETE: false };
+          ids.forEach((id: string) => {
+            if (!initial[id]) {
+              initial[id] = { VIEW: false, ADD: false, EDIT: false, DELETE: false };
             }
           });
           return initial;
@@ -289,10 +301,19 @@ const RolesPage = () => {
     console.log(role);
     // Map existing permissions to the state
     const nextPerms: Record<string, Record<string, boolean>> = {};
-    permissionModules.forEach(mod => {
-      console.log(mod);
-      const roleMod = role.permissions.find(p => p.moduleId === mod.toLowerCase());
-      nextPerms[mod] = {
+    permissionModules.forEach(modId => {
+      const targetModule = modulesList.find(m => m._id === modId);
+      const roleMod = role.permissions.find(p => {
+        if (p.moduleId === modId) return true;
+        if (targetModule) {
+          return p.moduleId === targetModule.slugName ||
+                 p.moduleId === targetModule.slugName.replace(/_/g, " ") ||
+                 String(p.moduleId).toLowerCase() === targetModule.slugName.toLowerCase() ||
+                 String(p.moduleId).toLowerCase() === targetModule.slugName.replace(/_/g, " ").toLowerCase();
+        }
+        return false;
+      });
+      nextPerms[modId] = {
         VIEW: roleMod?.actions?.includes("view") || false,
         ADD: roleMod?.actions?.includes("create") || false,
         EDIT: roleMod?.actions?.includes("edit") || false,
@@ -311,9 +332,19 @@ const RolesPage = () => {
   const handleOpenPermissions = (role: Role) => {
     // Map existing permissions to the state
     const nextPerms: Record<string, Record<string, boolean>> = {};
-    permissionModules.forEach(mod => {
-      const roleMod = role.permissions.find(p => p.moduleId === mod.toLowerCase());
-      nextPerms[mod] = {
+    permissionModules.forEach(modId => {
+      const targetModule = modulesList.find(m => m._id === modId);
+      const roleMod = role.permissions.find(p => {
+        if (p.moduleId === modId) return true;
+        if (targetModule) {
+          return p.moduleId === targetModule.slugName ||
+                 p.moduleId === targetModule.slugName.replace(/_/g, " ") ||
+                 String(p.moduleId).toLowerCase() === targetModule.slugName.toLowerCase() ||
+                 String(p.moduleId).toLowerCase() === targetModule.slugName.replace(/_/g, " ").toLowerCase();
+        }
+        return false;
+      });
+      nextPerms[modId] = {
         VIEW: roleMod?.actions?.includes("view") || false,
         ADD: roleMod?.actions?.includes("create") || false,
         EDIT: roleMod?.actions?.includes("edit") || false,
@@ -330,7 +361,9 @@ const RolesPage = () => {
 
 
   const handleEditUser = (userId: string) => {
-    const user = roleUsers.find(u => u._id === userId || u.id === userId);
+    const user =
+      roleUsers.find(u => u._id === userId || u.id === userId) ||
+      recentUsers.find(u => u._id === userId || u.id === userId);
     if (!user) return;
 
     // Set form fields
@@ -338,7 +371,12 @@ const RolesPage = () => {
       name: user.name || "",
       email: user.email || "",
       phone: user.phoneNumber || "",
+      pin: "",
     });
+
+    // Set selected role details so update preserves them
+    setSelectedRoleId(user.roleId || null);
+    setSelectedRole(roles.find(r => r._id === user.roleId)?.name || null);
 
     setEditingUserId(userId);
     setIsEditMode(true);
@@ -359,6 +397,7 @@ const RolesPage = () => {
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
       else fetchPaginatedUsers(null, usersPage);
       fetchRoles();
+      fetchRecentUsers();
     } catch (error: any) {
       console.error("Error deleting user:", error);
       const errorMsg = error.response?.data?.message || "Failed to delete user";
@@ -441,7 +480,7 @@ const RolesPage = () => {
           if (selectedActions.length === 0) return null;
 
           return {
-            moduleId: mod.toLowerCase(),
+            moduleId: mod,
             actions: selectedActions
           };
         })
@@ -484,11 +523,20 @@ const RolesPage = () => {
           if (selectedActions.length === 0) return null;
 
           return {
-            moduleId: mod.toLowerCase(),
+            moduleId: mod,
             actions: selectedActions
           };
         })
         .filter(p => p !== null);
+
+      if (rolePermissions.length === 0) {
+        toast({
+          title: "Error",
+          description: "At Least One Permission Selection is Required.",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const payload = {
         name: newRole.name,
@@ -531,7 +579,7 @@ const RolesPage = () => {
   const handleAddUserAction = (roleName: string, roleId: string) => {
     setSelectedRole(roleName);
     setSelectedRoleId(roleId);
-    setNewUser({ name: "", email: "", phone: "" });
+    setNewUser({ name: "", email: "", phone: "", pin: "" });
     setIsEditMode(false);
     setEditingUserId(null);
     setAddUserDialogOpen(true);
@@ -548,7 +596,11 @@ const RolesPage = () => {
 
       // Basic Validation
       const errors: Record<string, string> = {};
-      if (!newUser.name.trim()) errors.name = "Full name is required";
+      if (!newUser.name.trim()) {
+        errors.name = "Full name is required";
+      } else if (!/^[A-Za-z\s]+$/.test(newUser.name)) {
+        errors.name = "Full name should accept only alphabets";
+      }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!newUser.email) errors.email = "Email is required";
@@ -556,6 +608,11 @@ const RolesPage = () => {
 
       if (!newUser.phone) errors.phone = "Phone number is required";
       else if (newUser.phone.replace(/\D/g, "").length !== 10) errors.phone = "Phone must be exactly 10 digits";
+
+      if (!isEditMode || newUser.pin) {
+        if (!newUser.pin) errors.pin = "PIN is required";
+        else if (newUser.pin.length !== 4 || !/^\d{4}$/.test(newUser.pin)) errors.pin = "PIN must be exactly 4 digits";
+      }
 
       if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
@@ -566,7 +623,7 @@ const RolesPage = () => {
       setFormErrors({});
 
 
-      const payload = {
+      const payload: any = {
         name: newUser.name,
         email: newUser.email,
         phoneNumber: newUser.phone,
@@ -574,6 +631,10 @@ const RolesPage = () => {
         companyName: "CTN Global",
         isActive: true,
       };
+
+      if (newUser.pin) {
+        payload.pin = newUser.pin;
+      }
 
       if (isEditMode && editingUserId) {
         console.log("Triggering PATCH for user:", editingUserId);
@@ -593,6 +654,7 @@ const RolesPage = () => {
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, 1);
       else fetchPaginatedUsers(null, 1);
       fetchRoles();
+      fetchRecentUsers();
     } catch (error: any) {
       console.error("Error saving user:", error);
       const errorMsg = error.response?.data?.message || "Failed to save user";
@@ -744,12 +806,12 @@ const RolesPage = () => {
                     </div>
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="rounded-lg text-xs px-2 hover:bg-primary/10"
+                        className="rounded-lg text-xs px-2"
                         onClick={() => handleRoleCountClick(role.name, role._id)}
                       >
-                        <span className="font-semibold">{role.userCount || 0}</span> users
+                        <span className="font-semibold">{role.userCount || 0}</span>&nbsp;users
                       </Button>
                       <Button
                         variant="outline"
@@ -892,14 +954,14 @@ const RolesPage = () => {
                           {actions.map(action => (
                             <th key={action} className="py-3 text-center">
                               <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => handleToggleColumn(action)}>
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">
+                                <span className="text-xs font-black text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">
                                   {action}
                                 </span>
                                 <div className={cn(
-                                  "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
+                                  "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all",
                                   permissionModules.every(mod => permissions[mod][action])
                                     ? "bg-primary border-primary text-primary-foreground"
-                                    : "border-muted-foreground/30 bg-card hover:border-primary/50"
+                                    : "border-muted-foreground/50 bg-card hover:border-primary/50"
                                 )}>
                                   {permissionModules.every(mod => permissions[mod][action]) && <CheckCircle2 size={12} />}
                                 </div>
@@ -923,7 +985,7 @@ const RolesPage = () => {
                                   <Shield size={14} className="text-primary/70" />
                                 </div>
                                 <div className="flex flex-col">
-                                  <span className="text-sm font-semibold text-foreground">{mod}</span>
+                                  <span className="text-sm font-semibold text-foreground">{formatModuleName(moduleNames[mod] || mod)}</span>
                                 </div>
                               </div>
                             </td>
@@ -937,15 +999,15 @@ const RolesPage = () => {
                                   onClick={() => handleTogglePermission(mod, action)}
                                 >
                                   <div className={cn(
-                                    "w-6 h-6 rounded-lg border flex items-center justify-center transition-all duration-200",
+                                    "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200",
                                     permissions[mod][action]
-                                      ? "bg-primary/10 border-primary/30 text-primary scale-110 shadow-sm"
-                                      : "border-muted-foreground/20 bg-transparent opacity-40 hover:opacity-100 hover:border-primary/40"
+                                      ? "bg-primary/10 border-primary/40 text-primary scale-110 shadow-sm"
+                                      : "border-muted-foreground/40 bg-transparent opacity-60 hover:opacity-100 hover:border-primary/40"
                                   )}>
                                     {permissions[mod][action] ? (
                                       <CheckCircle2 size={14} className="fill-primary text-white" />
                                     ) : (
-                                      <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
+                                      <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
                                     )}
                                   </div>
                                 </div>
@@ -1099,7 +1161,8 @@ const RolesPage = () => {
                     placeholder="John Doe"
                     value={newUser.name}
                     onChange={(e) => {
-                      setNewUser({ ...newUser, name: e.target.value });
+                      const val = e.target.value.replace(/[^A-Za-z\s]/g, "");
+                      setNewUser({ ...newUser, name: val });
                       if (formErrors.name) setFormErrors({ ...formErrors, name: "" });
                     }}
                     className={cn(formErrors.name && "border-destructive focus-visible:ring-destructive")}
@@ -1135,6 +1198,23 @@ const RolesPage = () => {
                     className={cn(formErrors.phone && "border-destructive focus-visible:ring-destructive")}
                   />
                   {formErrors.phone && <span className="text-[10px] text-destructive font-medium">{formErrors.phone}</span>}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="pin" className={cn(formErrors.pin && "text-destructive")}>PIN (4 Digits) {isEditMode && <span className="text-muted-foreground font-normal text-[10px] ml-1">(Leave blank to keep unchanged)</span>}</Label>
+                  <Input
+                    id="pin"
+                    type="password"
+                    maxLength={4}
+                    placeholder="1234"
+                    value={newUser.pin}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                      setNewUser({ ...newUser, pin: val });
+                      if (formErrors.pin) setFormErrors({ ...formErrors, pin: "" });
+                    }}
+                    className={cn(formErrors.pin && "border-destructive focus-visible:ring-destructive")}
+                  />
+                  {formErrors.pin && <span className="text-[10px] text-destructive font-medium">{formErrors.pin}</span>}
                 </div>
               </div>
               <DialogFooter>
@@ -1188,73 +1268,97 @@ const RolesPage = () => {
             title={editingRoleId ? "Edit Role" : "Add Role"}
             description={editingRoleId ? "Update role details and permissions" : "Create a new user role and configure its permissions"}
           >
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground">Role Name</label>
-                  <input
-                    className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    placeholder="Enter role name"
-                    value={newRole.name}
-                    onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Description</label>
-                  <textarea
-                    className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 min-h-[80px]"
-                    placeholder="Describe this role"
-                    value={newRole.description}
-                    onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-                  />
-                </div>
+            <div className="space-y-6 pb-6">
+
+              {/* ── Role Name ── */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">
+                  Role Name
+                </label>
+                <input
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:border-primary/70 focus:shadow-[0_0_0_3px_rgba(var(--primary),0.12)] transition-all duration-200"
+                  placeholder="Enter role name"
+                  value={newRole.name}
+                  onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
+                />
               </div>
 
-              <div className="pt-4 border-t border-border">
-                <div className="flex items-center gap-2 mb-4">
-                  <Lock size={16} className="text-primary" />
-                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Role Permissions</h3>
+              {/* ── Description ── */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-foreground">
+                  Description
+                </label>
+                <textarea
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:border-primary/70 focus:shadow-[0_0_0_3px_rgba(var(--primary),0.12)] transition-all duration-200 min-h-[90px] resize-none"
+                  placeholder="Describe this role"
+                  value={newRole.description}
+                  onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
+                />
+              </div>
+
+              {/* ── Role Permissions ── */}
+              <div className="pt-1">
+                {/* Section Header */}
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Lock size={14} className="text-primary" />
+                  </div>
+                  <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">
+                    Role Permissions
+                  </h3>
                 </div>
 
-                <div className="rounded-xl border border-border bg-secondary/10 overflow-hidden shadow-sm">
-                  <div className="overflow-x-auto">
+                {/* Table */}
+                <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto no-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="bg-secondary/40 border-b border-border">
-                          <th className="px-4 py-3 text-left">
-                            <span className="text-[10px] font-bold text-foreground/80 uppercase tracking-widest">MODULE'S</span>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="px-5 py-3 text-left w-[44%]">
+                            <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">
+                              MODULE'S
+                            </span>
                           </th>
                           {actions.map(action => (
-                            <th key={action} className="px-2 py-3 text-center">
-                              <div className="flex flex-col items-center gap-1.5">
-                                <span className="text-[9px] font-bold text-foreground/70 uppercase tracking-tight">{action}</span>
+                            <th key={action} className="py-3 text-center w-20">
+                              <div className="flex flex-col items-center gap-2">
+                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                  {action}
+                                </span>
                                 <Checkbox
                                   checked={permissionModules.every(mod => permissions[mod][action])}
                                   onCheckedChange={() => handleToggleColumn(action)}
-                                  className="w-3.5 h-3.5 border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                  className="w-5 h-5 rounded-md border-2 border-slate-400 data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-sm cursor-pointer"
                                 />
                               </div>
                             </th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border">
-                        {permissionModules.map((mod) => (
-                          <tr key={mod} className="hover:bg-secondary/20 transition-colors group">
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col">
-                                <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                                  {formatModuleName(mod)}
-                                </span>
-                              </div>
+                      <tbody>
+                        {permissionModules.map((mod, idx) => (
+                          <tr
+                            key={mod}
+                            className={cn(
+                              "group transition-colors border-b border-slate-100 last:border-0",
+                              idx % 2 === 0 ? "bg-white" : "bg-slate-50/60",
+                              "hover:bg-primary/5 hover:border-primary/10"
+                            )}
+                          >
+                            <td className="px-5 py-3.5">
+                              <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                                {formatModuleName(moduleNames[mod] || mod)}
+                              </span>
                             </td>
                             {actions.map(action => (
-                              <td key={action} className="px-2 py-3 text-center">
-                                <Checkbox
-                                  checked={permissions[mod][action]}
-                                  onCheckedChange={() => handleTogglePermission(mod, action)}
-                                  className="w-4 h-4 rounded border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-sm"
-                                />
+                              <td key={action} className="py-3.5 text-center w-20">
+                                <div className="flex justify-center">
+                                  <Checkbox
+                                    checked={permissions[mod][action]}
+                                    onCheckedChange={() => handleTogglePermission(mod, action)}
+                                    className="w-5 h-5 rounded-md border-2 border-slate-400 data-[state=checked]:bg-primary data-[state=checked]:border-primary shadow-sm cursor-pointer transition-all"
+                                  />
+                                </div>
                               </td>
                             ))}
                           </tr>
@@ -1266,7 +1370,7 @@ const RolesPage = () => {
               </div>
 
               <Button
-                className="w-full rounded-xl bg-primary hover:bg-primary/90 mt-4 shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                className="w-full rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 flex items-center justify-center gap-2 h-12 font-bold text-sm tracking-wide"
                 onClick={handleSaveRole}
               >
                 <CheckCircle2 size={18} />
@@ -1274,6 +1378,7 @@ const RolesPage = () => {
               </Button>
             </div>
           </FormDrawer>
+
           <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
             <AlertDialogContent className="rounded-2xl border-border shadow-2xl">
               <AlertDialogHeader>

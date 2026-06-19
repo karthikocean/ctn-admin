@@ -59,13 +59,13 @@ const Topbar = ({ onMobileMenuToggle }: TopbarProps) => {
 
           {/* Profile */}
           <div className="flex items-center gap-1 mr-1">
-            <div className={cn(
+            {/* <div className={cn(
               "w-2 h-2 rounded-full",
               isSocketConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse" : "bg-red-500"
-            )} />
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">
+            )} /> */}
+            {/* <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">
               {isSocketConnected ? "Live" : "Offline"}
-            </span>
+            </span> */}
           </div>
 
           <DropdownMenu>
