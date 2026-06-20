@@ -251,14 +251,14 @@ const CategoriesPage = () => {
               ) : (
                 categories.map((c) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">{c.name}</td>
-                    <td className="px-6 py-4 text-sm text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/5 text-primary font-bold text-xs">
+                    <td className="px-6 py-4 text-sm font-semibold text-foreground">{c.name}</td>
+                    <td className="px-6 py-4 text-sm text-center text-foreground font-semibold">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/5 text-primary font-semibold text-sm">
                         {c.subCategoryCount || 0}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/5 text-emerald-600 font-bold text-xs border border-emerald-500/10">
+                    <td className="px-6 py-4 text-sm text-center text-foreground font-semibold">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/5 text-emerald-600 font-semibold text-sm border border-emerald-500/10">
                         {c.referralCount || 0}
                       </span>
                     </td>
@@ -620,8 +620,8 @@ export const SubCategoriesPage = () => {
               ) : (
                 subCategories.map((c) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">{c.name}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                    <td className="px-6 py-4 text-sm font-semibold text-foreground">{c.name}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       {c.parentCategory?.name || "N/A"}
                     </td>
                     <td className="px-6 py-4">

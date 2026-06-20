@@ -149,25 +149,25 @@ const ReferralsPage = () => {
               ) : (
                 filteredReferrals.map((r, index) => (
                   <tr key={r.id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-4 py-4 text-center text-xs font-medium text-muted-foreground">{index + 1}</td>
+                    <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{index + 1}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-foreground">{r.name}</span>
-                        <span className="text-xs text-muted-foreground">{r.email}</span>
+                        <span className="text-xs text-foreground font-semibold">{r.email}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       <span className="px-2 py-1 rounded-md bg-primary/5 text-primary text-[11px] font-bold border border-primary/10">
                         {r.category}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-secondary font-black text-xs border border-border">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-secondary font-semibold text-sm border border-border">
                         {r.referredCount}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-muted-foreground">{r.referredBy}</span>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
+                      <span>{r.referredBy}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <Button
@@ -219,10 +219,10 @@ const ReferralsPage = () => {
                 <tbody className="divide-y divide-border/50">
                   {selectedReferral?.referredMembers?.map((member: any, idx: number) => (
                     <tr key={member.id} className="hover:bg-primary/5 transition-colors">
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{idx + 1}</td>
-                      <td className="px-4 py-3 text-xs font-bold text-foreground">{member.name}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{member.email}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">{member.date}</td>
+                      <td className="px-4 py-3 text-sm text-foreground font-semibold">{idx + 1}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-foreground">{member.name}</td>
+                      <td className="px-4 py-3 text-sm text-foreground font-semibold">{member.email}</td>
+                      <td className="px-4 py-3 text-sm text-foreground font-semibold">{member.date}</td>
                       <td className="px-4 py-3 text-right">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${
                           member.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 

@@ -41,7 +41,7 @@ const MODULE_OPTIONS = [
   "Spotlight",
   "Online Stall",
   "Meeting",
-  "MarketPlace"
+  "Marketplace"
 ];
 
 const TYPE_OPTIONS = [
@@ -321,19 +321,19 @@ const AllocatePointsPage = () => {
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-primary/40 group-hover:bg-primary transition-colors" />
-                        <span className="text-sm font-bold text-slate-700">{config.moduleName}</span>
+                        <span className="text-sm font-semibold text-foreground">{config.moduleName}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-5 text-sm text-foreground font-semibold">
                       <div className="flex items-center gap-2">
-                        <Layers size={14} className="text-slate-400" />
-                        <Badge variant="outline" className={`capitalize font-semibold text-[10px] px-2 py-0 border-primary/20 bg-primary/5 text-primary`}>
+                        <Layers size={14} className="text-foreground" />
+                        <Badge variant="outline" className={`capitalize font-semibold text-xs px-2 py-0 border-primary/20 bg-primary/5 text-primary`}>
                           {config.type || "-"}
                         </Badge>
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-xs font-bold">
+                      <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 text-sm font-semibold">
                         {config.points} Points
                       </div>
                     </td>

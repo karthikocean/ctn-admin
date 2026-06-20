@@ -115,27 +115,27 @@ const MemberAwardsPage = () => {
                           {m.name.charAt(0)}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-foreground">{m.name}</p>
-                          <p className="text-xs text-muted-foreground">{m.category}</p>
+                          <p className="text-sm font-semibold text-foreground">{m.name}</p>
+                          <p className="text-xs text-foreground font-semibold">{m.category}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden lg:table-cell">{m.company}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden lg:table-cell">{m.company}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <Award size={14} className={m.awardCount > 0 ? "text-amber-500" : "text-muted-foreground/30"} />
-                        <span className={`text-sm font-bold ${m.awardCount > 0 ? "text-foreground" : "text-muted-foreground"}`}>
+                        <span className="text-sm font-bold text-foreground">
                           {m.awardCount}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">
                       {m.latestAward !== "None" ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-100">
                           {m.latestAward}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground/50">No awards yet</span>
+                        <span>No awards yet</span>
                       )}
                     </td>
                     <td className="px-6 py-4"><StatusBadge status={m.status} /></td>

@@ -261,7 +261,7 @@ const TrainingCategoriesPage = () => {
               ) : (
                 categories.map((c, index) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-xs font-bold text-muted-foreground/60">{(page * 10) + index + 1}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{(page * 10) + index + 1}</td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">{c.name}</td>
                     <td className="px-6 py-4">
                       <Badge variant={c.status === "active" ? "default" : "secondary"} className={c.status === "active" ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20" : "bg-muted/50 text-muted-foreground"}>

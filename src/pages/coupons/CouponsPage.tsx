@@ -357,7 +357,7 @@ const CouponsPage = () => {
               ) : (
                 coupons.map((coupon, index) => (
                   <tr key={coupon._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-4 py-4 text-center text-xs font-medium text-muted-foreground">{(page - 1) * pageSize + index + 1}</td>
+                    <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-bold text-foreground flex items-center gap-1.5">
@@ -366,7 +366,7 @@ const CouponsPage = () => {
                           </span>
                         </div>
                         {coupon.description && (
-                          <div className="text-xs text-muted-foreground mt-1 line-clamp-1 max-w-[250px]">
+                          <div className="text-xs text-foreground font-semibold mt-1 line-clamp-1 max-w-[250px]">
                             {coupon.description}
                           </div>
                         )}
@@ -378,7 +378,7 @@ const CouponsPage = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-medium text-muted-foreground">
+                      <span className="text-sm font-semibold text-foreground">
                         {coupon.minOrderAmount > 0 ? `₹${coupon.minOrderAmount}` : "None"}
                       </span>
                     </td>
@@ -389,11 +389,11 @@ const CouponsPage = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex flex-col items-center justify-center">
-                        <span className="text-xs font-medium text-foreground">
+                        <span className="text-sm font-semibold text-foreground">
                           {new Date(coupon.endDate).toLocaleDateString()}
                         </span>
                         {coupon.startDate && (
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-xs text-foreground font-semibold">
                             from {new Date(coupon.startDate).toLocaleDateString()}
                           </span>
                         )}

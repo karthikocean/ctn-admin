@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Receipt, Layers, Eye, Calendar, Store } from "lucide-react";
+import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Receipt, Layers, Eye, Calendar, Store, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,8 @@ const MODULE_OPTIONS = [
   "Thank you Slip",
   "Event",
   "Online Stall",
-  "Offline Stall"
+  "Offline Stall",
+  "Marketplace"
 ];
 
 const PlansPage = () => {
@@ -325,10 +326,10 @@ const PlansPage = () => {
               ) : (
                 plans.map((plan, index) => (
                   <tr key={plan._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-4 py-4 text-center text-xs font-medium text-muted-foreground">{(page - 1) * pageSize + index + 1}</td>
+                    <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="text-sm font-medium text-foreground">{plan.title}</div>
+                        <div className="text-sm font-semibold text-foreground">{plan.title}</div>
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           {plan.billingType && (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary capitalize border border-primary/20">
@@ -336,7 +337,7 @@ const PlansPage = () => {
                             </span>
                           )}
                           {plan.billingCycle && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-secondary text-muted-foreground capitalize border border-border">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-secondary text-foreground capitalize border border-border">
                               {plan.billingCycle}
                             </span>
                           )}
@@ -344,13 +345,13 @@ const PlansPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-bold text-primary">₹{plan.amount}</span>
+                      <span className="text-sm font-bold text-foreground">₹{plan.amount}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-medium text-foreground">{plan.memberCount ?? 0}</span>
+                      <span className="text-sm font-semibold text-foreground">{plan.memberCount ?? 0}</span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-semibold text-foreground">
                         {plan.trialDays !== null && plan.trialDays !== undefined ? `${plan.trialDays} days` : "None"}
                       </span>
                     </td>
@@ -716,6 +717,7 @@ const PlansPage = () => {
                       "Event": Calendar,
                       "Online Stall": Store,
                       "Offline Stall": Store,
+                      "Marketplace": ShoppingBag,
                     };
                     const IconComponent = iconMap[m.moduleName] || Layers;
                     const colorMap: Record<string, { hoverBorder: string, bg: string, text: string }> = {
@@ -731,6 +733,7 @@ const PlansPage = () => {
                       "Event": { hoverBorder: "hover:border-blue-500", bg: "bg-blue-500/10", text: "text-blue-500" },
                       "Online Stall": { hoverBorder: "hover:border-fuchsia-500", bg: "bg-fuchsia-500/10", text: "text-fuchsia-500" },
                       "Offline Stall": { hoverBorder: "hover:border-orange-500", bg: "bg-orange-500/10", text: "text-orange-500" },
+                      "Marketplace": { hoverBorder: "hover:border-pink-500", bg: "bg-pink-500/10", text: "text-pink-500" },
                     };
                     const colors = colorMap[m.moduleName] || { hoverBorder: "hover:border-primary", bg: "bg-primary/10", text: "text-primary" };
 

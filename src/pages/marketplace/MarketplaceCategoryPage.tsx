@@ -312,13 +312,13 @@ const MarketplaceCategoryPage = () => {
               ) : (
                 categories.map((c, index) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-xs font-bold text-muted-foreground/60">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       {page * 10 + index + 1}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <ShoppingBag size={14} className="text-primary/70" />
+                          <ShoppingBag size={14} className="text-foreground" />
                         </div>
                         <span className="text-sm text-foreground font-semibold">{c.name}</span>
                       </div>
@@ -345,7 +345,7 @@ const MarketplaceCategoryPage = () => {
                         {c.status.charAt(0).toUpperCase() + c.status.slice(1)}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-xs text-muted-foreground">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       {new Date(c.createdAt).toLocaleDateString("en-IN", {
                         day: "2-digit",
                         month: "short",

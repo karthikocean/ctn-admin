@@ -78,12 +78,12 @@ const UsersPage = () => {
                       <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="text-sm font-semibold text-primary">{user.name.charAt(0)}</span>
                       </div>
-                      <span className="font-medium text-sm text-foreground">{user.name}</span>
+                      <span className="font-semibold text-sm text-foreground">{user.name}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{user.email}</td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{user.phone}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-foreground">{user.role}</td>
+                  <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{user.email}</td>
+                  <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{user.phone}</td>
+                  <td className="px-6 py-4 text-sm font-semibold text-foreground">{user.role}</td>
                   <td className="px-6 py-4"><StatusBadge status={user.status} /></td>
                   <td className="px-6 py-4 text-right">
                     <ActionMenu onEdit={() => setDrawerOpen(true)} onDelete={() => setDeleteOpen(true)} />

@@ -232,11 +232,11 @@ const AwardsPage = () => {
                         <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
                           <Award size={16} />
                         </div>
-                        <span className="font-bold text-primary text-sm">{a.awardName}</span>
+                        <span className="font-semibold text-foreground text-sm">{a.awardName}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground">{a.category}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell max-w-xs truncate">{a.description}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{a.category}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell max-w-xs truncate">{a.description}</td>
                     <td className="px-6 py-4"><StatusBadge status={a.status} /></td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu 

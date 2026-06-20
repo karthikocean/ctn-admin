@@ -31,7 +31,7 @@ const FormDrawer = ({
         <SheetTitle>{title}</SheetTitle>
         {description && <SheetDescription>{description}</SheetDescription>}
       </SheetHeader>
-      <div className={cn("mt-6 flex-1 min-h-0", scrollable && "overflow-y-auto no-scrollbar space-y-4")}>
+      <div className={cn("mt-6 flex-1 min-h-0 px-1", scrollable && "overflow-y-auto no-scrollbar space-y-4")}>
         {children}
       </div>
     </SheetContent>

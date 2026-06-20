@@ -104,19 +104,19 @@ const RolesPage = () => {
 
   const [roles, setRoles] = useState<Role[]>([]);
   const [roleUsers, setRoleUsers] = useState<any[]>([]);
-  const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [recentLoading, setRecentLoading] = useState(false);
+  const [usersListLoading, setUsersListLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Memoized user lists with resolved role names
-  const memoizedRecentUsers = useMemo(() => {
-    return recentUsers.map((u: any) => ({
+  const memoizedUsersList = useMemo(() => {
+    return usersList.map((u: any) => ({
       ...u,
       resolvedRole: roles.find((r: any) => r._id === u.roleId)?.name || u.role || "N/A"
     }));
-  }, [recentUsers, roles]);
+  }, [usersList, roles]);
 
   const memoizedRoleUsers = useMemo(() => {
     return roleUsers.map((u: any) => ({
@@ -125,10 +125,16 @@ const RolesPage = () => {
     }));
   }, [roleUsers, roles]);
 
-  // Pagination state
+  // Pagination state for modal
   const [usersPage, setUsersPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
+
+  // Pagination and filter states for the bottom Users List card
+  const [usersListPage, setUsersListPage] = useState(1);
+  const [usersListTotalPages, setUsersListTotalPages] = useState(1);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
   const [deleteRoleConfirmOpen, setDeleteRoleConfirmOpen] = useState(false);
@@ -209,18 +215,39 @@ const RolesPage = () => {
     }
   };
 
-  const fetchRecentUsers = async () => {
-
+  const fetchUsersList = async (
+    page: number = 1,
+    search: string = searchTerm,
+    role: string = roleFilter,
+    status: string = statusFilter
+  ) => {
     try {
-      setRecentLoading(true);
-      const response = await api.get("/admin-users?limit=10");
+      setUsersListLoading(true);
+      setUsersListPage(page);
+
+      let url = `/admin-users?page=${page - 1}&limit=${pageSize}`;
+      if (search.trim()) {
+        url += `&search=${encodeURIComponent(search.trim())}`;
+      }
+      if (role !== "all") {
+        url += `&roleId=${role}`;
+      }
+      if (status !== "all") {
+        url += `&status=${status}`;
+      }
+
+      const response = await api.get(url);
       if (response.data && response.data.data) {
-        setRecentUsers(response.data.data);
+        setUsersList(response.data.data);
+        const meta = response.data.meta;
+        if (meta) {
+          setUsersListTotalPages(meta.totalPages || 1);
+        }
       }
     } catch (error) {
-      console.error("Error fetching recent users:", error);
+      console.error("Error fetching users list:", error);
     } finally {
-      setRecentLoading(false);
+      setUsersListLoading(false);
     }
   };
 
@@ -256,9 +283,9 @@ const RolesPage = () => {
 
   useEffect(() => {
     fetchRoles();
-    fetchRecentUsers();
+    fetchUsersList(1, searchTerm, roleFilter, statusFilter);
     fetchPermissionModules();
-  }, [searchTerm]);
+  }, [searchTerm, roleFilter, statusFilter]);
 
   const handleTogglePermission = (mod: string, action: string) => {
     setPermissions(prev => ({
@@ -363,7 +390,7 @@ const RolesPage = () => {
   const handleEditUser = (userId: string) => {
     const user =
       roleUsers.find(u => u._id === userId || u.id === userId) ||
-      recentUsers.find(u => u._id === userId || u.id === userId);
+      usersList.find(u => u._id === userId || u.id === userId);
     if (!user) return;
 
     // Set form fields
@@ -397,7 +424,7 @@ const RolesPage = () => {
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
       else fetchPaginatedUsers(null, usersPage);
       fetchRoles();
-      fetchRecentUsers();
+      fetchUsersList(usersListPage, searchTerm, roleFilter, statusFilter);
     } catch (error: any) {
       console.error("Error deleting user:", error);
       const errorMsg = error.response?.data?.message || "Failed to delete user";
@@ -451,7 +478,7 @@ const RolesPage = () => {
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
       else fetchPaginatedUsers(null, usersPage);
       fetchRoles();
-      fetchRecentUsers();
+      fetchUsersList(usersListPage, searchTerm, roleFilter, statusFilter);
 
       setStatusDialogOpen(false);
     } catch (error: any) {
@@ -654,7 +681,7 @@ const RolesPage = () => {
       if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, 1);
       else fetchPaginatedUsers(null, 1);
       fetchRoles();
-      fetchRecentUsers();
+      fetchUsersList(usersListPage, searchTerm, roleFilter, statusFilter);
     } catch (error: any) {
       console.error("Error saving user:", error);
       const errorMsg = error.response?.data?.message || "Failed to save user";
@@ -713,7 +740,7 @@ const RolesPage = () => {
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
                 <input
                   type="text"
-                  placeholder="Search roles..."
+                  placeholder="Search roles or users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="h-9 pl-8 pr-3 w-full md:w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
@@ -811,7 +838,7 @@ const RolesPage = () => {
                         className="rounded-lg text-xs px-2"
                         onClick={() => handleRoleCountClick(role.name, role._id)}
                       >
-                        <span className="font-semibold">{role.userCount || 0}</span>&nbsp;users
+                        <span className="font-semibold">{role.userCount || 0}</span>&nbsp;{role.userCount === 1 ? "User" : "Users"}
                       </Button>
                       <Button
                         variant="outline"
@@ -846,7 +873,7 @@ const RolesPage = () => {
           </div>
 
 
-          {/* Recent Users Table (always visible below roles) */}
+          {/* Admin Users Table Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -854,11 +881,49 @@ const RolesPage = () => {
             className="mt-6"
           >
             <div className="glass-card overflow-hidden">
-              <div className="px-5 py-4 border-b border-border">
-                <h3 className="font-semibold text-foreground">Recently Created Users</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Showing the 10 most recently created users
-                </p>
+              <div className="px-5 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h3 className="font-semibold text-foreground">Users List</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Manage and view all system admin users, their roles, and status
+                  </p>
+                </div>
+                
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Role Filter */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground font-medium">Role:</span>
+                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                      <SelectTrigger className="h-9 w-36 rounded-lg text-xs bg-secondary/30 border-border focus:ring-1 focus:ring-primary/20">
+                        <SelectValue placeholder="All Roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {roles.map((role) => (
+                          <SelectItem key={role._id} value={role._id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground font-medium">Status:</span>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="h-9 w-32 rounded-lg text-xs bg-secondary/30 border-border focus:ring-1 focus:ring-primary/20">
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
               <div className="table-responsive">
                 <table className="w-full min-w-[800px] md:min-w-full">
@@ -874,15 +939,15 @@ const RolesPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {recentLoading ? (
+                    {usersListLoading ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-20">
-                          <PremiumLoader style="pulse" variant="centered" text="Loading recent updates..." />
+                          <PremiumLoader style="pulse" variant="centered" text="Loading admin users..." />
                         </td>
                       </tr>
-                    ) : memoizedRecentUsers.map((user, index) => (
+                    ) : memoizedUsersList.map((user, index) => (
                       <tr key={user._id || user.id || index} className="hover:bg-secondary/30 transition-colors">
-                        <td className="px-6 py-4 text-sm font-semibold text-primary/80">
+                        <td className="px-6 py-4 text-sm font-semibold text-foreground">
                           {user.userId || "N/A"}
                         </td>
                         <td className="px-6 py-4">
@@ -890,12 +955,12 @@ const RolesPage = () => {
                             <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
                             </div>
-                            <span className="font-medium text-sm text-foreground">{user.name}</span>
+                            <span className="font-semibold text-sm text-foreground">{user.name}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{user.email || "N/A"}</td>
-                        <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
-                        <td className="px-6 py-4 text-sm font-medium text-foreground">{user.resolvedRole}</td>
+                        <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{user.email || "N/A"}</td>
+                        <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-foreground">{user.resolvedRole}</td>
                         <td className="px-6 py-4">
                           <StatusBadge
                             status={user.isActive ? "Active" : "Inactive"}
@@ -910,17 +975,30 @@ const RolesPage = () => {
                         </td>
                       </tr>
                     ))}
-                    {memoizedRecentUsers.length === 0 && !recentLoading && (
+                    {memoizedUsersList.length === 0 && !usersListLoading && (
                       <tr>
                         <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
-                          No users found.
+                          No users found matching the filter criteria.
                         </td>
                       </tr>
                     )}
                   </tbody>
-
                 </table>
               </div>
+              
+              {/* Pagination for bottom Users List card */}
+              {usersListTotalPages > 1 && (
+                <div className="px-6 py-4 border-t border-border bg-secondary/10 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Page {usersListPage} of {usersListTotalPages}
+                  </span>
+                  <PaginationBar
+                    currentPage={usersListPage}
+                    totalPages={usersListTotalPages}
+                    onPageChange={(page) => fetchUsersList(page, searchTerm, roleFilter, statusFilter)}
+                  />
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -1081,7 +1159,7 @@ const RolesPage = () => {
                     <tbody className="divide-y divide-border">
                       {memoizedRoleUsers.map((user, index) => (
                         <tr key={user._id || user.id || index} className="hover:bg-secondary/30 transition-colors">
-                          <td className="px-6 py-4 text-sm font-semibold text-primary/80">
+                          <td className="px-6 py-4 text-sm font-semibold text-foreground">
                             {user.userId || "N/A"}
                           </td>
                           <td className="px-6 py-4">
@@ -1089,12 +1167,12 @@ const RolesPage = () => {
                               <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
                                 <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
                               </div>
-                              <span className="font-medium text-sm text-foreground">{user.name}</span>
+                              <span className="font-semibold text-sm text-foreground">{user.name}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{user.email || "N/A"}</td>
-                          <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
-                          {!selectedRoleId && <td className="px-6 py-4 text-sm font-medium text-foreground">{user.resolvedRole}</td>}
+                          <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{user.email || "N/A"}</td>
+                          <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
+                          {!selectedRoleId && <td className="px-6 py-4 text-sm font-semibold text-foreground">{user.resolvedRole}</td>}
                           <td className="px-6 py-4">
                             <StatusBadge
                               status={user.isActive ? "Active" : "Inactive"}
@@ -1276,7 +1354,7 @@ const RolesPage = () => {
                   Role Name
                 </label>
                 <input
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:border-primary/70 focus:shadow-[0_0_0_3px_rgba(var(--primary),0.12)] transition-all duration-200"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 transition-all duration-200"
                   placeholder="Enter role name"
                   value={newRole.name}
                   onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
@@ -1289,7 +1367,7 @@ const RolesPage = () => {
                   Description
                 </label>
                 <textarea
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:border-primary/70 focus:shadow-[0_0_0_3px_rgba(var(--primary),0.12)] transition-all duration-200 min-h-[90px] resize-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#CBD5E1] bg-white text-sm text-foreground placeholder:text-slate-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 transition-all duration-200 min-h-[90px] resize-none"
                   placeholder="Describe this role"
                   value={newRole.description}
                   onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
@@ -1346,7 +1424,7 @@ const RolesPage = () => {
                             )}
                           >
                             <td className="px-5 py-3.5">
-                              <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                              <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                                 {formatModuleName(moduleNames[mod] || mod)}
                               </span>
                             </td>

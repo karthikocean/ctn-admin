@@ -132,20 +132,20 @@ const ConnectionsPage = () => {
               ) : (
                 connections.map((c) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">
+                    <td className="px-6 py-4 text-sm font-semibold text-foreground">
                       <div>
                         <p className="font-semibold">{c.sender?.fullName || "Unknown"}</p>
-                        <p className="text-[10px] text-muted-foreground">{c.sender?.businessName || ""}</p>
+                        <p className="text-[10px] text-foreground font-semibold">{c.sender?.businessName || ""}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       <div>
                         <p className="font-semibold text-foreground">{c.receiver?.fullName || "Unknown"}</p>
-                        <p className="text-[10px] text-muted-foreground">{c.receiver?.businessName || ""}</p>
+                        <p className="text-[10px] text-foreground font-semibold">{c.receiver?.businessName || ""}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground">{formatResponseText(c.status)}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{formatResponseText(c.status)}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">
                       {c.createdAt ? c.createdAt.split("T")[0] : ""}
                     </td>
                     <td className="px-6 py-4">
