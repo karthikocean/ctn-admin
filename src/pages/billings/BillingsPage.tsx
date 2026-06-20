@@ -316,15 +316,15 @@ const BillingsPage = () => {
               ) : (
                 billings.map((b, index) => (
                   <tr key={b._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-4 py-4 text-center text-xs font-medium text-muted-foreground">{(page - 1) * pageSize + index + 1}</td>
+                    <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-foreground">{b.member?.fullName || "Unknown Member"}</span>
-                        <span className="text-[11px] text-muted-foreground">{b.member?.email}</span>
+                        <span className="text-xs text-foreground font-semibold">{b.member?.email}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-xs font-bold text-primary bg-primary/5 px-2 py-1 rounded border border-primary/10">
+                      <span className="text-sm font-semibold text-foreground bg-primary/5 px-2 py-1 rounded border border-primary/10">
                         {b.plan?.title || "Unknown Plan"}
                       </span>
                     </td>
@@ -333,11 +333,11 @@ const BillingsPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1 items-start">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-secondary border border-border text-foreground">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-semibold bg-secondary border border-border text-foreground">
                           {b.paymentMethod || b.paymentType}
                         </span>
                         {b.transactionId && (
-                          <span className="text-[10px] font-medium text-muted-foreground">
+                          <span className="text-xs font-semibold text-foreground">
                             ID: {b.transactionId}
                           </span>
                         )}
@@ -348,7 +348,7 @@ const BillingsPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-xs text-muted-foreground">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       {new Date(b.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right">

@@ -337,16 +337,16 @@ const ContributionsPage = () => {
                         <div>
                           <p className="font-semibold text-sm text-foreground flex items-center gap-1.5 flex-wrap">
                             <span>{c.sender?.fullName || "Unknown"}</span>
-                            <span className="text-muted-foreground/60 font-normal">➜</span>
-                            <span className="text-muted-foreground/90">{c.receiver?.fullName || "Unknown"}</span>
+                            <span className="text-foreground/60 font-normal">➜</span>
+                            <span className="text-foreground">{c.receiver?.fullName || "Unknown"}</span>
                           </p>
-                          <p className="text-[10px] text-muted-foreground/80 mt-0.5">
+                          <p className="text-[10px] text-foreground font-semibold mt-0.5">
                             {c.sender?.businessName || "No business"} to {c.receiver?.businessName || "No business"}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground font-medium">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${
                         c.type === "one_to_one" 
                           ? "bg-blue-50 text-blue-700 border-blue-100" 
@@ -359,7 +359,7 @@ const ContributionsPage = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-sm font-medium text-foreground">
+                        <p className="text-sm font-semibold text-foreground">
                           {c.type === "thank_you_slip" && (
                             <span className="text-emerald-600 font-bold mr-1.5">
                               ₹{c.amount?.toLocaleString() || 0}
@@ -373,18 +373,18 @@ const ContributionsPage = () => {
                           <span>{c.description}</span>
                         </p>
                         {(c.businessDetails || c.referralDetails?.comments) && (
-                          <p className="text-xs text-muted-foreground/80 mt-0.5 max-w-md truncate">
+                          <p className="text-xs text-foreground font-semibold mt-0.5 max-w-md truncate">
                             {c.type === "thank_you_slip" ? c.businessDetails : c.referralDetails?.comments}
                           </p>
                         )}
                         {c.type === "referral" && (c.referralDetails?.referralMobile || c.referralDetails?.referralEmail) && (
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                          <p className="text-xs text-foreground font-semibold mt-0.5">
                             {c.referralDetails.referralMobile} {c.referralDetails.referralEmail ? `| ${c.referralDetails.referralEmail}` : ""}
                           </p>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-xs text-muted-foreground">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       {formatDate(c.date)}
                     </td>
                     <td className="px-6 py-4">

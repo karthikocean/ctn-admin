@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Country, State, City } from "country-state-city";
-import { Plus, Trash2, Search, Filter, Globe, Loader2, MapPin } from "lucide-react";
+import { Plus, Trash2, Search, Filter, Globe, Loader2, MapPin, Check, ChevronsUpDown } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -15,12 +15,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { getRegions, createRegion, updateRegion, deleteRegion } from "@/api/RegionApi";
 import { useToast } from "@/hooks/use-toast";
 import { Region } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+import { cn } from "@/lib/utils";
+
 
 const RegionsPage = () => {
   const { toast } = useToast();
@@ -48,6 +52,11 @@ const RegionsPage = () => {
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [areas, setAreas] = useState<{ _id?: string; name: string }[]>([{ name: "" }]);
   const [saving, setSaving] = useState(false);
+
+  // Combobox open states
+  const [countryOpen, setCountryOpen] = useState(false);
+  const [stateOpen, setStateOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
 
   const countries = Country.getAllCountries();
   const states = selectedCountry ? State.getStatesOfCountry(selectedCountry) : [];
@@ -145,10 +154,10 @@ const RegionsPage = () => {
     // Filter out empty areas
     const filteredAreas = areas.filter(a => a.name.trim() !== "");
 
-    if (!countryName || !stateName || !selectedCity) {
+    if (!countryName || !stateName || !selectedCity || filteredAreas.length === 0) {
       toast({
         title: "Validation Error",
-        description: "Please fill all required fields",
+        description: "Please fill all required fields, including at least one business region name.",
         variant: "destructive"
       });
       return;
@@ -229,7 +238,7 @@ const RegionsPage = () => {
         {/* Title Block */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Globe size={16} className="text-primary" />
+            <MapPin size={16} className="text-primary" />
           </div>
           <div>
             <h1 className="text-base font-semibold text-foreground">Business Regions</h1>
@@ -249,7 +258,7 @@ const RegionsPage = () => {
                 setSearchTerm(e.target.value);
                 setPage(0);
               }}
-              className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+              className="h-9 pl-8 pr-3 w-48 rounded-lg border border-slate-300 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary placeholder:text-muted-foreground/60"
             />
           </div>
 
@@ -261,7 +270,7 @@ const RegionsPage = () => {
               setPage(0);
             }}
           >
-            <SelectTrigger className="h-9 w-32 rounded-lg text-xs bg-background border-border">
+            <SelectTrigger className="h-9 w-32 rounded-lg text-xs bg-background border-slate-300 focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary">
               <Filter size={14} className="mr-1.5" />
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
@@ -310,29 +319,29 @@ const RegionsPage = () => {
               ) : (
                 regions.map((r, index) => (
                   <tr key={r._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-xs font-bold text-muted-foreground/60">{(page * 10) + index + 1}</td>
-                    <td className="px-6 py-4 text-sm text-foreground font-medium">{r.country}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{r.state}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">{r.city}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{(page * 10) + index + 1}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{r.country}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{r.state}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{r.city}</td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1 max-w-[200px]">
                         {r.areas && r.areas.length > 0 ? (
                           r.areas.slice(0, 2).map((area, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 border-none font-medium">
+                            <Badge key={idx} variant="secondary" className="text-sm text-foreground bg-slate-100 border-none font-semibold">
                               {typeof area === "string" ? area : area.name}
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-[10px] text-muted-foreground italic">No regions defined</span>
+                          <span className="text-sm text-foreground font-semibold">No regions defined</span>
                         )}
                         {r.areas && r.areas.length > 2 && (
-                          <Badge variant="secondary" className="text-[10px] bg-primary/5 text-primary border-none font-bold">
+                          <Badge variant="secondary" className="text-sm bg-primary/5 text-primary border-none font-semibold">
                             +{r.areas.length - 2}
                           </Badge>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-primary font-semibold hidden sm:table-cell">{r.memberCount || 0}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{r.memberCount || 0}</td>
                     <td className="px-6 py-4">
                       <Badge variant={r.status === "active" ? "default" : "secondary"} className={r.status === "active" ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20" : "bg-muted/50 text-muted-foreground"}>
                         {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
@@ -366,68 +375,161 @@ const RegionsPage = () => {
         description={editingRegion ? "Update existing business region" : "Add a new business region"}
       >
         <div className="space-y-5">
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Country</label>
-            <Select value={selectedCountry} onValueChange={(val) => {
-              setSelectedCountry(val);
-              setSelectedState("");
-              setSelectedCity("");
-            }}>
-              <SelectTrigger className="w-full h-11 bg-secondary/50 border-border rounded-xl focus:ring-primary/20">
-                <SelectValue placeholder="Select Country" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {countries.map((c) => (
-                  <SelectItem key={c.isoCode} value={c.isoCode}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={countryOpen}
+                  className="w-full h-11 bg-white border border-slate-300 rounded-xl justify-between px-3 text-xs font-normal text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-secondary/40 active:scale-[0.99] transition-all"
+                >
+                  {selectedCountry
+                    ? countries.find((c) => c.isoCode === selectedCountry)?.name
+                    : "Select Country"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                <Command className="w-full">
+                  <CommandInput placeholder="Search country..." className="h-10 text-xs" />
+                  <CommandEmpty>No country found.</CommandEmpty>
+                  <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                    <CommandGroup>
+                      {countries.map((c) => (
+                        <CommandItem
+                          key={c.isoCode}
+                          value={c.name}
+                          onSelect={() => {
+                            setSelectedCountry(c.isoCode);
+                            setSelectedState("");
+                            setSelectedCity("");
+                            setCountryOpen(false);
+                          }}
+                          className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-3.5 w-3.5",
+                              selectedCountry === c.isoCode ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {c.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">State</label>
-            <Select
-              value={selectedState}
-              onValueChange={(val) => {
-                setSelectedState(val);
-                setSelectedCity("");
-              }}
-              disabled={!selectedCountry}
-            >
-              <SelectTrigger className="w-full h-11 bg-secondary/50 border-border rounded-xl focus:ring-primary/20">
-                <SelectValue placeholder={selectedCountry ? "Select State" : "Choose country first"} />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {states.length > 0 ? (
-                  states.map((s) => (
-                    <SelectItem key={s.isoCode} value={s.isoCode}>{s.name}</SelectItem>
-                  ))
-                ) : (
-                  <div className="p-2 text-xs text-muted-foreground text-center">No states found</div>
-                )}
-              </SelectContent>
-            </Select>
+            <Popover open={stateOpen} onOpenChange={setStateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={stateOpen}
+                  className="w-full h-11 bg-white border border-slate-300 rounded-xl justify-between px-3 text-xs font-normal text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-secondary/40 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!selectedCountry}
+                >
+                  {selectedState
+                    ? states.find((s) => s.isoCode === selectedState)?.name
+                    : selectedCountry ? "Select State" : "Choose country first"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                <Command className="w-full">
+                  <CommandInput placeholder="Search state..." className="h-10 text-xs" />
+                  <CommandEmpty>No state found.</CommandEmpty>
+                  <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                    <CommandGroup>
+                      {states.length > 0 ? (
+                        states.map((s) => (
+                          <CommandItem
+                            key={s.isoCode}
+                            value={s.name}
+                            onSelect={() => {
+                              setSelectedState(s.isoCode);
+                              setSelectedCity("");
+                              setStateOpen(false);
+                            }}
+                            className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-3.5 w-3.5",
+                                selectedState === s.isoCode ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {s.name}
+                          </CommandItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-xs text-muted-foreground text-center">No states found</div>
+                      )}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">City</label>
-            <Select value={selectedCity} onValueChange={setSelectedCity}>
-              <SelectTrigger className="h-11 bg-secondary/50 border-border rounded-xl focus:ring-primary/20">
-                <SelectValue placeholder="Select City" />
-              </SelectTrigger>
-              <SelectContent>
-                {cities.map((city) => (
-                  <SelectItem key={city.name} value={city.name}>
-                    {city.name}
-                  </SelectItem>
-                ))}
-                {cities.length === 0 && (
-                  <p className="text-center py-2 text-xs text-muted-foreground italic">
-                    {!selectedState ? "Select a state first" : "No cities found"}
-                  </p>
-                )}
-              </SelectContent>
-            </Select>
+            <Popover open={cityOpen} onOpenChange={setCityOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={cityOpen}
+                  className="w-full h-11 bg-white border border-slate-300 rounded-xl justify-between px-3 text-xs font-normal text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-secondary/40 active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!selectedState}
+                >
+                  {selectedCity || (!selectedState ? "Select a state first" : "Select City")}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                <Command className="w-full">
+                  <CommandInput placeholder="Search city..." className="h-10 text-xs" />
+                  <CommandEmpty>No city found.</CommandEmpty>
+                  <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                    <CommandGroup>
+                      {cities.length > 0 ? (
+                        cities.map((city) => (
+                          <CommandItem
+                            key={city.name}
+                            value={city.name}
+                            onSelect={() => {
+                              setSelectedCity(city.name);
+                              setCityOpen(false);
+                            }}
+                            className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-3.5 w-3.5",
+                                selectedCity === city.name ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {city.name}
+                          </CommandItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-xs text-muted-foreground text-center">
+                          {!selectedState ? "Select a state first" : "No cities found"}
+                        </div>
+                      )}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-3 pt-2">
@@ -455,7 +557,7 @@ const RegionsPage = () => {
                       value={area.name}
                       onChange={(e) => handleAreaChange(index, e.target.value)}
                       placeholder={`Region ${index + 1} (e.g. T. Nagar, Adyar)`}
-                      className="h-10 pl-9 bg-white border-slate-200 rounded-xl focus:ring-primary/20 text-xs font-medium"
+                      className="h-10 pl-9 bg-white border border-slate-200 rounded-xl text-xs font-medium focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary"
                     />
                   </div>
                   <Button
@@ -463,7 +565,7 @@ const RegionsPage = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => handleRemoveArea(index)}
-                    className="h-9 w-9 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                    className="h-9 w-9 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
                   >
                     <Trash2 size={14} />
                   </Button>

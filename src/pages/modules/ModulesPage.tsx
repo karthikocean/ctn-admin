@@ -315,9 +315,9 @@ const ModulesPage = () => {
               ) : (
                 modules.map((module, index) => (
                   <tr key={module._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-4 py-4 text-center text-xs font-medium text-muted-foreground">{(page - 1) * pageSize + index + 1}</td>
+                    <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-bold text-foreground">
+                      <div className="text-sm font-semibold text-foreground">
                         {formatModuleName(module.name)}
                       </div>
                       {module.parentSlug && (
@@ -327,14 +327,14 @@ const ModulesPage = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <Calendar size={12} />
+                      <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-foreground">
+                        <Calendar size={12} className="text-foreground" />
                         {module.createdAt ? new Date(module.createdAt).toLocaleDateString() : "N/A"}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <Calendar size={12} />
+                      <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-foreground">
+                        <Calendar size={12} className="text-foreground" />
                         {module.updatedAt ? new Date(module.updatedAt).toLocaleDateString() : "N/A"}
                       </div>
                     </td>

@@ -244,16 +244,16 @@ const SpotlightRequestsPage = () => {
                         </div>
                       )}
                       <div>
-                        <div className="text-xs font-semibold text-foreground">
+                        <div className="text-sm font-semibold text-foreground">
                           {r.member?.fullName || "Unknown Member"}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">
+                        <div className="text-xs text-foreground font-semibold">
                           {r.member?.businessName || "No Business Name"}
                         </div>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-muted-foreground">
+                  <TableCell className="text-sm text-foreground font-semibold">
                     {r.createdAt ? format(new Date(r.createdAt), "PPP p") : "N/A"}
                   </TableCell>
                   <TableCell>

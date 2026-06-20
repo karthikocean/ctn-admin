@@ -298,10 +298,10 @@ export const ReferralCategoriesPage = () => {
               ) : (
                 categories.map((c) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-medium text-foreground">
+                    <td className="px-6 py-4 text-sm font-semibold text-foreground">
                       {c.referralParent?.name || "N/A"}
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       {c.name}
                     </td>
                     <td className="px-6 py-4">

@@ -477,18 +477,18 @@ const StallAttributesPage = () => {
               ) : (
                 paginatedAttributes.map((attr) => (
                   <tr key={attr.id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-800 flex items-center gap-2">
-                      <Calendar size={14} className="text-primary/70" />
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold flex items-center gap-2">
+                      <Calendar size={14} className="text-muted-foreground" />
                       {attr.title}
                     </td>
-                    <td className="px-6 py-4 text-sm text-center font-bold text-slate-700">
+                    <td className="px-6 py-4 text-sm text-center text-foreground font-semibold">
                       {attr.totalStallCount || 0} Stalls
                     </td>
-                    <td className="px-6 py-4 text-xs text-muted-foreground max-w-xs truncate">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold max-w-xs truncate">
                       {attr.stalls && attr.stalls.length > 0 ? (
                         attr.stalls.map((s) => `${s.name} (${s.size || "N/A"})`).join(", ")
                       ) : (
-                        <span className="italic">No stalls configured</span>
+                        <span className="italic text-muted-foreground">No stalls configured</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">

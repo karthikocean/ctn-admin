@@ -282,15 +282,15 @@ const SpotlightPage = () => {
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {s.members?.map((m: any) => (
-                        <Badge key={m._id} variant="secondary" className="text-[10px] font-medium">
+                        <Badge key={m._id} variant="secondary" className="text-sm text-foreground bg-slate-100 border-none font-semibold">
                           {m.fullName}
                         </Badge>
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-muted-foreground">
+                  <TableCell className="text-sm text-foreground font-semibold">
                     <div className="flex items-center gap-1.5">
-                      <CalendarIcon size={12} />
+                      <CalendarIcon size={12} className="text-muted-foreground" />
                       {format(new Date(s.scheduleDate), "PPP")}
                     </div>
                   </TableCell>

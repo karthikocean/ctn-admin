@@ -117,26 +117,26 @@ const ReportHistoryPage = () => {
                             ) : (
                                 reports.map((item, index) => (
                                     <tr key={item._id} className="hover:bg-secondary/30 transition-colors">
-                                        <td className="px-6 py-4 text-xs font-bold text-muted-foreground/60">{(page * limit) + index + 1}</td>
+                                        <td className="px-6 py-4 text-sm text-foreground font-semibold">{(page * limit) + index + 1}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-sm text-foreground font-medium">{item.reporterName}</span>
-                                                <span className="text-[10px] text-muted-foreground">{item.reporterMobile}</span>
+                                                <span className="text-sm text-foreground font-semibold">{item.reporterName}</span>
+                                                <span className="text-xs text-foreground font-semibold">{item.reporterMobile}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-sm text-foreground font-medium">{item.targetName}</span>
-                                                <span className="text-[10px] text-muted-foreground">{item.targetMobile}</span>
+                                                <span className="text-sm text-foreground font-semibold">{item.targetName}</span>
+                                                <span className="text-xs text-foreground font-semibold">{item.targetMobile}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                                        <td className="px-6 py-4 text-sm text-foreground font-semibold">
                                             <span className="px-2 py-1 rounded-md bg-primary/5 text-primary text-[11px] font-bold uppercase tracking-wider">
                                                 {item.moduleName}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-muted-foreground">{item.reason}</td>
-                                        <td className="px-6 py-4 text-sm text-muted-foreground text-right font-medium">
+                                        <td className="px-6 py-4 text-sm text-foreground font-semibold">{item.reason}</td>
+                                        <td className="px-6 py-4 text-sm text-foreground text-right font-semibold">
                                             {item.createdAt ? format(new Date(item.createdAt), "dd MMM yyyy") : "N/A"}
                                         </td>
                                     </tr>

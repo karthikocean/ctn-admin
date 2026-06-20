@@ -130,28 +130,28 @@ const PointsPage = () => {
                   <tr key={p.id} className="hover:bg-secondary/30 transition-colors">
                     <td className="px-6 py-4">
                       <div>
-                        <p className="text-sm font-medium text-foreground">{p.memberName}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm font-semibold text-foreground">{p.memberName}</p>
+                        <p className="text-xs text-foreground font-semibold">
                           {mockMembers.find(m => m.id === p.memberId)?.company || ""}
                         </p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-medium">{p.category || "-"}</span>
+                      <span className="text-sm font-semibold text-foreground">{p.category || "-"}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`text-sm font-bold ${p.type === "earned" ? "text-emerald-600" : "text-accent"}`}>
                         {p.type === "earned" ? "+" : ""}{p.points}
                         {p.category && (
-                          <span className="text-xs text-muted-foreground ml-1">
+                          <span className="text-xs text-foreground font-semibold ml-1">
                             ({getPointsForModule(p.category)})
                           </span>
                         )}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden sm:table-cell">{p.reason}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{p.reason}</td>
                     <td className="px-6 py-4"><StatusBadge status={p.type} /></td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground hidden md:table-cell">{p.date}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{p.date}</td>
                   </tr>
                 ))
               )}

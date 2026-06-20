@@ -939,17 +939,17 @@ const AnnouncementsPage = () => {
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <p className="font-bold text-slate-700 text-xs">{booking.member?.fullName}</p>
-                                    <p className="text-[10px] text-slate-400">{booking.member?.email}</p>
+                                    <p className="text-sm text-foreground font-semibold">{booking.member?.fullName}</p>
+                                    <p className="text-sm text-foreground font-semibold block mt-0.5">{booking.member?.email}</p>
                                   </div>
                                 </TableCell>
-                                <TableCell className="py-2.5 text-xs font-medium text-slate-600">
+                                <TableCell className="py-2.5 text-sm text-foreground font-semibold">
                                   {booking.member?.businessName || "-"}
                                 </TableCell>
-                                <TableCell className="py-2.5 text-xs text-slate-500">
+                                <TableCell className="py-2.5 text-sm text-foreground font-semibold">
                                   {booking.member?.mobileNumber}
                                 </TableCell>
-                                <TableCell className="py-2.5 text-xs text-slate-400">
+                                <TableCell className="py-2.5 text-sm text-foreground font-semibold">
                                   {new Date(booking.createdAt).toLocaleDateString()}
                                 </TableCell>
                               </TableRow>
@@ -984,12 +984,12 @@ const AnnouncementsPage = () => {
                               previewData.stallBookings?.map((booking: any) => (
                                 <TableRow key={booking.bookingId} className="hover:bg-slate-50">
                                   <TableCell className="py-2.5">
-                                    <div className="font-bold text-slate-700 text-xs">{booking.stall?.name}</div>
+                                    <div className="text-sm text-foreground font-semibold">{booking.stall?.name}</div>
                                     {booking.stall?.size && (
-                                      <div className="text-[10px] text-slate-400">Size: {booking.stall.size}</div>
+                                      <div className="text-sm text-foreground font-semibold mt-0.5">Size: {booking.stall.size}</div>
                                     )}
                                   </TableCell>
-                                  <TableCell className="flex items-center gap-2 py-2.5 font-medium">
+                                  <TableCell className="flex items-center gap-2 py-2.5">
                                     <Avatar className="h-7 w-7">
                                       <AvatarImage src={getFullUrl(booking.member?.profilePhoto)} />
                                       <AvatarFallback className="text-[10px] font-bold">
@@ -997,17 +997,17 @@ const AnnouncementsPage = () => {
                                       </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                      <p className="font-bold text-slate-700 text-xs">{booking.member?.fullName}</p>
+                                      <p className="text-sm text-foreground font-semibold">{booking.member?.fullName}</p>
                                     </div>
                                   </TableCell>
-                                  <TableCell className="py-2.5 text-xs font-medium text-slate-600">
+                                  <TableCell className="py-2.5 text-sm text-foreground font-semibold">
                                     {booking.member?.businessName || "-"}
                                   </TableCell>
-                                  <TableCell className="py-2.5 text-xs text-slate-500">
+                                  <TableCell className="py-2.5 text-sm text-foreground font-semibold">
                                     {booking.member?.mobileNumber}
                                   </TableCell>
-                                  <TableCell className="py-2.5 text-xs font-medium">
-                                    <Badge variant="secondary" className="font-bold bg-slate-100 hover:bg-slate-100 text-[10px]">
+                                  <TableCell className="py-2.5">
+                                    <Badge variant="secondary" className="text-sm text-foreground bg-slate-100 border-none font-semibold">
                                       {booking.pointsSpent || 0} Pts
                                     </Badge>
                                   </TableCell>

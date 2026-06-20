@@ -744,7 +744,7 @@ const MembersPage = () => {
                     key={member._id}
                     className="hover:bg-secondary/10 transition-colors"
                   >
-                    <TableCell className="px-6 py-4 text-xs font-bold text-muted-foreground/60">
+                    <TableCell className="px-6 py-4 text-sm text-foreground font-semibold">
                       {((page - 1) * 10) + index + 1}
                     </TableCell>
                     <TableCell className="px-6 py-4">
@@ -762,32 +762,34 @@ const MembersPage = () => {
                           )}
                         </div>
                         <div>
-                          <p className="font-semibold text-sm">{member.fullName}</p>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-sm text-foreground font-semibold">{member.fullName}</p>
+                          <p className="text-sm text-foreground font-semibold">
                             {member.mobileNumber}
                           </p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="px-6 py-4">
-                      <p className="font-medium text-sm">{member.businessName}</p>
+                      <p className="text-sm text-foreground font-semibold">{member.businessName}</p>
                       {member.gstNumber && (
-                        <span className="text-[10px] text-primary/60 font-medium">
+                        <span className="text-sm text-foreground font-semibold block mt-0.5">
                           GST: {member.gstNumber}
                         </span>
                       )}
                     </TableCell>
                     <TableCell className="px-6 py-4 min-w-[220px]">
-                      <p className="text-xs font-medium">
+                      <p className="text-sm text-foreground font-semibold">
                         {member.businessCategory?.name || "N/A"}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {member.subCategory?.name || ""}
-                      </p>
+                      {member.subCategory?.name && (
+                        <p className="text-sm text-foreground font-semibold mt-0.5">
+                          {member.subCategory.name}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <MapPin size={14} className="text-primary/60" />
+                      <div className="flex items-center gap-1.5 text-sm text-foreground font-semibold">
+                        <MapPin size={14} className="text-muted-foreground" />
                         <span>{member.city}{member.state ? `, ${member.state}` : ""}</span>
                       </div>
                     </TableCell>

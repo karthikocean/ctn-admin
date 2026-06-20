@@ -342,11 +342,11 @@ const FranchisesPage = () => {
                       : "Unknown Region");
                   return (
                     <tr key={f._id} className="hover:bg-secondary/30 transition-colors">
-                      <td className="px-6 py-4 text-xs font-bold text-muted-foreground/60">{(page * 10) + index + 1}</td>
+                      <td className="px-6 py-4 text-sm text-foreground font-semibold">{(page * 10) + index + 1}</td>
                       <td className="px-6 py-4 text-sm text-foreground font-semibold">{f.name}</td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                      <td className="px-6 py-4 text-sm text-foreground font-semibold">
                         <div className="flex items-center gap-1.5">
-                          <MapPin size={13} className="text-muted-foreground/60" />
+                          <MapPin size={13} className="text-foreground" />
                           {regionText}
                         </div>
                       </td>
@@ -354,12 +354,12 @@ const FranchisesPage = () => {
                         <div className="flex flex-wrap gap-1 max-w-[220px]">
                           {f.users && f.users.length > 0 ? (
                             f.users.map((u) => (
-                              <Badge key={u._id} variant="secondary" className="text-[10px] bg-slate-100 text-slate-600 border-none font-medium">
+                              <Badge key={u._id} variant="secondary" className="text-sm text-foreground bg-slate-100 border-none font-semibold">
                                 {u.fullName}
                               </Badge>
                             ))
                           ) : (
-                            <span className="text-[10px] text-muted-foreground italic">No users assigned</span>
+                            <span className="text-sm text-foreground font-semibold">No users assigned</span>
                           )}
                         </div>
                       </td>
