@@ -131,8 +131,8 @@ const AnnouncementsPage = () => {
     date: "",
     time: "",
     location: "",
-    points: 0,
-    membersLimit: 0,
+    points: "" as any,
+    membersLimit: "" as any,
     scheduleDate: "",
     isOfflineStallExist: false,
     stallConfig: {
@@ -225,7 +225,7 @@ const AnnouncementsPage = () => {
     const { id, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [id]: id === 'points' || id === 'membersLimit' ? Number(value) : value
+      [id]: id === 'points' || id === 'membersLimit' ? (value === "" ? "" : Number(value)) : value
     }));
     if (errors[id]) setErrors(prev => ({ ...prev, [id]: "" }));
   };
@@ -255,6 +255,12 @@ const AnnouncementsPage = () => {
       if (selectedSchedule < now) {
         newErrors.scheduleDate = "Schedule date cannot be in the past";
       }
+    }
+    if (formData.points !== undefined && formData.points !== null && formData.points !== "" && formData.points < 0) {
+      newErrors.points = "Points must be a positive value";
+    }
+    if (formData.membersLimit !== undefined && formData.membersLimit !== null && formData.membersLimit !== "" && formData.membersLimit < 0) {
+      newErrors.membersLimit = "Members Limit must be a positive value";
     }
     if (formData.announcementType === "Event" && formData.isOfflineStallExist) {
       if (!formData.stallConfig?.totalStallCount || formData.stallConfig.totalStallCount <= 0) {
@@ -297,8 +303,8 @@ const AnnouncementsPage = () => {
       date: "",
       time: "",
       location: "",
-      points: 0,
-      membersLimit: 0,
+      points: "" as any,
+      membersLimit: "" as any,
       scheduleDate: "",
       isOfflineStallExist: false,
       stallConfig: {
@@ -322,6 +328,8 @@ const AnnouncementsPage = () => {
       const { _id, createdAt, updatedAt, __v, ...dataToSave } = formData as any;
       const payload = {
         ...dataToSave,
+        points: formData.points === "" ? 0 : Number(formData.points),
+        membersLimit: formData.membersLimit === "" ? 0 : Number(formData.membersLimit),
         date: formData.date ? new Date(formData.date).toISOString() : undefined,
         scheduleDate: formData.status === 'scheduled' && formData.scheduleDate ? new Date(formData.scheduleDate).toISOString() : undefined,
         stallConfig: formData.isOfflineStallExist 
@@ -406,8 +414,8 @@ const AnnouncementsPage = () => {
           date: data.date ? data.date.split('T')[0] : "",
           time: data.time || "",
           location: data.location || "",
-          points: data.points || 0,
-          membersLimit: data.membersLimit || 0,
+          points: data.points || "",
+          membersLimit: data.membersLimit || "",
           scheduleDate: data.scheduleDate ? data.scheduleDate.slice(0, 16) : "",
           isOfflineStallExist: data.isOfflineStallExist || false,
           stallConfig: data.stallConfig || { totalStallCount: 0, stalls: [] }
@@ -593,7 +601,7 @@ const AnnouncementsPage = () => {
         title={editingId ? "Edit Announcement" : "Create Announcement"}
         description="Fill in the details to publish an announcement"
       >
-        <div className="flex flex-col h-full bg-slate-50/50 p-6 space-y-6">
+        <div className="flex flex-col h-full bg-slate-50/50 px-1 py-2 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title" className="text-xs font-bold uppercase tracking-wider text-slate-600">Title <span className="text-red-500">*</span></Label>
             <Input id="title" value={formData.title} onChange={handleInputChange} placeholder="Announcement title" className={`h-11 ${errors.title ? "border-red-500" : ""}`} />
@@ -728,11 +736,13 @@ const AnnouncementsPage = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="points" className="text-xs font-bold uppercase tracking-wider text-slate-600">Points</Label>
-              <Input type="number" id="points" value={formData.points || ""} onChange={handleInputChange} placeholder="0" className="h-11" />
+              <Input type="number" id="points" min="0" value={formData.points === undefined || formData.points === null ? "" : formData.points} onChange={handleInputChange} placeholder="0" className={`h-11 ${errors.points ? "border-red-500" : ""}`} />
+              {errors.points && <p className="text-[10px] text-red-500 font-bold">{errors.points}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="membersLimit" className="text-xs font-bold uppercase tracking-wider text-slate-600">Members Limit</Label>
-              <Input type="number" id="membersLimit" value={formData.membersLimit || ""} onChange={handleInputChange} placeholder="0 (No limit)" className="h-11" />
+              <Input type="number" id="membersLimit" min="0" value={formData.membersLimit === undefined || formData.membersLimit === null ? "" : formData.membersLimit} onChange={handleInputChange} placeholder="0 (No limit)" className={`h-11 ${errors.membersLimit ? "border-red-500" : ""}`} />
+              {errors.membersLimit && <p className="text-[10px] text-red-500 font-bold">{errors.membersLimit}</p>}
             </div>
           </div>
 

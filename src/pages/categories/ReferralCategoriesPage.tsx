@@ -29,16 +29,7 @@ import {
 } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 export const ReferralCategoriesPage = () => {
   const { toast } = useToast();
@@ -56,6 +47,7 @@ export const ReferralCategoriesPage = () => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,7 +62,7 @@ export const ReferralCategoriesPage = () => {
   const fetchParentCategories = async () => {
     try {
       const response = await api.get("/categories", {
-        params: { type: "MAIN", limit: 100, page: 0 }
+        params: { type: "MAIN", limit: 100, page: 0, status: "active" }
       });
       const list = response.data?.data || [];
       setParentCategories(Array.isArray(list) ? list : []);
@@ -82,7 +74,7 @@ export const ReferralCategoriesPage = () => {
   const fetchAvailableSubCategories = async () => {
     try {
       const response = await api.get("/categories", {
-        params: { type: "REFERRAL", limit: 100, page: 0 }
+        params: { type: "REFERRAL", limit: 100, page: 0, status: "active" }
       });
       const list = response.data?.data || [];
       setAvailableSubCategories(Array.isArray(list) ? list : []);
@@ -151,15 +143,31 @@ export const ReferralCategoriesPage = () => {
     try {
       setFormLoading(true);
 
-      // Use the new batch assignment endpoint
-      const response = await api.post("/referral-categories", {
-        subCategory: formData.subCategories.join(","),
-        refferalCategory: formData.referralParent
-      });
+      if (editingId) {
+        if (!formData.subCategories.includes(editingId)) {
+          // Unlink the old subcategory mapping
+          await api.delete(`/referral-categories/${editingId}`);
+        }
+        // Update / link all selected subcategories
+        await Promise.all(
+          formData.subCategories.map((subId) =>
+            api.put(`/categories/${subId}`, {
+              referralParent: formData.referralParent,
+              status: formData.status
+            })
+          )
+        );
+      } else {
+        // Use the new batch assignment endpoint
+        await api.post("/referral-categories", {
+          subCategory: formData.subCategories.join(","),
+          refferalCategory: formData.referralParent
+        });
+      }
 
       toast({
         title: "Success",
-        description: response.data?.message || (editingId ? "Referral category updated successfully" : "Referral categories assigned successfully"),
+        description: editingId ? "Referral category updated successfully" : "Referral categories assigned successfully",
         variant: "success"
       });
 
@@ -192,6 +200,7 @@ export const ReferralCategoriesPage = () => {
   const handleDelete = async () => {
     if (!categoryToDelete) return;
     try {
+      setIsDeleting(true);
       // Use the referral-categories endpoint to unlink
       const response = await api.delete(`/referral-categories/${categoryToDelete}`);
       toast({
@@ -210,6 +219,8 @@ export const ReferralCategoriesPage = () => {
         description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -276,6 +287,7 @@ export const ReferralCategoriesPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Subcategory</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
@@ -285,19 +297,20 @@ export const ReferralCategoriesPage = () => {
             <tbody className="divide-y divide-border">
               {loading && categories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-0">
-                    <TableSkeleton rows={8} columns={4} />
+                  <td colSpan={5} className="p-0">
+                    <TableSkeleton rows={8} columns={5} />
                   </td>
                 </tr>
               ) : categories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                     No referral categories found.
                   </td>
                 </tr>
               ) : (
-                categories.map((c) => (
+                categories.map((c, index) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-6 py-4 text-sm text-muted-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-foreground">
                       {c.referralParent?.name || "N/A"}
                     </td>
@@ -343,40 +356,56 @@ export const ReferralCategoriesPage = () => {
       >
         <div className="space-y-6 py-2">
           <div className="space-y-2">
+            <Label className="text-sm font-semibold text-foreground ml-1">Parent Category</Label>
+            <select
+              className="w-full px-3 h-11 rounded-xl border border-[#cbd5e1] bg-[#f8fafc] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 transition-all appearance-none cursor-pointer"
+              value={formData.referralParent}
+              onChange={(e) => setFormData({ ...formData, referralParent: e.target.value })}
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1rem' }}
+            >
+              <option value="">Select Category</option>
+              {parentCategories.map((c) => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
             <Label className="text-sm font-semibold text-foreground ml-1">Sub Category Name</Label>
-            {editingId ? (
-              <div className="w-full px-4 py-3 rounded-xl border border-[#cbd5e1] bg-[#f8fafc] text-sm font-medium text-[#1e293b] flex items-center gap-2">
-                <Check size={16} className="text-[#2563eb]" />
-                {categories.find(c => c._id === editingId)?.name || "Selected Category"}
-              </div>
-            ) : (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className={cn(
-                      "w-full justify-between rounded-xl border-[#cbd5e1] bg-[#f8fafc] h-11 px-4 text-sm font-medium !text-[#1e293b] hover:bg-[#f1f5f9] transition-all shadow-sm",
-                      formData.subCategories.length === 0 && "!text-[#64748b]"
-                    )}
-                  >
-                    {formData.subCategories.length > 0
-                      ? `${formData.subCategories.length} categories selected`
-                      : "Select Category"}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl border border-[#cbd5e1] bg-white overflow-hidden shadow-xl"
-                  align="start"
-                  sideOffset={4}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className={cn(
+                    "w-full justify-between rounded-xl border-[#cbd5e1] bg-[#f8fafc] h-11 px-4 text-sm font-medium !text-[#1e293b] hover:bg-[#f1f5f9] transition-all shadow-sm",
+                    formData.subCategories.length === 0 && "!text-[#64748b]"
+                  )}
                 >
-                  <Command className="bg-white">
-                    <CommandInput placeholder="Search sub categories..." className="h-10 border-none focus:ring-0 px-4 text-[#1e293b]" />
-                    <CommandList className="max-h-[250px] scrollbar-thin">
-                      <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">No sub category found.</CommandEmpty>
-                      <CommandGroup className="p-0">
-                        {availableSubCategories.map((category) => {
+                  {formData.subCategories.length > 0
+                    ? (formData.subCategories.length === 1
+                        ? (categories.find(c => c._id === formData.subCategories[0])?.name || availableSubCategories.find(c => c._id === formData.subCategories[0])?.name || "Selected Sub Category")
+                        : `${formData.subCategories.length} categories selected`)
+                    : "Select Sub Category"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl border border-[#cbd5e1] bg-white overflow-hidden shadow-xl"
+                align="start"
+                sideOffset={4}
+              >
+                <Command className="bg-white">
+                  <CommandInput placeholder="Search sub categories..." className="h-10 border-none focus:ring-0 px-4 text-[#1e293b]" />
+                  <CommandList className="max-h-[250px] scrollbar-thin">
+                    <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">No sub category found.</CommandEmpty>
+                    <CommandGroup className="p-0">
+                      {(() => {
+                        const currentlyEditingCategory = editingId ? categories.find(c => c._id === editingId) : null;
+                        const dropdownList = [...availableSubCategories];
+                        if (currentlyEditingCategory && !dropdownList.some(c => c._id === currentlyEditingCategory._id)) {
+                          dropdownList.unshift(currentlyEditingCategory);
+                        }
+                        return dropdownList.map((category) => {
                           const isSelected = formData.subCategories.includes(category._id);
                           return (
                             <CommandItem
@@ -408,27 +437,13 @@ export const ReferralCategoriesPage = () => {
                               <span className="flex-grow text-[13px] font-medium leading-none">{category.name}</span>
                             </CommandItem>
                           );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-foreground ml-1">Parent Category</Label>
-            <select
-              className="w-full px-3 h-11 rounded-xl border border-[#cbd5e1] bg-[#f8fafc] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 transition-all appearance-none cursor-pointer"
-              value={formData.referralParent}
-              onChange={(e) => setFormData({ ...formData, referralParent: e.target.value })}
-              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundPosition: 'right 0.75rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1rem' }}
-            >
-              <option value="">Select Category</option>
-              {parentCategories.map((c) => (
-                <option key={c._id} value={c._id}>{c.name}</option>
-              ))}
-            </select>
+                        });
+                      })()}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-foreground ml-1">Status</Label>
@@ -454,28 +469,15 @@ export const ReferralCategoriesPage = () => {
       </FormDrawer>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-3xl border-border bg-card">
-          <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center mb-2">
-              <AlertCircle className="text-destructive w-6 h-6" />
-            </div>
-            <AlertDialogTitle className="text-xl font-bold">Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the referral category.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel className="rounded-xl mt-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
-            >
-              Delete Referral Category
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Referral Category?"
+        description="This action cannot be undone. This will permanently delete the referral category."
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+        confirmLabel="Delete Referral Category"
+      />
     </div>
   );
 };

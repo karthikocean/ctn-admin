@@ -130,6 +130,12 @@ const RolesPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
 
+  // Modal search and filter states
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
+  const [modalRoleFilter, setModalRoleFilter] = useState<string>("all");
+  const [modalStatusFilter, setModalStatusFilter] = useState<string>("all");
+  const [modalTotalCount, setModalTotalCount] = useState(0);
+
   // Pagination and filter states for the bottom Users List card
   const [usersListPage, setUsersListPage] = useState(1);
   const [usersListTotalPages, setUsersListTotalPages] = useState(1);
@@ -176,23 +182,34 @@ const RolesPage = () => {
     }
   };
 
-  const fetchPaginatedUsers = async (roleId: string | null, page: number = 1) => {
+  const fetchPaginatedUsers = async (
+    page: number = 1,
+    search: string = modalSearchTerm,
+    role: string = modalRoleFilter,
+    status: string = modalStatusFilter
+  ) => {
     try {
       setUsersLoading(true);
       setUsersPage(page);
 
       let url = `/admin-users?page=${page - 1}&limit=${pageSize}`;
-      if (roleId) {
-        url += `&roleId=${roleId}`;
+      if (search.trim()) {
+        url += `&search=${encodeURIComponent(search.trim())}`;
+      }
+      if (role !== "all") {
+        url += `&roleId=${role}`;
+      }
+      if (status !== "all") {
+        url += `&status=${status}`;
       }
 
       const response = await api.get(url);
       if (response.data && response.data.data) {
         setRoleUsers(response.data.data);
-        const meta = response.data.meta;
-        if (meta) {
-          setTotalPages(meta.totalPages || 1);
-        }
+        const total = response.data.total ?? 0;
+        const totalPagesVal = response.data.totalPages ?? 1;
+        setModalTotalCount(total);
+        setTotalPages(totalPagesVal);
       }
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -239,10 +256,8 @@ const RolesPage = () => {
       const response = await api.get(url);
       if (response.data && response.data.data) {
         setUsersList(response.data.data);
-        const meta = response.data.meta;
-        if (meta) {
-          setUsersListTotalPages(meta.totalPages || 1);
-        }
+        const totalPagesVal = response.data.totalPages ?? 1;
+        setUsersListTotalPages(totalPagesVal);
       }
     } catch (error) {
       console.error("Error fetching users list:", error);
@@ -282,10 +297,32 @@ const RolesPage = () => {
   };
 
   useEffect(() => {
-    fetchRoles();
-    fetchUsersList(1, searchTerm, roleFilter, statusFilter);
     fetchPermissionModules();
+  }, []);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchRoles();
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchUsersList(1, searchTerm, roleFilter, statusFilter);
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    if (usersDialogOpen) {
+      const delayDebounceFn = setTimeout(() => {
+        fetchPaginatedUsers(1, modalSearchTerm, modalRoleFilter, modalStatusFilter);
+      }, 300);
+
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [modalSearchTerm, modalRoleFilter, modalStatusFilter, usersDialogOpen]);
 
   const handleTogglePermission = (mod: string, action: string) => {
     setPermissions(prev => ({
@@ -313,13 +350,11 @@ const RolesPage = () => {
 
   const handleRoleCountClick = (roleName: string, roleId?: string) => {
     setSelectedRole(roleName);
-    if (roleId) {
-      setSelectedRoleId(roleId);
-      fetchPaginatedUsers(roleId, 1);
-    } else {
-      setRoleUsers([]);
-      setSelectedRoleId(null);
-    }
+    setSelectedRoleId(roleId || null);
+    setModalSearchTerm("");
+    setModalRoleFilter(roleId || "all");
+    setModalStatusFilter("all");
+    setUsersPage(1);
     setUsersDialogOpen(true);
   };
 
@@ -421,8 +456,9 @@ const RolesPage = () => {
     try {
       const response = await api.delete(`/admin-users/${userToDelete}`);
       toast({ title: "Success", description: response.data?.message || "User deleted successfully", variant: "success" });
-      if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
-      else fetchPaginatedUsers(null, usersPage);
+      if (usersDialogOpen) {
+        fetchPaginatedUsers(usersPage, modalSearchTerm, modalRoleFilter, modalStatusFilter);
+      }
       fetchRoles();
       fetchUsersList(usersListPage, searchTerm, roleFilter, statusFilter);
     } catch (error: any) {
@@ -475,8 +511,9 @@ const RolesPage = () => {
       toast({ title: "Success", description: response.data?.message || `User status updated to ${newStatus}`, variant: "success" });
 
       // Refresh data
-      if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, usersPage);
-      else fetchPaginatedUsers(null, usersPage);
+      if (usersDialogOpen) {
+        fetchPaginatedUsers(usersPage, modalSearchTerm, modalRoleFilter, modalStatusFilter);
+      }
       fetchRoles();
       fetchUsersList(usersListPage, searchTerm, roleFilter, statusFilter);
 
@@ -678,8 +715,9 @@ const RolesPage = () => {
       setEditingUserId(null);
 
       // Refresh data
-      if (selectedRoleId) fetchPaginatedUsers(selectedRoleId, 1);
-      else fetchPaginatedUsers(null, 1);
+      if (usersDialogOpen) {
+        fetchPaginatedUsers(isEditMode ? usersPage : 1, modalSearchTerm, modalRoleFilter, modalStatusFilter);
+      }
       fetchRoles();
       fetchUsersList(usersListPage, searchTerm, roleFilter, statusFilter);
     } catch (error: any) {
@@ -711,7 +749,21 @@ const RolesPage = () => {
 
   return (
     <div className="page-container">
-      {loading && roles.length === 0 ? (
+      <style dangerouslySetInnerHTML={{ __html: `
+        body {
+          padding-right: 0px !important;
+        }
+      `}} />
+
+      {loading && (
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="CTN Admin Network Data..."
+          subtitle="Establishing secure connection to global nodes"
+        />
+      )}
+
+      {roles.length === 0 && loading ? (
         <div className="page-container relative min-h-[600px]">
           <GlobalNetworkLoader
             fullScreen={false}
@@ -761,7 +813,10 @@ const RolesPage = () => {
                 onClick={() => {
                   setSelectedRole(null);
                   setSelectedRoleId(null);
-                  fetchPaginatedUsers(null, 1);
+                  setModalSearchTerm("");
+                  setModalRoleFilter("all");
+                  setModalStatusFilter("all");
+                  setUsersPage(1);
                   setUsersDialogOpen(true);
                 }}
               >
@@ -803,8 +858,12 @@ const RolesPage = () => {
                   : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
               )}
             >
-              {loading ? (
+              {roles.length === 0 && loading ? (
                 Array(4).fill(0).map((_, i) => <RoleSkeleton key={i} />)
+              ) : roles.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-muted-foreground w-full">
+                  No roles found.
+                </div>
               ) : (
                 roles.map((role, i) => (
                   <motion.div
@@ -814,7 +873,8 @@ const RolesPage = () => {
                     transition={{ duration: 0.3, delay: i * 0.05 }}
                     className={cn(
                       "glass-card p-5 transition-all",
-                      roles.length > 4 ? "min-w-[calc(25%-12px)] shrink-0 grow-0 snap-start" : "w-full"
+                      roles.length > 4 ? "min-w-[calc(25%-12px)] shrink-0 grow-0 snap-start" : "w-full",
+                      loading && "opacity-50 pointer-events-none"
                     )}
                   >
                     <div className="flex items-start justify-between">
@@ -939,55 +999,56 @@ const RolesPage = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {usersListLoading ? (
+                    {usersListLoading && memoizedUsersList.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-20">
                           <PremiumLoader style="pulse" variant="centered" text="Loading admin users..." />
                         </td>
                       </tr>
-                    ) : memoizedUsersList.map((user, index) => (
-                      <tr key={user._id || user.id || index} className="hover:bg-secondary/30 transition-colors">
-                        <td className="px-6 py-4 text-sm font-semibold text-foreground">
-                          {user.userId || "N/A"}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                              <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
-                            </div>
-                            <span className="font-semibold text-sm text-foreground">{user.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{user.email || "N/A"}</td>
-                        <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-foreground">{user.resolvedRole}</td>
-                        <td className="px-6 py-4">
-                          <StatusBadge
-                            status={user.isActive ? "Active" : "Inactive"}
-                            onClick={() => handleStatusClick(user)}
-                          />
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <ActionMenu
-                            onEdit={canEdit ? () => handleEditUser(user._id || user.id) : undefined}
-                            onDelete={canDelete ? () => handleDeleteUser(user._id || user.id) : undefined}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                    {memoizedUsersList.length === 0 && !usersListLoading && (
+                    ) : memoizedUsersList.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                           No users found matching the filter criteria.
                         </td>
                       </tr>
+                    ) : (
+                      memoizedUsersList.map((user, index) => (
+                        <tr key={user._id || user.id || index} className={cn("hover:bg-secondary/30 transition-colors", usersListLoading && "opacity-50 pointer-events-none")}>
+                          <td className="px-6 py-4 text-sm font-semibold text-foreground">
+                            {user.userId || "N/A"}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
+                              </div>
+                              <span className="font-semibold text-sm text-foreground">{user.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{user.email || "N/A"}</td>
+                          <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
+                          <td className="px-6 py-4 text-sm font-semibold text-foreground">{user.resolvedRole}</td>
+                          <td className="px-6 py-4">
+                            <StatusBadge
+                              status={user.isActive ? "Active" : "Inactive"}
+                              onClick={() => handleStatusClick(user)}
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <ActionMenu
+                              onEdit={canEdit ? () => handleEditUser(user._id || user.id) : undefined}
+                              onDelete={canDelete ? () => handleDeleteUser(user._id || user.id) : undefined}
+                            />
+                          </td>
+                        </tr>
+                      ))
                     )}
                   </tbody>
                 </table>
               </div>
               
               {/* Pagination for bottom Users List card */}
-              {usersListTotalPages > 1 && (
+              {usersListTotalPages >= 1 && memoizedUsersList.length > 0 && (
                 <div className="px-6 py-4 border-t border-border bg-secondary/10 flex items-center justify-between">
                   <span className="text-xs text-muted-foreground">
                     Page {usersListPage} of {usersListTotalPages}
@@ -1119,7 +1180,7 @@ const RolesPage = () => {
 
           {/* Users Dialog */}
           <Dialog open={usersDialogOpen} onOpenChange={handleUsersDialogClose}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -1127,19 +1188,71 @@ const RolesPage = () => {
                   </div>
                   <div>
                     <DialogTitle className="text-xl">
-                      {selectedRole ? `Users with "${selectedRole}" role` : "All Admin Users"}
+                      {modalRoleFilter !== "all" 
+                        ? `Users with "${roles.find(r => r._id === modalRoleFilter)?.name || "Selected"}" role` 
+                        : "All Admin Users"}
                     </DialogTitle>
                     <DialogDescription>
                       {usersLoading
                         ? "Fetching users..."
-                        : `Showing ${roleUsers.length} user(s) assigned to this role`}
+                        : `Showing ${modalTotalCount} user(s) assigned`}
                     </DialogDescription>
                   </div>
                 </div>
               </DialogHeader>
 
+              {/* Modal Filters */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4 p-4 rounded-xl bg-secondary/20 border border-border">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
+                  <input
+                    type="text"
+                    placeholder="Search users by name, email, phone or ID..."
+                    value={modalSearchTerm}
+                    onChange={(e) => setModalSearchTerm(e.target.value)}
+                    className="h-9 pl-9 pr-3 w-full rounded-lg border border-border bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* Role Filter */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground font-medium">Role:</span>
+                    <Select value={modalRoleFilter} onValueChange={setModalRoleFilter}>
+                      <SelectTrigger className="h-9 w-36 rounded-lg text-xs bg-background border-border focus:ring-1 focus:ring-primary/20">
+                        <SelectValue placeholder="All Roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        {roles.map((role) => (
+                          <SelectItem key={role._id} value={role._id}>
+                            {role.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground font-medium">Status:</span>
+                    <Select value={modalStatusFilter} onValueChange={setModalStatusFilter}>
+                      <SelectTrigger className="h-9 w-32 rounded-lg text-xs bg-background border-border focus:ring-1 focus:ring-primary/20">
+                        <SelectValue placeholder="All Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
               <div className="table-responsive mt-4">
-                {usersLoading ? (
+                {usersLoading && roleUsers.length === 0 ? (
                   <div className="py-24">
                     <PremiumLoader variant="centered" style="tech-circle" text="Establishing member connection..." />
                   </div>
@@ -1151,67 +1264,71 @@ const RolesPage = () => {
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Phone</th>
-                        {!selectedRoleId && <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>}
+                        {modalRoleFilter === "all" && <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>}
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                         <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {memoizedRoleUsers.map((user, index) => (
-                        <tr key={user._id || user.id || index} className="hover:bg-secondary/30 transition-colors">
-                          <td className="px-6 py-4 text-sm font-semibold text-foreground">
-                            {user.userId || "N/A"}
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
-                              </div>
-                              <span className="font-semibold text-sm text-foreground">{user.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{user.email || "N/A"}</td>
-                          <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
-                          {!selectedRoleId && <td className="px-6 py-4 text-sm font-semibold text-foreground">{user.resolvedRole}</td>}
-                          <td className="px-6 py-4">
-                            <StatusBadge
-                              status={user.isActive ? "Active" : "Inactive"}
-                              onClick={() => handleStatusClick(user)}
-                            />
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <ActionMenu
-                              onEdit={canEdit ? () => handleEditUser(user._id || user.id) : undefined}
-                              onDelete={canDelete ? () => handleDeleteUser(user._id || user.id) : undefined}
-                            />
-
-                          </td>
-                        </tr>
-                      ))}
-                      {roleUsers.length === 0 && !usersLoading && (
+                      {roleUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-6 py-12 text-center">
+                          <td colSpan={modalRoleFilter === "all" ? 7 : 6} className="px-6 py-12 text-center">
                             <div className="flex flex-col items-center gap-2">
                               <Users size={32} className="text-muted-foreground/30" />
-                              <p className="text-muted-foreground font-medium">No users found for this role.</p>
+                              <p className="text-muted-foreground font-medium">No users found.</p>
                             </div>
                           </td>
                         </tr>
+                      ) : (
+                        memoizedRoleUsers.map((user, index) => (
+                          <tr key={user._id || user.id || index} className={cn("hover:bg-secondary/30 transition-colors", usersLoading && "opacity-50 pointer-events-none")}>
+                            <td className="px-6 py-4 text-sm font-semibold text-foreground">
+                              {user.userId || "N/A"}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
+                                </div>
+                                <span className="font-semibold text-sm text-foreground">{user.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{user.email || "N/A"}</td>
+                            <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{user.phoneNumber || "N/A"}</td>
+                            {modalRoleFilter === "all" && <td className="px-6 py-4 text-sm font-semibold text-foreground">{user.resolvedRole}</td>}
+                            <td className="px-6 py-4">
+                              <StatusBadge
+                                status={user.isActive ? "Active" : "Inactive"}
+                                onClick={() => handleStatusClick(user)}
+                              />
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <ActionMenu
+                                onEdit={canEdit ? () => handleEditUser(user._id || user.id) : undefined}
+                                onDelete={canDelete ? () => handleDeleteUser(user._id || user.id) : undefined}
+                              />
+                            </td>
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </table>
                 )}
               </div>
 
-              {totalPages > 1 && (
-                <div className="mt-4 px-2">
+              {/* Pagination and Count */}
+              <div className="mt-4 px-2 flex items-center justify-between border-t border-border pt-4">
+                <span className="text-xs text-muted-foreground">
+                  Showing {roleUsers.length} of {modalTotalCount} users
+                </span>
+                {totalPages >= 1 && roleUsers.length > 0 && (
                   <PaginationBar
                     currentPage={usersPage}
                     totalPages={totalPages}
-                    onPageChange={(page) => fetchPaginatedUsers(selectedRoleId, page)}
+                    onPageChange={(page) => fetchPaginatedUsers(page, modalSearchTerm, modalRoleFilter, modalStatusFilter)}
                   />
-                </div>
-              )}
+                )}
+              </div>
 
               <DialogFooter className="mt-4">
                 <Button variant="outline" onClick={() => setUsersDialogOpen(false)}>Close</Button>

@@ -16,6 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { getRegions, createRegion, updateRegion, deleteRegion } from "@/api/RegionApi";
@@ -44,6 +52,15 @@ const RegionsPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [regionToDelete, setRegionToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Status update states
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [regionToUpdateStatus, setRegionToUpdateStatus] = useState<Region | null>(null);
+  const [newStatus, setNewStatus] = useState<string>("active");
+
+  // Areas popup states
+  const [areasPopupOpen, setAreasPopupOpen] = useState(false);
+  const [selectedRegionForAreas, setSelectedRegionForAreas] = useState<Region | null>(null);
 
   // Form states
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
@@ -223,6 +240,29 @@ const RegionsPage = () => {
     }
   };
 
+  const handleUpdateStatus = async () => {
+    if (!regionToUpdateStatus) return;
+    try {
+      setSaving(true);
+      await updateRegion(regionToUpdateStatus._id, { status: newStatus });
+      toast({
+        title: "Success",
+        description: `Region status updated to ${newStatus}`,
+        variant: "success"
+      });
+      fetchRegions();
+      setStatusDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update status",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="page-container relative min-h-[600px]">
       {loading && regions.length === 0 && (
@@ -335,7 +375,14 @@ const RegionsPage = () => {
                           <span className="text-sm text-foreground font-semibold">No regions defined</span>
                         )}
                         {r.areas && r.areas.length > 2 && (
-                          <Badge variant="secondary" className="text-sm bg-primary/5 text-primary border-none font-semibold">
+                          <Badge
+                            variant="secondary"
+                            className="text-sm bg-primary/5 text-primary border-none font-semibold cursor-pointer hover:bg-primary/15 transition-colors"
+                            onClick={() => {
+                              setSelectedRegionForAreas(r);
+                              setAreasPopupOpen(true);
+                            }}
+                          >
                             +{r.areas.length - 2}
                           </Badge>
                         )}
@@ -343,7 +390,22 @@ const RegionsPage = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{r.memberCount || 0}</td>
                     <td className="px-6 py-4">
-                      <Badge variant={r.status === "active" ? "default" : "secondary"} className={r.status === "active" ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20" : "bg-muted/50 text-muted-foreground"}>
+                      <Badge
+                        variant={r.status === "active" ? "default" : "secondary"}
+                        className={cn(
+                          "cursor-pointer font-semibold transition-all active:scale-95",
+                          r.status === "active"
+                            ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20"
+                            : "bg-muted/50 text-muted-foreground hover:bg-muted/70"
+                        )}
+                        onClick={() => {
+                          if (canEdit) {
+                            setRegionToUpdateStatus(r);
+                            setNewStatus(r.status);
+                            setStatusDialogOpen(true);
+                          }
+                        }}
+                      >
                         {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
                       </Badge>
                     </td>
@@ -591,6 +653,47 @@ const RegionsPage = () => {
         </div>
       </FormDrawer>
 
+      {/* Areas List Popup Dialog */}
+      <Dialog open={areasPopupOpen} onOpenChange={setAreasPopupOpen}>
+        <DialogContent className="sm:max-w-[420px] border-border rounded-2xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <MapPin className="text-primary w-4 h-4" />
+              </div>
+              Business Regions
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-1">
+              {selectedRegionForAreas?.city}, {selectedRegionForAreas?.state} — All regions listed below
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 max-h-[360px] overflow-y-auto">
+            {selectedRegionForAreas?.areas && selectedRegionForAreas.areas.length > 0 ? (
+              <ul className="space-y-2">
+                {selectedRegionForAreas.areas.map((area, idx) => (
+                  <li key={idx} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition-colors">
+
+                    <span className="w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold flex-shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="text-sm font-medium text-foreground">
+                      {typeof area === "string" ? area : area.name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No regions found.</p>
+            )}
+          </div>
+          <DialogFooter className="mt-2">
+            <Button variant="outline" className="rounded-xl border-border w-full" onClick={() => setAreasPopupOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -600,6 +703,44 @@ const RegionsPage = () => {
         isLoading={isDeleting}
         confirmLabel="Delete Region"
       />
+
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] border-border rounded-2xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <MapPin className="text-primary w-4 h-4" />
+              </div>
+              Update Region Status
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2">
+              Change the configuration status for the region in {regionToUpdateStatus?.city}, {regionToUpdateStatus?.state}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="status" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Region Status</label>
+              <Select value={newStatus} onValueChange={(val) => setNewStatus(val as any)}>
+                <SelectTrigger id="status" className="h-11 rounded-xl bg-white border border-slate-300">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" className="rounded-xl border-border" onClick={() => setStatusDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpdateStatus} disabled={saving}>
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
