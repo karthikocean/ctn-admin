@@ -4,25 +4,32 @@ import { Search, Filter, Layers, Loader2, AlertCircle } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import api from "@/services/api";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton";
-import PremiumLoader from "@/components/common/PremiumLoader";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { TableLoader, TableSkeleton } from "@/components/common/TableLoader";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
 
 const CategoriesPage = () => {
   const { toast } = useToast();
@@ -40,6 +47,13 @@ const CategoriesPage = () => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Status update states
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [categoryToUpdateStatus, setCategoryToUpdateStatus] = useState<any | null>(null);
+  const [newStatus, setNewStatus] = useState<string>("active");
+  const [statusSaving, setStatusSaving] = useState(false);
 
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -144,6 +158,7 @@ const CategoriesPage = () => {
   const handleDelete = async () => {
     if (!categoryToDelete) return;
     try {
+      setIsDeleting(true);
       const response = await api.delete(`/categories/${categoryToDelete}`);
       toast({
         title: "Deleted",
@@ -161,12 +176,37 @@ const CategoriesPage = () => {
         description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const confirmDelete = (id: string) => {
     setCategoryToDelete(id);
     setDeleteDialogOpen(true);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!categoryToUpdateStatus) return;
+    try {
+      setStatusSaving(true);
+      await api.put(`/categories/${categoryToUpdateStatus._id}`, { status: newStatus });
+      toast({
+        title: "Success",
+        description: `Status updated to ${newStatus}`,
+        variant: "success"
+      });
+      fetchCategories(searchTerm, page);
+      setStatusDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update status",
+        variant: "destructive"
+      });
+    } finally {
+      setStatusSaving(false);
+    }
   };
 
 
@@ -228,9 +268,9 @@ const CategoriesPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Category</th>
                 <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sub Category Count</th>
-                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Referral Count</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
@@ -249,21 +289,34 @@ const CategoriesPage = () => {
                   </td>
                 </tr>
               ) : (
-                categories.map((c) => (
+                categories.map((c, index) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-6 py-4 text-sm text-muted-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-foreground">{c.name}</td>
                     <td className="px-6 py-4 text-sm text-center text-foreground font-semibold">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/5 text-primary font-semibold text-sm">
                         {c.subCategoryCount || 0}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-center text-foreground font-semibold">
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/5 text-emerald-600 font-semibold text-sm border border-emerald-500/10">
-                        {c.referralCount || 0}
-                      </span>
-                    </td>
                     <td className="px-6 py-4">
-                      <StatusBadge status={c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"} />
+                      <Badge
+                        variant={c.status?.toLowerCase() === "active" || c.isActive ? "default" : "secondary"}
+                        className={cn(
+                          "cursor-pointer font-semibold transition-all active:scale-95",
+                          c.status?.toLowerCase() === "active" || c.isActive
+                            ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20"
+                            : "bg-muted/50 text-muted-foreground hover:bg-muted/70"
+                        )}
+                        onClick={() => {
+                          if (canEdit) {
+                            setCategoryToUpdateStatus(c);
+                            setNewStatus(c.status?.toLowerCase() === "active" || c.isActive ? "active" : "inactive");
+                            setStatusDialogOpen(true);
+                          }
+                        }}
+                      >
+                        {c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"}
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
@@ -333,28 +386,55 @@ const CategoriesPage = () => {
       </FormDrawer>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-3xl border-border bg-card">
-          <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center mb-2">
-              <AlertCircle className="text-destructive w-6 h-6" />
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Category?"
+        description="This action cannot be undone. This will permanently delete the category and may affect associated items."
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+        confirmLabel="Delete Category"
+      />
+
+      {/* Status Update Dialog */}
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] border-border rounded-2xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Layers className="text-primary w-4 h-4" />
+              </div>
+              Update Category Status
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2">
+              Change the status for <span className="font-semibold text-foreground">{categoryToUpdateStatus?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger className="h-11 rounded-xl bg-white border border-slate-300">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <AlertDialogTitle className="text-xl font-bold">Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the category and may affect associated items.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel className="rounded-xl mt-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
-            >
-              Delete Category
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </div>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" className="rounded-xl border-border" onClick={() => setStatusDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpdateStatus} disabled={statusSaving}>
+              {statusSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -377,6 +457,13 @@ export const SubCategoriesPage = () => {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Status update states
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [subCatToUpdateStatus, setSubCatToUpdateStatus] = useState<any | null>(null);
+  const [newStatus, setNewStatus] = useState<string>("active");
+  const [statusSaving, setStatusSaving] = useState(false);
 
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -390,7 +477,7 @@ export const SubCategoriesPage = () => {
   const fetchParentCategories = async () => {
     try {
       const response = await api.get("/categories", {
-        params: { type: "MAIN", limit: 100, page: 0 }
+        params: { type: "MAIN", limit: 100, page: 0, status: "active" }
       });
       // Axios response.data is the body. The body contains the 'data' array from pagination util.
       const list = response.data?.data || [];
@@ -515,6 +602,7 @@ export const SubCategoriesPage = () => {
   const handleDelete = async () => {
     if (!categoryToDelete) return;
     try {
+      setIsDeleting(true);
       const response = await api.delete(`/categories/${categoryToDelete}`);
       toast({
         title: "Deleted",
@@ -532,12 +620,37 @@ export const SubCategoriesPage = () => {
         description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg,
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const confirmDelete = (id: string) => {
     setCategoryToDelete(id);
     setDeleteDialogOpen(true);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!subCatToUpdateStatus) return;
+    try {
+      setStatusSaving(true);
+      await api.put(`/categories/${subCatToUpdateStatus._id}`, { status: newStatus });
+      toast({
+        title: "Success",
+        description: `Status updated to ${newStatus}`,
+        variant: "success"
+      });
+      fetchSubCategories(searchTerm, page);
+      setStatusDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update status",
+        variant: "destructive"
+      });
+    } finally {
+      setStatusSaving(false);
+    }
   };
 
   return (
@@ -598,6 +711,7 @@ export const SubCategoriesPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Sub Category</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Parent Category</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
@@ -607,25 +721,43 @@ export const SubCategoriesPage = () => {
             <tbody className="divide-y divide-border">
               {loading && subCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-0">
-                    <TableSkeleton rows={8} columns={4} />
+                  <td colSpan={5} className="p-0">
+                    <TableSkeleton rows={8} columns={5} />
                   </td>
                 </tr>
               ) : subCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                     No subcategories found.
                   </td>
                 </tr>
               ) : (
-                subCategories.map((c) => (
+                subCategories.map((c, index) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-6 py-4 text-sm text-muted-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-foreground">{c.name}</td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       {c.parentCategory?.name || "N/A"}
                     </td>
                     <td className="px-6 py-4">
-                      <StatusBadge status={c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"} />
+                      <Badge
+                        variant={c.status?.toLowerCase() === "active" || c.isActive ? "default" : "secondary"}
+                        className={cn(
+                          "cursor-pointer font-semibold transition-all active:scale-95",
+                          c.status?.toLowerCase() === "active" || c.isActive
+                            ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20"
+                            : "bg-muted/50 text-muted-foreground hover:bg-muted/70"
+                        )}
+                        onClick={() => {
+                          if (canEdit) {
+                            setSubCatToUpdateStatus(c);
+                            setNewStatus(c.status?.toLowerCase() === "active" || c.isActive ? "active" : "inactive");
+                            setStatusDialogOpen(true);
+                          }
+                        }}
+                      >
+                        {c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"}
+                      </Badge>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
@@ -707,28 +839,55 @@ export const SubCategoriesPage = () => {
       </FormDrawer>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="rounded-3xl border-border bg-card">
-          <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center mb-2">
-              <AlertCircle className="text-destructive w-6 h-6" />
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Sub Category?"
+        description="This action cannot be undone. This will permanently delete the sub-category."
+        onConfirm={handleDelete}
+        isLoading={isDeleting}
+        confirmLabel="Delete Sub Category"
+      />
+
+      {/* Status Update Dialog */}
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] border-border rounded-2xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Layers className="text-primary w-4 h-4" />
+              </div>
+              Update Sub Category Status
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2">
+              Change the status for <span className="font-semibold text-foreground">{subCatToUpdateStatus?.name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger className="h-11 rounded-xl bg-white border border-slate-300">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <AlertDialogTitle className="text-xl font-bold">Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the sub-category.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel className="rounded-xl mt-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
-            >
-              Delete Sub-category
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          </div>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" className="rounded-xl border-border" onClick={() => setStatusDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpdateStatus} disabled={statusSaving}>
+              {statusSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
