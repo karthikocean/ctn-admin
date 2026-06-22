@@ -1,52 +1,136 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Coins } from "lucide-react";
-import StatusBadge from "@/components/common/StatusBadge";
+import { Search, Coins } from "lucide-react";
 import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
-import { mockPoints, mockMembers, modulePoints } from "@/data/mockData";
+import { mockPoints, mockMembers } from "@/data/mockData";
 import type { PointEntry } from "@/types";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getPointsHistory } from "@/api/PointsApi";
+
+interface ExtendedPointEntry extends PointEntry {
+  companyName?: string;
+  region?: string;
+}
 
 const PointsPage = () => {
   const { hasPermission } = useAuth();
   const canCreate = hasPermission("points", "create");
   const [loading, setLoading] = useState(true);
+  const [points, setPoints] = useState<ExtendedPointEntry[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [page, setPage] = useState(1);
+
+  const fetchPoints = async () => {
+    setLoading(true);
+    try {
+      const res = await getPointsHistory();
+      setPoints(res.data || []);
+    } catch (error) {
+      console.error("Failed to fetch points history:", error);
+      // Fallback to localStorage or mockPoints if database/backend is unavailable
+      const stored = localStorage.getItem("points");
+      setPoints(stored ? JSON.parse(stored) : mockPoints);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
+    fetchPoints();
   }, []);
-  const [points, setPoints] = useState<PointEntry[]>(() => {
-    const stored = localStorage.getItem("points");
-    return stored ? JSON.parse(stored) : mockPoints;
-  });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(1);
 
   // Sync to localStorage whenever points change
   useEffect(() => {
-    localStorage.setItem("points", JSON.stringify(points));
+    if (points.length > 0) {
+      localStorage.setItem("points", JSON.stringify(points));
+    }
+  }, [points]);
+
+  // Extract unique categories/modules dynamically from points history
+  const categories = useMemo(() => {
+    const list = new Set<string>();
+    points.forEach((p) => {
+      if (p.category) list.add(p.category);
+    });
+    return Array.from(list);
   }, [points]);
 
   const filteredPoints = useMemo(() => {
-    if (!searchQuery.trim()) return points;
-    const query = searchQuery.toLowerCase();
-    return points.filter(
-      (p) =>
-        p.memberName.toLowerCase().includes(query) ||
-        p.reason.toLowerCase().includes(query) ||
-        p.type.toLowerCase().includes(query) ||
-        p.category?.toLowerCase().includes(query) // PointEntry still uses 'category' for now as per type definition
-    );
-  }, [points, searchQuery]);
+    let result = points;
 
-  const getPointsForModule = (module?: string) => {
-    if (!module) return "-";
-    return modulePoints[module] || "-";
-  };
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.memberName.toLowerCase().includes(query) ||
+          p.category?.toLowerCase().includes(query)
+      );
+    }
+
+    if (selectedCategory && selectedCategory !== "all") {
+      result = result.filter(
+        (p) => p.category?.toLowerCase() === selectedCategory.toLowerCase()
+      );
+    }
+
+    return result;
+  }, [points, searchQuery, selectedCategory]);
+
+  const groupedPoints = useMemo(() => {
+    const groups: Record<string, {
+      memberId: string;
+      memberName: string;
+      company: string;
+      region: string;
+      points: number;
+      latestModule: string;
+      latestDate: string;
+    }> = {};
+
+    filteredPoints.forEach((p) => {
+      const memberId = p.memberId;
+      const company = p.companyName || mockMembers.find((m: any) => m.id === p.memberId || m?._id?.toString() === p.memberId)?.company || "";
+      const region = p.region || mockMembers.find((m: any) => m.id === p.memberId || m?._id?.toString() === p.memberId)?.region || "-";
+      if (!groups[memberId]) {
+        groups[memberId] = {
+          memberId,
+          memberName: p.memberName,
+          company,
+          region,
+          points: 0,
+          latestModule: p.category || "-",
+          latestDate: p.date,
+        };
+      }
+
+      groups[memberId].points += p.points;
+
+      if (new Date(p.date) >= new Date(groups[memberId].latestDate)) {
+        groups[memberId].latestDate = p.date;
+        if (p.category) {
+          groups[memberId].latestModule = p.category;
+        }
+      }
+    });
+
+    return Object.values(groups);
+  }, [filteredPoints]);
+
+  const paginatedGroupedPoints = useMemo(() => {
+    const startIndex = (page - 1) * 10;
+    return groupedPoints.slice(startIndex, startIndex + 10);
+  }, [groupedPoints, page]);
 
   return (
     <div className="page-container relative min-h-[600px]">
@@ -76,16 +160,29 @@ const PointsPage = () => {
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
             <input
               type="text"
-              placeholder="Search points allocations..."
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+              placeholder="Search member..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:border-primary focus:ring-0 placeholder:text-muted-foreground/60"
             />
           </div>
 
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
-            <Filter size={14} className="mr-1.5" />
-            Filters
-          </Button>
+          <Select value={selectedCategory} onValueChange={(val) => { setSelectedCategory(val); setPage(1); }}>
+            <SelectTrigger className="h-9 w-36 rounded-lg text-xs bg-secondary/30 border-border focus:ring-1 focus:ring-primary/20">
+              <SelectValue placeholder="All Modules" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Modules</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {canCreate && (
             <Link to="/allocate-points">
@@ -100,7 +197,7 @@ const PointsPage = () => {
         </div>
       </div>
 
-      {/* Points Table - Read Only */}
+      {/* Points Table */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -110,48 +207,47 @@ const PointsPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Member</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Region</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Module</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Points</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Reason</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filteredPoints.length === 0 ? (
+              {groupedPoints.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                     No points entries found.
                   </td>
                 </tr>
               ) : (
-                filteredPoints.map((p) => (
-                  <tr key={p.id} className="hover:bg-secondary/30 transition-colors">
+                paginatedGroupedPoints.map((p, index) => (
+                  <tr key={p.memberId} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-6 py-4 text-sm font-semibold text-foreground">
+                      {(page - 1) * 10 + index + 1}
+                    </td>
                     <td className="px-6 py-4">
                       <div>
                         <p className="text-sm font-semibold text-foreground">{p.memberName}</p>
-                        <p className="text-xs text-foreground font-semibold">
-                          {mockMembers.find(m => m.id === p.memberId)?.company || ""}
+                        <p className="text-xs text-muted-foreground font-semibold">
+                          {p.company}
                         </p>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-semibold text-foreground">{p.category || "-"}</span>
+                      <span className="text-sm font-semibold text-foreground">{p.region}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-sm font-bold ${p.type === "earned" ? "text-emerald-600" : "text-accent"}`}>
-                        {p.type === "earned" ? "+" : ""}{p.points}
-                        {p.category && (
-                          <span className="text-xs text-foreground font-semibold ml-1">
-                            ({getPointsForModule(p.category)})
-                          </span>
-                        )}
+                      <span className="text-sm font-semibold text-foreground">{p.latestModule}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`text-sm font-bold ${p.points >= 0 ? "text-emerald-600" : "text-accent"}`}>
+                        {p.points >= 0 ? "+" : ""}{p.points}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{p.reason}</td>
-                    <td className="px-6 py-4"><StatusBadge status={p.type} /></td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{p.date}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{p.latestDate}</td>
                   </tr>
                 ))
               )}
@@ -159,7 +255,7 @@ const PointsPage = () => {
           </table>
         </div>
         <div className="px-6 pb-4">
-          <PaginationBar currentPage={page} totalPages={Math.ceil(filteredPoints.length / 10)} onPageChange={setPage} />
+          <PaginationBar currentPage={page} totalPages={Math.ceil(groupedPoints.length / 10)} onPageChange={setPage} />
         </div>
       </motion.div>
     </div>

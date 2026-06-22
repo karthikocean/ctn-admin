@@ -429,8 +429,7 @@ const TrainingsPage = () => {
             <GraduationCap size={24} className="text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">Trainings & Curriculum</h1>
-            <p className="text-xs text-muted-foreground font-medium">Manage educational video courses and instructor profiles</p>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Trainings Management</h1>
           </div>
         </div>
 
@@ -641,7 +640,7 @@ const TrainingsPage = () => {
                         value={form.overallPoints}
                       />
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-1 ml-1 italic">Calculated from lessons automatically</p>
+                    <p className="text-[10px] text-slate-400 mt-1 ml-1">Calculated from lessons automatically</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</Label>
@@ -659,30 +658,40 @@ const TrainingsPage = () => {
 
             {activeTab === "author" && (
               <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="h-full overflow-y-auto px-6 py-6 space-y-6 pb-32">
-                <div className="flex items-center gap-6">
-                  <div className={cn("relative group w-32 h-32 rounded-3xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex items-center justify-center", errors.authorImage && "border-red-500 bg-red-50")}>
-                    {form.authorImage ? (
-                      <div className="relative w-full h-full">
-                        <img src={getFullUrl(form.authorImage)} className="w-full h-full object-cover" />
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, authorImage: null, authorImageFile: null })); }}
-                          className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <User size={28} className="text-slate-300" />
-                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, "authorImage")} />
-                      </>
-                    )}
+                <div className="flex items-start gap-6">
+                  <div className="flex flex-col items-center space-y-2">
+                    <div className={cn("relative group w-32 h-32 rounded-3xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex items-center justify-center", errors.authorImage && "border-red-500 bg-red-50")}>
+                      {form.authorImage ? (
+                        <div className="relative w-full h-full">
+                          <img src={getFullUrl(form.authorImage)} className="w-full h-full object-cover" />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, authorImage: null, authorImageFile: null })); }}
+                            className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <User size={28} className="text-slate-300" />
+                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageChange(e, "authorImage")} />
+                        </>
+                      )}
+                    </div>
+                    {errors.authorImage && <p className="text-red-500 text-[10px] font-bold mt-1 text-center w-32">{errors.authorImage}</p>}
                   </div>
                   <div className="flex-1 space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Instructor Name <span className="text-red-500">*</span></Label>
-                    <Input placeholder="Sneha Kapoor" className={cn("h-12 rounded-2xl", errors.authorName && "border-red-500 focus-visible:ring-red-500")} value={form.authorName} onChange={(e) => setForm(prev => ({ ...prev, authorName: e.target.value }))} />
+                    <Input
+                      placeholder="Sneha Kapoor"
+                      className={cn("h-12 rounded-2xl", errors.authorName && "border-red-500 focus-visible:ring-red-500")}
+                      value={form.authorName}
+                      onChange={(e) => {
+                        const cleaned = e.target.value.replace(/[^A-Za-z\s]/g, "");
+                        setForm(prev => ({ ...prev, authorName: cleaned }));
+                      }}
+                    />
                     {errors.authorName && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.authorName}</p>}
-                    {errors.authorImage && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.authorImage}</p>}
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -703,7 +712,7 @@ const TrainingsPage = () => {
                         </span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lesson Detail</span>
                       </div>
-                      <button onClick={() => removeLesson(lesson.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover/lesson:opacity-100">
+                      <button onClick={() => removeLesson(lesson.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -792,9 +801,18 @@ const TrainingsPage = () => {
 
           <div className="p-6 bg-white border-t border-border flex gap-3 sticky bottom-0 z-20 shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
             <Button variant="outline" className="flex-1 h-12 rounded-2xl font-bold border-slate-200" onClick={() => setDrawerOpen(false)}>Discard Changes</Button>
-            <Button className="flex-1 h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={handleSave} disabled={isLoading}>
-              {isLoading ? "Saving..." : editingId ? "Update Training" : "Publish Training"}
-            </Button>
+            {activeTab === "lessons" ? (
+              <Button className="flex-1 h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={handleSave} disabled={isLoading}>
+                {isLoading ? "Saving..." : editingId ? "Update Training" : "Publish Training"}
+              </Button>
+            ) : (
+              <Button className="flex-1 h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => {
+                if (activeTab === "basic") setActiveTab("author");
+                else if (activeTab === "author") setActiveTab("lessons");
+              }}>
+                Next
+              </Button>
+            )}
           </div>
         </div>
       </FormDrawer>
