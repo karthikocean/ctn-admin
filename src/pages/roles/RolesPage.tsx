@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import { getMembers } from "@/api/MembersApi";
+import { mockMembers } from "@/data/mockData";
 import {
   Dialog,
   DialogContent,
@@ -146,6 +148,7 @@ const RolesPage = () => {
   const [deleteRoleConfirmOpen, setDeleteRoleConfirmOpen] = useState(false);
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [activeMembers, setActiveMembers] = useState<any[]>([]);
 
   // New user form state
   const [newUser, setNewUser] = useState({
@@ -153,6 +156,7 @@ const RolesPage = () => {
     email: "",
     phone: "",
     pin: "",
+    memberId: "",
   });
 
   const [newRole, setNewRole] = useState({
@@ -324,6 +328,32 @@ const RolesPage = () => {
     }
   }, [modalSearchTerm, modalRoleFilter, modalStatusFilter, usersDialogOpen]);
 
+  useEffect(() => {
+    if (addUserDialogOpen && selectedRole === "Franchise Owner") {
+      const fetchActiveMembers = async () => {
+        try {
+          const response = await getMembers({ status: "active", limit: 1000 });
+          if (response && response.data) {
+            setActiveMembers(response.data);
+          } else {
+            setActiveMembers(mockMembers);
+          }
+        } catch (error) {
+          console.error("Failed to fetch active members", error);
+          setActiveMembers(mockMembers);
+        }
+      };
+      fetchActiveMembers();
+    }
+  }, [addUserDialogOpen, selectedRole]);
+
+  const getLinkedMemberName = (memberId?: string) => {
+    if (!memberId) return "None";
+    const member = activeMembers.find(m => (m._id === memberId || m.id === memberId)) || 
+                   mockMembers.find(m => (m._id === memberId || m.id === memberId));
+    return member ? (member.fullName || member.name) : `Linked Member (ID: ${memberId})`;
+  };
+
   const handleTogglePermission = (mod: string, action: string) => {
     setPermissions(prev => ({
       ...prev,
@@ -434,6 +464,7 @@ const RolesPage = () => {
       email: user.email || "",
       phone: user.phoneNumber || "",
       pin: "",
+      memberId: user.memberId || "",
     });
 
     // Set selected role details so update preserves them
@@ -643,7 +674,7 @@ const RolesPage = () => {
   const handleAddUserAction = (roleName: string, roleId: string) => {
     setSelectedRole(roleName);
     setSelectedRoleId(roleId);
-    setNewUser({ name: "", email: "", phone: "", pin: "" });
+    setNewUser({ name: "", email: "", phone: "", pin: "", memberId: "" });
     setIsEditMode(false);
     setEditingUserId(null);
     setAddUserDialogOpen(true);
@@ -694,6 +725,7 @@ const RolesPage = () => {
         roleId: selectedRoleId,
         companyName: "CTN Global",
         isActive: true,
+        memberId: newUser.memberId || null,
       };
 
       if (newUser.pin) {
@@ -1349,6 +1381,61 @@ const RolesPage = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                {!isEditMode && selectedRole === "Franchise Owner" && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="memberId">Link Active Member</Label>
+                    <Select
+                      value={newUser.memberId}
+                      onValueChange={(val) => {
+                        const membersToDisplay = activeMembers.length > 0 ? activeMembers : mockMembers;
+                        const selectedMember = membersToDisplay.find(m => (m._id === val || m.id === val));
+                        if (selectedMember) {
+                          setNewUser({
+                            ...newUser,
+                            memberId: val,
+                            name: (selectedMember.fullName || selectedMember.name || "").replace(/[^A-Za-z\s]/g, ""),
+                            email: selectedMember.email || "",
+                            phone: (selectedMember.mobileNumber || selectedMember.phone || "").replace(/\D/g, "").slice(0, 10),
+                          });
+                          // Clear errors since fields are auto-filled
+                          setFormErrors(prev => ({
+                            ...prev,
+                            name: "",
+                            email: "",
+                            phone: ""
+                          }));
+                        } else {
+                          setNewUser({
+                            ...newUser,
+                            memberId: val,
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select an active member" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(activeMembers.length > 0 ? activeMembers : mockMembers).map((member) => (
+                          <SelectItem key={member._id || member.id} value={member._id || member.id}>
+                            {member.fullName || member.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {isEditMode && selectedRole === "Franchise Owner" && newUser.memberId && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="linkedMember">Linked Member</Label>
+                    <Input
+                      id="linkedMember"
+                      value={getLinkedMemberName(newUser.memberId)}
+                      disabled
+                      className="bg-muted text-muted-foreground"
+                    />
+                  </div>
+                )}
                 <div className="grid gap-2">
                   <Label htmlFor="name" className={cn(formErrors.name && "text-destructive")}>Full Name</Label>
                   <Input
