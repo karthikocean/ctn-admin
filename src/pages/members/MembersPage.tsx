@@ -55,6 +55,7 @@ import {
   updateMember,
   getMemberDetails,
   deleteMember,
+  updateMemberStatus,
   getBusinessRegion
 } from "@/api/MembersApi";
 import { uploadFiles } from "@/api/MediaApi";
@@ -289,6 +290,9 @@ const MembersPage = () => {
     if (id === "mobileNumber") {
       const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
       setFormData(prev => ({ ...prev, [id]: digitsOnly }));
+    } else if (id === "fullName") {
+      const alphabetsOnly = value.replace(/[^a-zA-Z\s]/g, "");
+      setFormData(prev => ({ ...prev, [id]: alphabetsOnly }));
     } else {
       setFormData(prev => ({ ...prev, [id]: value }));
     }
@@ -466,6 +470,27 @@ const MembersPage = () => {
     }
   };
 
+  const handleToggleStatus = async (member: any) => {
+    const newStatus = member.status === "active" ? "inactive" : "active";
+    try {
+      const result = await updateMemberStatus(member._id, newStatus);
+      if (result.success) {
+        toast({
+          title: "Status Updated",
+          description: result.message || `Member status updated to ${newStatus}`,
+          variant: "success"
+        });
+        fetchMembers();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update member status",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleVerifyGST = async () => {
     if (!gstInput) {
       toast({
@@ -561,6 +586,8 @@ const MembersPage = () => {
     // Name validation
     if (!formData.fullName) {
       newErrors.fullName = "Full Name is required";
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.fullName)) {
+      newErrors.fullName = "Full Name should accept only alphabets and spaces";
     }
 
     // Mobile validation
@@ -573,6 +600,11 @@ const MembersPage = () => {
     // Email validation (optional but must be valid if entered)
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Enter a valid email address";
+    }
+
+    // Experience validation
+    if (formData.yearsOfExperience !== null && formData.yearsOfExperience < 0) {
+      newErrors.yearsOfExperience = "Experience must be a positive value";
     }
 
     // GST validation
@@ -677,7 +709,7 @@ const MembersPage = () => {
             <Users size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Member Directory</h1>
+            <h1 className="text-xl font-bold">Member List</h1>
             <p className="text-xs text-muted-foreground">
               Manage network members and their business details
             </p>
@@ -795,6 +827,7 @@ const MembersPage = () => {
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <Badge
+                        variant="outline"
                         className={
                           member.status === 'active'
                             ? 'bg-green-500/10 text-green-600 border-green-200'
@@ -808,6 +841,8 @@ const MembersPage = () => {
                       <ActionMenu
                         onEdit={canEdit ? () => handleEdit(member) : undefined}
                         onDelete={canDelete ? () => handleDeleteClick(member) : undefined}
+                        onToggleStatus={canEdit ? () => handleToggleStatus(member) : undefined}
+                        statusLabel={member.status}
                       />
                     </TableCell>
                   </TableRow>
@@ -836,7 +871,7 @@ const MembersPage = () => {
         title={
           editingMemberId
             ? "Edit Member Details"
-            : (showGstStep ? "Registration" : "Complete Profile")
+            : (showGstStep ? "Registration" : "Add Member")
         }
       >
         <div className="flex flex-col h-full bg-slate-50/80">
@@ -976,10 +1011,11 @@ const MembersPage = () => {
                           id="email"
                           type="email"
                           placeholder="email@domain.com"
-                          className="h-11 bg-white border-slate-300 font-medium"
+                          className={`h-11 bg-white border-slate-300 font-medium ${errors.email ? "border-red-500 focus:border-red-500" : ""}`}
                           value={formData.email}
                           onChange={handleInputChange}
                         />
+                        <ErrorMsg message={errors.email} />
                       </div>
                     </div>
                   </div>
@@ -1074,13 +1110,28 @@ const MembersPage = () => {
                         <Input
                           id="yearsOfExperience"
                           type="number"
-                          className="h-11 bg-white border-slate-300 font-medium"
+                          min="0"
+                          onKeyDown={(e) => {
+                            if (["-", "+", "e", "E"].includes(e.key)) {
+                              e.preventDefault();
+                            }
+                          }}
+                          onPaste={(e) => {
+                            const pasteData = e.clipboardData.getData("text");
+                            if (pasteData.includes("-") || pasteData.includes("+") || /[eE]/.test(pasteData)) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className={`h-11 bg-white border-slate-300 font-medium ${errors.yearsOfExperience ? "border-red-500 focus:border-red-500" : ""}`}
                           value={formData.yearsOfExperience ?? ""}
-                          onChange={(e) => handleSelectChange(
-                            "yearsOfExperience",
-                            e.target.value ? Number(e.target.value) : null
-                          )}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const numVal = val ? Number(val) : null;
+                            if (numVal !== null && numVal < 0) return;
+                            handleSelectChange("yearsOfExperience", numVal);
+                          }}
                         />
+                        <ErrorMsg message={errors.yearsOfExperience} />
                       </div>
                       <div>
                         <Label className="text-xs font-bold text-slate-700 mb-2 block">Company Size</Label>

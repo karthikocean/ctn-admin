@@ -60,12 +60,27 @@ const FranchisesPage = () => {
   const [franchises, setFranchises] = useState<Franchise[]>([]);
   const [regionsList, setRegionsList] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<User[]>([]);
+  const [assignedRegionIds, setAssignedRegionIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  const fetchAssignedRegions = async () => {
+    try {
+      const franchiseRes = await getFranchises({ limit: 1000 });
+      if (franchiseRes && franchiseRes.data) {
+        const ids = franchiseRes.data
+          .map((f: any) => f.businessRegionId?.toString() || f.businessRegion?._id?.toString())
+          .filter(Boolean);
+        setAssignedRegionIds(ids);
+      }
+    } catch (e) {
+      console.error("Failed to load franchises list for validation", e);
+    }
+  };
 
   // Delete states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -123,6 +138,8 @@ const FranchisesPage = () => {
         console.error("Failed to load business regions from API", e);
       }
 
+      await fetchAssignedRegions();
+
       try {
         const franchiseUsers = await getFranchiseUsers();
         if (franchiseUsers && franchiseUsers.length > 0) {
@@ -151,7 +168,7 @@ const FranchisesPage = () => {
     return () => clearTimeout(timer);
   }, [page, searchTerm, statusFilter]);
 
-  const handleOpenAdd = () => {
+  const handleOpenAdd = async () => {
     setEditingFranchise(null);
     setFranchiseName("");
     setSelectedRegionId("");
@@ -161,9 +178,24 @@ const FranchisesPage = () => {
     setCommissionPercentage(0);
     setRegionOpen(false);
     setDrawerOpen(true);
+    try {
+      const franchiseUsers = await getFranchiseUsers();
+      if (franchiseUsers && franchiseUsers.length > 0) {
+        const mappedUsers = franchiseUsers.map((u: any) => ({
+          _id: u.id,
+          fullName: u.name
+        }));
+        setUsersList(mappedUsers);
+      } else {
+        setUsersList([]);
+      }
+    } catch (e) {
+      console.error("Failed to load franchise users from API", e);
+      setUsersList([]);
+    }
   };
 
-  const handleEdit = (franchise: Franchise) => {
+  const handleEdit = async (franchise: Franchise) => {
     setEditingFranchise(franchise);
     setFranchiseName(franchise.name);
     setSelectedRegionId(franchise.businessRegionId ? franchise.businessRegionId.toString() : (franchise.businessRegion?._id || ""));
@@ -173,6 +205,21 @@ const FranchisesPage = () => {
     setCommissionPercentage(franchise.commissionPercentage !== undefined ? franchise.commissionPercentage : 0);
     setRegionOpen(false);
     setDrawerOpen(true);
+    try {
+      const franchiseUsers = await getFranchiseUsers(franchise._id);
+      if (franchiseUsers && franchiseUsers.length > 0) {
+        const mappedUsers = franchiseUsers.map((u: any) => ({
+          _id: u.id,
+          fullName: u.name
+        }));
+        setUsersList(mappedUsers);
+      } else {
+        setUsersList([]);
+      }
+    } catch (e) {
+      console.error("Failed to load franchise users from API", e);
+      setUsersList([]);
+    }
   };
 
   const toggleUser = (user: User) => {
@@ -223,6 +270,7 @@ const FranchisesPage = () => {
       }
       setDrawerOpen(false);
       fetchFranchises();
+      fetchAssignedRegions();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -252,6 +300,7 @@ const FranchisesPage = () => {
       setDeleteDialogOpen(false);
       setFranchiseToDelete(null);
       fetchFranchises();
+      fetchAssignedRegions();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -313,6 +362,13 @@ const FranchisesPage = () => {
       country: r.country
     }];
   });
+
+  const currentAssignedRegionId = editingFranchise?.businessRegionId?.toString() || editingFranchise?.businessRegion?._id?.toString();
+
+  const availableAreas = allAreas.filter(area => 
+    !assignedRegionIds.includes(area._id.toString()) || 
+    (currentAssignedRegionId && currentAssignedRegionId === area._id.toString())
+  );
 
   const selectedArea = allAreas.find(a => a._id === selectedRegionId);
 
@@ -525,7 +581,7 @@ const FranchisesPage = () => {
                   <CommandEmpty>No regions found.</CommandEmpty>
                   <CommandList className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
                     <CommandGroup>
-                      {allAreas.map((area) => (
+                      {availableAreas.map((area) => (
                         <CommandItem
                           key={area._id}
                           value={area.name + ` ${area.city} ${area.state} ${area.country}`}

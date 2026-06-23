@@ -349,8 +349,8 @@ const RolesPage = () => {
 
   const getLinkedMemberName = (memberId?: string) => {
     if (!memberId) return "None";
-    const member = activeMembers.find(m => (m._id === memberId || m.id === memberId)) || 
-                   mockMembers.find(m => (m._id === memberId || m.id === memberId));
+    const member = activeMembers.find(m => (m._id === memberId || m.id === memberId)) ||
+      mockMembers.find((m: any) => (m._id === memberId || m.id === memberId));
     return member ? (member.fullName || member.name) : `Linked Member (ID: ${memberId})`;
   };
 
@@ -399,9 +399,9 @@ const RolesPage = () => {
         if (p.moduleId === modId) return true;
         if (targetModule) {
           return p.moduleId === targetModule.slugName ||
-                 p.moduleId === targetModule.slugName.replace(/_/g, " ") ||
-                 String(p.moduleId).toLowerCase() === targetModule.slugName.toLowerCase() ||
-                 String(p.moduleId).toLowerCase() === targetModule.slugName.replace(/_/g, " ").toLowerCase();
+            p.moduleId === targetModule.slugName.replace(/_/g, " ") ||
+            String(p.moduleId).toLowerCase() === targetModule.slugName.toLowerCase() ||
+            String(p.moduleId).toLowerCase() === targetModule.slugName.replace(/_/g, " ").toLowerCase();
         }
         return false;
       });
@@ -430,9 +430,9 @@ const RolesPage = () => {
         if (p.moduleId === modId) return true;
         if (targetModule) {
           return p.moduleId === targetModule.slugName ||
-                 p.moduleId === targetModule.slugName.replace(/_/g, " ") ||
-                 String(p.moduleId).toLowerCase() === targetModule.slugName.toLowerCase() ||
-                 String(p.moduleId).toLowerCase() === targetModule.slugName.replace(/_/g, " ").toLowerCase();
+            p.moduleId === targetModule.slugName.replace(/_/g, " ") ||
+            String(p.moduleId).toLowerCase() === targetModule.slugName.toLowerCase() ||
+            String(p.moduleId).toLowerCase() === targetModule.slugName.replace(/_/g, " ").toLowerCase();
         }
         return false;
       });
@@ -781,7 +781,8 @@ const RolesPage = () => {
 
   return (
     <div className="page-container">
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         body {
           padding-right: 0px !important;
         }
@@ -980,7 +981,7 @@ const RolesPage = () => {
                     Manage and view all system admin users, their roles, and status
                   </p>
                 </div>
-                
+
                 {/* Filters */}
                 <div className="flex flex-wrap items-center gap-3">
                   {/* Role Filter */}
@@ -1078,7 +1079,7 @@ const RolesPage = () => {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Pagination for bottom Users List card */}
               {usersListTotalPages >= 1 && memoizedUsersList.length > 0 && (
                 <div className="px-6 py-4 border-t border-border bg-secondary/10 flex items-center justify-between">
@@ -1220,8 +1221,8 @@ const RolesPage = () => {
                   </div>
                   <div>
                     <DialogTitle className="text-xl">
-                      {modalRoleFilter !== "all" 
-                        ? `Users with "${roles.find(r => r._id === modalRoleFilter)?.name || "Selected"}" role` 
+                      {modalRoleFilter !== "all"
+                        ? `Users with "${roles.find(r => r._id === modalRoleFilter)?.name || "Selected"}" role`
                         : "All Admin Users"}
                     </DialogTitle>
                     <DialogDescription>
