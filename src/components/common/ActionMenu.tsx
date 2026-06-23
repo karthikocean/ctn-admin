@@ -1,4 +1,4 @@
-import { MoreHorizontal, Eye, Pencil, Trash2, UserPlus } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Trash2, UserPlus, CheckCircle2, X } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,10 +13,12 @@ interface ActionMenuProps {
   onDelete?: () => void;
   onAddUser?: () => void;
   onAssign?: () => void;
+  onToggleStatus?: () => void;
+  statusLabel?: string;
 }
 
-const ActionMenu = ({ onView, onEdit, onDelete, onAddUser, onAssign }: ActionMenuProps) => {
-  const hasAnyAction = !!(onView || onEdit || onDelete || onAddUser || onAssign);
+const ActionMenu = ({ onView, onEdit, onDelete, onAddUser, onAssign, onToggleStatus, statusLabel }: ActionMenuProps) => {
+  const hasAnyAction = !!(onView || onEdit || onDelete || onAddUser || onAssign || onToggleStatus);
 
   return (
     <DropdownMenu>
@@ -36,6 +38,19 @@ const ActionMenu = ({ onView, onEdit, onDelete, onAddUser, onAssign }: ActionMen
           {onAssign && <DropdownMenuItem onClick={onAssign} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Assign Member</DropdownMenuItem>}
           {onView && <DropdownMenuItem onClick={onView} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Eye size={14} className="mr-2" /> View</DropdownMenuItem>}
           {onEdit && <DropdownMenuItem onClick={onEdit} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Pencil size={14} className="mr-2" /> Edit</DropdownMenuItem>}
+          {onToggleStatus && (
+            <DropdownMenuItem onClick={onToggleStatus} className="focus:bg-primary/5 focus:text-primary cursor-pointer">
+              {statusLabel?.toLowerCase() === "active" ? (
+                <>
+                  <X size={14} className="mr-2" /> Deactivate
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={14} className="mr-2" /> Activate
+                </>
+              )}
+            </DropdownMenuItem>
+          )}
           {onDelete && <DropdownMenuItem onClick={onDelete} className="focus:bg-red-50 focus:text-red-600 cursor-pointer text-red-600"><Trash2 size={14} className="mr-2" /> Delete</DropdownMenuItem>}
         </DropdownMenuContent>
       )}

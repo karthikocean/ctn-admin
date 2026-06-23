@@ -25,8 +25,10 @@ export const deleteFranchise = async (id: string) => {
   return response.data;
 };
 
-export const getFranchiseUsers = async () => {
-  const response = await api.get("/admin-users/getfranchies-user");
+export const getFranchiseUsers = async (excludeFranchiseId?: string) => {
+  const response = await api.get("/admin-users/getfranchies-user", {
+    params: excludeFranchiseId ? { excludeFranchiseId } : {}
+  });
   return response.data;
 };
 
@@ -50,3 +52,9 @@ export const uploadReceipt = async (file: File) => {
   });
   return response.data;
 };
+
+export const getCommissionReportDetails = async (params: { franchiseId: string; month: string }) => {
+  const response = await api.get("/franchises/commission-report/details", { params });
+  return response.data;
+};
+
