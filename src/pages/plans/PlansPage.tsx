@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Receipt, Layers, Eye, Calendar, Store, ShoppingBag } from "lucide-react";
+import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Receipt, Layers, Eye, Calendar, Store, ShoppingBag, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +71,18 @@ const PlansPage = () => {
     status: string;
     billingType: string;
     billingCycle: string;
+    features: {
+      monthlyMeeting: boolean;
+      eventVisitor: boolean;
+      eventStall: boolean;
+      spotlights: boolean;
+    };
+    benefits: {
+      requirementResponseLimit: number;
+      pointMultiplier: number;
+      trainingDiscountPercentage: number;
+      referralBonusMonths: number;
+    };
   }>({
     title: "",
     description: "",
@@ -79,7 +91,19 @@ const PlansPage = () => {
     modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
     status: "active",
     billingType: "basic",
-    billingCycle: "monthly"
+    billingCycle: "monthly",
+    features: {
+      monthlyMeeting: false,
+      eventVisitor: false,
+      eventStall: false,
+      spotlights: false
+    },
+    benefits: {
+      requirementResponseLimit: 0,
+      pointMultiplier: 1,
+      trainingDiscountPercentage: 0,
+      referralBonusMonths: 0
+    }
   });
 
   const fetchPlans = async (search: string = "", pageNum: number = 1) => {
@@ -192,7 +216,19 @@ const PlansPage = () => {
       modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
       status: "active",
       billingType: "basic",
-      billingCycle: "monthly"
+      billingCycle: "monthly",
+      features: {
+        monthlyMeeting: false,
+        eventVisitor: false,
+        eventStall: false,
+        spotlights: false
+      },
+      benefits: {
+        requirementResponseLimit: 0,
+        pointMultiplier: 1,
+        trainingDiscountPercentage: 0,
+        referralBonusMonths: 0
+      }
     });
   };
 
@@ -211,7 +247,19 @@ const PlansPage = () => {
       })),
       status: plan.status || "active",
       billingType: plan.billingType || "basic",
-      billingCycle: plan.billingCycle || "monthly"
+      billingCycle: plan.billingCycle || "monthly",
+      features: plan.features || {
+        monthlyMeeting: false,
+        eventVisitor: false,
+        eventStall: false,
+        spotlights: false
+      },
+      benefits: plan.benefits || {
+        requirementResponseLimit: 0,
+        pointMultiplier: 1,
+        trainingDiscountPercentage: 0,
+        referralBonusMonths: 0
+      }
     });
     setDrawerOpen(true);
   };
@@ -411,7 +459,11 @@ const PlansPage = () => {
         description={editingId ? "Update plan details and module counts" : "Create a new subscription plan with specific modules"}
       >
         <div className="space-y-6 pb-20 px-4">
+          {/* Section 1: Plan Information */}
           <div className="space-y-4">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2 border-b pb-1">
+              Section 1: Plan Information
+            </Label>
             <div>
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Plan Title <span className="text-red-500">*</span>
@@ -503,6 +555,7 @@ const PlansPage = () => {
                   <option value="basic">Basic</option>
                   <option value="standard">Standard</option>
                   <option value="premium">Premium</option>
+                  <option value="enterprise">Enterprise</option>
                 </select>
               </div>
               <div>
@@ -519,9 +572,10 @@ const PlansPage = () => {
             </div>
           </div>
 
+          {/* Section 2: Usage Limits */}
           <div className="space-y-4 pt-4 border-t border-border">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Modules Configuration</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Section 2: Usage Limits</Label>
               <Button
                 variant="outline"
                 size="sm"
@@ -561,9 +615,8 @@ const PlansPage = () => {
                       <Input
                         type="number"
                         placeholder="0"
-                        min={0}
-                        value={module.countLimit === 0 ? "" : module.countLimit}
-                        onChange={(e) => handleModuleChange(index, "countLimit", Math.max(0, parseInt(e.target.value) || 0))}
+                        value={module.countLimit}
+                        onChange={(e) => handleModuleChange(index, "countLimit", parseInt(e.target.value) || 0)}
                         className="h-10 rounded-lg border-border bg-background text-xs font-bold focus:ring-primary/20 text-center px-1.5"
                       />
                     </div>
@@ -608,6 +661,177 @@ const PlansPage = () => {
             {errors.modules && (
               <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.modules}</p>
             )}
+          </div>
+
+          {/* Section 3: Feature Access */}
+          <div className="pt-4 border-t border-border space-y-3">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block mb-2">
+              Section 3: Feature Access
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-border/60 bg-secondary/15 cursor-pointer hover:bg-secondary/30 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.features.monthlyMeeting}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      features: { ...formData.features, monthlyMeeting: e.target.checked }
+                    })
+                  }
+                  className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-foreground">Monthly Meeting</span>
+                  <span className="text-[9px] text-muted-foreground leading-none mt-0.5">Allows participating in monthly events</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-border/60 bg-secondary/15 cursor-pointer hover:bg-secondary/30 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.features.eventVisitor}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      features: { ...formData.features, eventVisitor: e.target.checked }
+                    })
+                  }
+                  className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-foreground">Event Visitor</span>
+                  <span className="text-[9px] text-muted-foreground leading-none mt-0.5">Allows visiting other region events</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-border/60 bg-secondary/15 cursor-pointer hover:bg-secondary/30 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.features.eventStall}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      features: { ...formData.features, eventStall: e.target.checked }
+                    })
+                  }
+                  className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-foreground">Event Stall</span>
+                  <span className="text-[9px] text-muted-foreground leading-none mt-0.5">Allows booking exhibition stalls</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-border/60 bg-secondary/15 cursor-pointer hover:bg-secondary/30 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.features.spotlights}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      features: { ...formData.features, spotlights: e.target.checked }
+                    })
+                  }
+                  className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-foreground">Spotlights</span>
+                  <span className="text-[9px] text-muted-foreground leading-none mt-0.5">Highlight profile options in spotlights</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Section 4: Plan Benefits */}
+          <div className="pt-4 border-t border-border space-y-4">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+              Section 4: Plan Benefits
+            </Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest block ml-0.5">
+                  Requirement Response Limit
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.benefits.requirementResponseLimit}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      benefits: {
+                        ...formData.benefits,
+                        requirementResponseLimit: Math.max(0, parseInt(e.target.value) || 0)
+                      }
+                    })
+                  }
+                  className="mt-1.5 h-10 rounded-lg border-border bg-secondary/30 text-xs font-bold"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest block ml-0.5">
+                  Point Multiplier (e.g. 1, 2)
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  step={0.1}
+                  value={formData.benefits.pointMultiplier}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      benefits: {
+                        ...formData.benefits,
+                        pointMultiplier: Math.max(1, parseFloat(e.target.value) || 1)
+                      }
+                    })
+                  }
+                  className="mt-1.5 h-10 rounded-lg border-border bg-secondary/30 text-xs font-bold"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest block ml-0.5">
+                  Training Discount (%)
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.benefits.trainingDiscountPercentage}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      benefits: {
+                        ...formData.benefits,
+                        trainingDiscountPercentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
+                      }
+                    })
+                  }
+                  className="mt-1.5 h-10 rounded-lg border-border bg-secondary/30 text-xs font-bold"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest block ml-0.5">
+                  Referral Bonus Months
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.benefits.referralBonusMonths}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      benefits: {
+                        ...formData.benefits,
+                        referralBonusMonths: Math.max(0, parseInt(e.target.value) || 0)
+                      }
+                    })
+                  }
+                  className="mt-1.5 h-10 rounded-lg border-border bg-secondary/30 text-xs font-bold"
+                />
+              </div>
+            </div>
           </div>
 
           <Button
@@ -702,7 +926,7 @@ const PlansPage = () => {
                   Resource Limits & Frequencies
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[300px] overflow-y-auto p-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[180px] overflow-y-auto p-1">
                   {viewingPlan.modules?.map((m: any, i: number) => {
                     const iconMap: Record<string, any> = {
                       "Ask": HelpCircle,
@@ -762,11 +986,57 @@ const PlansPage = () => {
                       </div>
                     );
                   })}
-                  {(!viewingPlan.modules || viewingPlan.modules.length === 0) && (
-                    <div className="col-span-2 text-center py-8 text-sm text-muted-foreground border border-dashed border-border rounded-xl">
-                      No modules configured for this plan.
+                </div>
+              </div>
+
+              {/* Features & Benefits details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-6 pb-6 border-t border-border pt-4">
+                <div>
+                  <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <Shield size={12} className="text-primary" />
+                    Feature Access
+                  </h3>
+                  <div className="space-y-1.5">
+                    {Object.entries(viewingPlan.features || {
+                      monthlyMeeting: false,
+                      eventVisitor: false,
+                      eventStall: false,
+                      spotlights: false
+                    }).map(([key, val]) => (
+                      <div key={key} className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                        <span className="font-semibold text-foreground capitalize">
+                          {key.replace(/([A-Z])/g, " $1")}
+                        </span>
+                        <span className={val ? "text-emerald-500 font-bold" : "text-muted-foreground font-semibold"}>
+                          {val ? "Enabled" : "Disabled"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                    <Trophy size={12} className="text-primary" />
+                    Plan Benefits
+                  </h3>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                      <span className="font-semibold text-foreground">Requirement Response Limit</span>
+                      <span className="font-bold text-foreground">{viewingPlan.benefits?.requirementResponseLimit ?? 0}</span>
                     </div>
-                  )}
+                    <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                      <span className="font-semibold text-foreground">Point Multiplier</span>
+                      <span className="font-bold text-primary">{viewingPlan.benefits?.pointMultiplier ?? 1}x</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                      <span className="font-semibold text-foreground">Training Discount</span>
+                      <span className="font-bold text-foreground">{viewingPlan.benefits?.trainingDiscountPercentage ?? 0}%</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                      <span className="font-semibold text-foreground">Referral Bonus Months</span>
+                      <span className="font-bold text-foreground">{viewingPlan.benefits?.referralBonusMonths ?? 0} months</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

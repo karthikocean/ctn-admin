@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Loader2, Store, MapPin, Users, X } from "lucide-react";
+import { Search, Filter, Loader2, Store, MapPin, Users, X, Check, ChevronsUpDown } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -15,8 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { getRegions } from "@/api/RegionApi";
@@ -35,12 +38,15 @@ interface Franchise {
   status: "active" | "inactive";
   userId: string[];
   businessRegion?: {
+    name: string;
     _id: string;
     country: string;
     state: string;
     city: string;
+    areas?: any[];
   } | null;
   users?: User[];
+  commissionPercentage?: number;
   createdAt: string;
 }
 const FranchisesPage = () => {
@@ -73,7 +79,14 @@ const FranchisesPage = () => {
   const [franchiseStatus, setFranchiseStatus] = useState<"active" | "inactive">("active");
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [commissionPercentage, setCommissionPercentage] = useState<number | string>(0);
+  const [regionOpen, setRegionOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Status dialog states
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [franchiseToUpdateStatus, setFranchiseToUpdateStatus] = useState<Franchise | null>(null);
+  const [newStatus, setNewStatus] = useState<"active" | "inactive">("active");
 
   // Fetch franchises from API
   const fetchFranchises = async () => {
@@ -145,6 +158,8 @@ const FranchisesPage = () => {
     setFranchiseStatus("active");
     setSelectedUsers([]);
     setUserSearchQuery("");
+    setCommissionPercentage(0);
+    setRegionOpen(false);
     setDrawerOpen(true);
   };
 
@@ -155,6 +170,8 @@ const FranchisesPage = () => {
     setFranchiseStatus(franchise.status);
     setSelectedUsers(franchise.users || []);
     setUserSearchQuery("");
+    setCommissionPercentage(franchise.commissionPercentage !== undefined ? franchise.commissionPercentage : 0);
+    setRegionOpen(false);
     setDrawerOpen(true);
   };
 
@@ -177,13 +194,24 @@ const FranchisesPage = () => {
       return;
     }
 
+    const commPct = parseFloat(commissionPercentage.toString());
+    if (isNaN(commPct) || commPct < 0 || commPct > 100) {
+      toast({
+        title: "Validation Error",
+        description: "Commission percentage must be a positive number between 0 and 100",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
         name: franchiseName.trim(),
         businessRegionId: selectedRegionId,
         userId: selectedUsers.map(u => u._id),
-        status: franchiseStatus
+        status: franchiseStatus,
+        commissionPercentage: commPct
       };
 
       if (editingFranchise) {
@@ -235,11 +263,58 @@ const FranchisesPage = () => {
     }
   };
 
+  const handleUpdateStatus = async () => {
+    if (!franchiseToUpdateStatus) return;
+    try {
+      setSaving(true);
+      await updateFranchise(franchiseToUpdateStatus._id, {
+        name: franchiseToUpdateStatus.name,
+        businessRegionId: franchiseToUpdateStatus.businessRegionId,
+        userId: franchiseToUpdateStatus.userId,
+        status: newStatus
+      });
+      toast({
+        title: "Success",
+        description: `Franchise status updated to ${newStatus}`,
+        variant: "success"
+      });
+      fetchFranchises();
+      setStatusDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update status",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const filteredUsers = usersList.filter(u =>
     u.fullName.toLowerCase().includes(userSearchQuery.toLowerCase())
   );
 
-  const selectedRegion = regionsList.find(r => r._id === selectedRegionId);
+  const allAreas = regionsList.flatMap((r) => {
+    if (r.areas && r.areas.length > 0) {
+      return r.areas.map((area: any) => ({
+        _id: typeof area === "string" ? area : area._id,
+        name: typeof area === "string" ? area : area.name,
+        city: r.city,
+        state: r.state,
+        country: r.country
+      }));
+    }
+    return [{
+      _id: r._id,
+      name: `${r.city}, ${r.state} (${r.country})`,
+      city: r.city,
+      state: r.state,
+      country: r.country
+    }];
+  });
+
+  const selectedArea = allAreas.find(a => a._id === selectedRegionId);
 
   return (
     <div className="page-container relative min-h-[600px]">
@@ -320,6 +395,7 @@ const FranchisesPage = () => {
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Franchise Name</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Business Region</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Commission (%)</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Assigned Users</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
@@ -328,18 +404,20 @@ const FranchisesPage = () => {
             <tbody className="divide-y divide-border">
               {franchises.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-xs text-muted-foreground">
+                  <td colSpan={7} className="px-6 py-12 text-center text-xs text-muted-foreground">
                     No franchises found
                   </td>
                 </tr>
               ) : (
                 franchises.map((f, index) => {
-                  const region = regionsList.find(r => r._id === (f.businessRegionId?.toString() || f.businessRegion?._id));
-                  const regionText = region
-                    ? `${region.city}, ${region.state}`
-                    : (f.businessRegion
-                      ? `${f.businessRegion.city}, ${f.businessRegion.state}`
-                      : "Unknown Region");
+                  const region = regionsList.find(r =>
+                    r._id === f.businessRegionId?.toString() ||
+                    (r.areas && r.areas.some((a: any) => (typeof a === "string" ? a : a._id) === f.businessRegionId?.toString()))
+                  );
+                  const matchedArea = region?.areas?.find((a: any) => (typeof a === "string" ? a : a._id) === f.businessRegionId?.toString());
+                  const regionText = matchedArea
+                    ? (typeof matchedArea === "string" ? matchedArea : matchedArea.name)
+                    : (f.businessRegion?.name || (region ? `${region.city}, ${region.state}` : (f.businessRegion ? `${f.businessRegion.city}, ${f.businessRegion.state}` : "Unknown Region")));
                   return (
                     <tr key={f._id} className="hover:bg-secondary/30 transition-colors">
                       <td className="px-6 py-4 text-sm text-foreground font-semibold">{(page * 10) + index + 1}</td>
@@ -349,6 +427,9 @@ const FranchisesPage = () => {
                           <MapPin size={13} className="text-foreground" />
                           {regionText}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-foreground font-semibold">
+                        {f.commissionPercentage !== undefined ? `${f.commissionPercentage}%` : "0%"}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-1 max-w-[220px]">
@@ -364,7 +445,22 @@ const FranchisesPage = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant={f.status === "active" ? "default" : "secondary"} className={f.status === "active" ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20" : "bg-muted/50 text-muted-foreground"}>
+                        <Badge
+                          variant={f.status === "active" ? "default" : "secondary"}
+                          className={cn(
+                            "cursor-pointer font-semibold transition-all active:scale-95",
+                            f.status === "active"
+                              ? "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border-emerald-500/20"
+                              : "bg-muted/50 text-muted-foreground hover:bg-muted/70"
+                          )}
+                          onClick={() => {
+                            if (canEdit) {
+                              setFranchiseToUpdateStatus(f);
+                              setNewStatus(f.status);
+                              setStatusDialogOpen(true);
+                            }
+                          }}
+                        >
                           {f.status.charAt(0).toUpperCase() + f.status.slice(1)}
                         </Badge>
                       </td>
@@ -407,42 +503,68 @@ const FranchisesPage = () => {
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Business Region</label>
-            <Select
-              value={selectedRegionId}
-              onValueChange={setSelectedRegionId}
-            >
-              <SelectTrigger className="w-full h-11 bg-secondary/50 border-border rounded-xl focus:ring-primary/20">
-                <SelectValue placeholder="Select Business Region" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60">
-                {regionsList.length > 0 ? (
-                  regionsList.map((r) => (
-                    <SelectItem key={r._id} value={r._id}>
-                      {r.city}, {r.state} ({r.country})
-                    </SelectItem>
-                  ))
-                ) : (
-                  <div className="p-2 text-xs text-muted-foreground text-center">No regions available</div>
-                )}
-              </SelectContent>
-            </Select>
+            <Popover open={regionOpen} onOpenChange={setRegionOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={regionOpen}
+                  className="w-full h-11 bg-secondary/50 border border-border rounded-xl justify-between px-3 text-xs font-semibold text-slate-900 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 hover:bg-secondary/40 active:scale-[0.99] transition-all"
+                >
+                  {selectedRegionId && selectedArea
+                    ? `${selectedArea.name} (${selectedArea.city})`
+                    : "Select Business Region"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-slate-600" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                <Command className="w-full">
+                  <CommandInput placeholder="Search region or area..." className="h-10 text-xs" />
+                  <CommandEmpty>No regions found.</CommandEmpty>
+                  <CommandList className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
+                    <CommandGroup>
+                      {allAreas.map((area) => (
+                        <CommandItem
+                          key={area._id}
+                          value={area.name + ` ${area.city} ${area.state} ${area.country}`}
+                          onSelect={() => {
+                            setSelectedRegionId(area._id);
+                            setRegionOpen(false);
+                          }}
+                          className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg flex items-center justify-between"
+                        >
+                          <span className="flex items-center">
+                            <Check
+                              className={cn(
+                                "mr-2 h-3.5 w-3.5",
+                                selectedRegionId === area._id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {area.name} ({area.city})
+                          </span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
 
-            {selectedRegion && selectedRegion.areas && selectedRegion.areas.length > 0 && (
-              <div className="mt-2 p-3 bg-secondary/30 rounded-xl border border-border/60">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1.5">
-                  Region Areas
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {selectedRegion.areas.map((area: any, i: number) => (
-                    <Badge key={i} variant="outline" className="bg-background text-[11px] font-semibold text-slate-600 border-border/80">
-                      {typeof area === "string" ? area : area.name}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Commission Percentage (%)</label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="any"
+              value={commissionPercentage}
+              onChange={(e) => setCommissionPercentage(e.target.value)}
+              placeholder="e.g. 10"
+              className="h-11 bg-secondary/50 border-border rounded-xl focus:ring-primary/20 text-xs font-semibold"
+            />
           </div>
 
           {/* Multiple Users Selection */}
@@ -457,7 +579,7 @@ const FranchisesPage = () => {
                     : "Choose users"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0" align="start">
+              <PopoverContent className="w-[300px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <div className="p-3 border-b border-border">
                   <div className="relative">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -541,6 +663,44 @@ const FranchisesPage = () => {
         isLoading={isDeleting}
         confirmLabel="Delete"
       />
+
+      <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <DialogContent className="sm:max-w-[400px] border-border rounded-2xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Store className="text-primary w-4 h-4" />
+              </div>
+              Update Franchise Status
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2">
+              Change the configuration status for the franchise {franchiseToUpdateStatus?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <label htmlFor="status" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Franchise Status</label>
+              <Select value={newStatus} onValueChange={(val: "active" | "inactive") => setNewStatus(val)}>
+                <SelectTrigger id="status" className="h-11 rounded-xl bg-white border border-slate-300">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" className="rounded-xl border-border" onClick={() => setStatusDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="rounded-xl bg-primary hover:bg-primary/90" onClick={handleUpdateStatus} disabled={saving}>
+              Update Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
