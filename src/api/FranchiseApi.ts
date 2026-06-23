@@ -29,3 +29,24 @@ export const getFranchiseUsers = async () => {
   const response = await api.get("/admin-users/getfranchies-user");
   return response.data;
 };
+
+export const getCommissionReport = async (params: any) => {
+  const response = await api.get("/franchises/commission-report", { params });
+  return response.data;
+};
+
+export const settleCommission = async (data: any) => {
+  const response = await api.post("/franchises/commission-report/settle", data);
+  return response.data;
+};
+
+export const uploadReceipt = async (file: File) => {
+  const formData = new FormData();
+  formData.append("files", file);
+  const response = await api.post("/media/upload?folder=receipts", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data"
+    }
+  });
+  return response.data;
+};

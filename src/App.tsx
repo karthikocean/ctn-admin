@@ -29,7 +29,7 @@ import AwardsPage from "@/pages/awards/AwardsPage";
 import MemberAwardsPage from "@/pages/awards/MemberAwardsPage";
 import ConnectionsPage from "@/pages/connections/ConnectionsPage";
 import ContributionsPage from "@/pages/contributions/ContributionsPage";
-import ReportsPage from "@/pages/reports/ReportsPage";
+// import FranchiseCommissionReportPage from "@/pages/reports/FranchiseCommissionReportPage"; // Newly added report page
 import ReportHistoryPage from "@/pages/reports/ReportHistoryPage";
 
 import SubscriptionPage from "@/pages/subscription/SubscriptionPage";
@@ -107,7 +107,7 @@ const App = () => (
               <Route path="/awards/members" element={<MemberAwardsPage />} />
               <Route path="/connections" element={<ConnectionsPage />} />
               <Route path="/contributions" element={<ContributionsPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
+              {/* <Route path="/reports/franchise-commission" element={<FranchiseCommissionReportPage />} /> */}
               <Route path="/reports/history" element={<ReportHistoryPage />} />
 
               <Route path="/subscription" element={<SubscriptionPage />} />

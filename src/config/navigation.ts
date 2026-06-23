@@ -69,7 +69,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   {
     title: "Reports", icon: BarChart3, moduleId: "reports",
     children: [
-      { title: "Dashboard", path: "/reports", moduleId: "reports" },
+      { title: "Franchise Commission Report", path: "/reports/franchise-commission", moduleId: "reports" },
       { title: "Report History", path: "/reports/history", moduleId: "reports" },
     ],
   },
