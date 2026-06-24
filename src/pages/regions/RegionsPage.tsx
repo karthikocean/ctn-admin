@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Country, State, City } from "country-state-city";
-import { Plus, Trash2, Search, Filter, Globe, Loader2, MapPin, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Trash2, Search, Filter, Globe, Loader2, MapPin, Check, ChevronsUpDown, Users, ExternalLink } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -27,6 +28,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { getRegions, createRegion, updateRegion, deleteRegion } from "@/api/RegionApi";
+import { getMembers } from "@/api/MembersApi";
 import { useToast } from "@/hooks/use-toast";
 import { Region } from "@/types";
 import { useAuth } from "@/context/AuthContext";
@@ -61,6 +63,14 @@ const RegionsPage = () => {
   // Areas popup states
   const [areasPopupOpen, setAreasPopupOpen] = useState(false);
   const [selectedRegionForAreas, setSelectedRegionForAreas] = useState<Region | null>(null);
+
+  // Members popup states
+  const [memberPopupOpen, setMemberPopupOpen] = useState(false);
+  const [selectedRegionForMembers, setSelectedRegionForMembers] = useState<Region | null>(null);
+  const [regionMembers, setRegionMembers] = useState<any[]>([]);
+  const [regionMembersLoading, setRegionMembersLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   // Form states
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
@@ -388,7 +398,28 @@ const RegionsPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden sm:table-cell">{r.memberCount || 0}</td>
+                    <td className="px-6 py-4 hidden sm:table-cell">
+                      {r.memberCount && r.memberCount > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedRegionForMembers(r);
+                            setRegionMembersLoading(true);
+                            setMemberPopupOpen(true);
+                            getMembers({ regionId: r._id, limit: 100 })
+                              .then((res) => setRegionMembers(res.data || []))
+                              .catch(() => setRegionMembers([]))
+                              .finally(() => setRegionMembersLoading(false));
+                          }}
+                          className="inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors"
+                        >
+                          <Users size={13} />
+                          {r.memberCount}
+                        </button>
+                      ) : (
+                        <span className="text-sm text-muted-foreground font-semibold">0</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <Badge
                         variant={r.status === "active" ? "default" : "secondary"}
@@ -652,6 +683,74 @@ const RegionsPage = () => {
           </Button>
         </div>
       </FormDrawer>
+
+      {/* Member List Popup Dialog */}
+      <Dialog open={memberPopupOpen} onOpenChange={(o) => { setMemberPopupOpen(o); if (!o) { setRegionMembers([]); setSelectedRegionForMembers(null); } }}>
+        <DialogContent className="sm:max-w-[520px] border-border rounded-2xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Users className="text-primary w-4 h-4" />
+              </div>
+              Members in {selectedRegionForMembers?.city}{selectedRegionForMembers?.state ? `, ${selectedRegionForMembers.state}` : ""}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-1">
+              {selectedRegionForMembers?.memberCount || 0} member{(selectedRegionForMembers?.memberCount || 0) !== 1 ? "s" : ""} registered in this region
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2 max-h-[400px] overflow-y-auto">
+            {regionMembersLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 size={24} className="animate-spin text-primary" />
+              </div>
+            ) : regionMembers.length > 0 ? (
+              <ul className="space-y-2">
+                {regionMembers.map((member, idx) => (
+                  <li key={member._id || idx} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-secondary/40 hover:bg-secondary/60 transition-colors">
+                    <span className="w-7 h-7 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold flex-shrink-0">
+                      {member.fullName?.charAt(0)?.toUpperCase() || "?"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{member.fullName || "—"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{member.businessName || member.email || ""}</p>
+                    </div>
+                    {member.status && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        member.status === "active"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "bg-amber-100 text-amber-600"
+                      }`}>
+                        {member.status.toUpperCase()}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">No members found for this region.</p>
+            )}
+          </div>
+          <DialogFooter className="mt-2 flex gap-2">
+            <Button
+              variant="outline"
+              className="rounded-xl border-border flex-1"
+              onClick={() => setMemberPopupOpen(false)}
+            >
+              Close
+            </Button>
+            <Button
+              className="rounded-xl flex-1 gap-1.5"
+              onClick={() => {
+                navigate(`/members?regionId=${selectedRegionForMembers?._id}`);
+                setMemberPopupOpen(false);
+              }}
+            >
+              <ExternalLink size={14} />
+              View in Members
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Areas List Popup Dialog */}
       <Dialog open={areasPopupOpen} onOpenChange={setAreasPopupOpen}>

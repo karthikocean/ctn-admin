@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -19,7 +20,9 @@ import {
   Building2,
   ArrowRight,
   Shield,
-  Trash2
+  Trash2,
+  ChevronsUpDown,
+  Check
 } from "lucide-react";
 import { State, City } from "country-state-city";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -41,13 +44,16 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
   registerMember,
@@ -63,6 +69,7 @@ import { uploadFiles } from "@/api/MediaApi";
 import { getCategories } from "@/api/CategoryApi";
 import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -144,12 +151,17 @@ const ErrorMsg = ({ message }: { message?: string }) => {
 const MembersPage = () => {
   const { toast } = useToast();
   const { hasPermission } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const regionIdFilter = searchParams.get("regionId") || "";
   const canCreate = hasPermission("members", "create");
   const canEdit = hasPermission("members", "edit");
   const canDelete = hasPermission("members", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<any>(null);
+  const [statusConfirmOpen, setStatusConfirmOpen] = useState(false);
+  const [memberToToggle, setMemberToToggle] = useState<any>(null);
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
   const [page, setPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -163,6 +175,7 @@ const MembersPage = () => {
 
   const [filesToUpload, setFilesToUpload] = useState({
     profilePhoto: null as File | null,
+    profileBanner: null as File | null,
     workImages: [] as File[],
     certifications: [] as File[],
     businessDocuments: [] as File[]
@@ -173,12 +186,30 @@ const MembersPage = () => {
   const [gstInput, setGstInput] = useState("");
   const [selectedStateCode, setSelectedStateCode] = useState("");
 
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [subCategoryOpen, setSubCategoryOpen] = useState(false);
+  const [companySizeOpen, setCompanySizeOpen] = useState(false);
+  const [stateOpen, setStateOpen] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
+  const [regionOpen, setRegionOpen] = useState(false);
+  const [stateSearch, setStateSearch] = useState("");
+  const [citySearch, setCitySearch] = useState("");
+  const [regionSearch, setRegionSearch] = useState("");
+
+  const [serviceStateOpen, setServiceStateOpen] = useState(false);
+  const [serviceCityOpen, setServiceCityOpen] = useState(false);
+  const [serviceStateSearch, setServiceStateSearch] = useState("");
+  const [serviceCitySearch, setServiceCitySearch] = useState("");
+
   const [formData, setFormData] = useState({
     fullName: "",
     mobileNumber: "",
     email: "",
+    about: "",
     gstNumber: "",
     businessName: "",
+    businessType: "",
+    legalName: "",
     businessCategory: "",
     subCategory: "",
     yearsOfExperience: null as number | null,
@@ -187,7 +218,11 @@ const MembersPage = () => {
     city: "",
     businessRegion: "",
     businessAddress: "",
-    serviceLocations: [] as string[],
+    serviceLocations: {
+      country: "India",
+      states: [] as string[],
+      cities: [] as string[]
+    },
     productsServicesDescription: "",
     targetAudience: "",
     websiteUrl: "",
@@ -195,6 +230,7 @@ const MembersPage = () => {
     instagramFacebook: "",
     youtubeLink: "",
     profilePhoto: "",
+    profileBanner: "",
     workImages: [] as string[],
     certifications: [] as string[],
     businessDocuments: [] as string[]
@@ -232,6 +268,7 @@ const MembersPage = () => {
         limit: 10,
       };
       if (search) params.search = search;
+      if (regionIdFilter) params.regionId = regionIdFilter;
 
       const result = await getMembers(params);
       setMembers(result.data || []);
@@ -275,6 +312,11 @@ const MembersPage = () => {
     }, 500);
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    if (page !== 1) setPage(1);
+    else fetchMembers();
+  }, [regionIdFilter]);
 
   useEffect(() => {
     if (formData.state && formData.city) {
@@ -337,14 +379,81 @@ const MembersPage = () => {
     }
   };
 
+  const handleAddServiceState = (stateName: string) => {
+    setFormData(prev => {
+      const states = prev.serviceLocations.states.includes(stateName)
+        ? prev.serviceLocations.states
+        : [...prev.serviceLocations.states, stateName];
+      return {
+        ...prev,
+        serviceLocations: {
+          ...prev.serviceLocations,
+          states
+        }
+      };
+    });
+  };
+
+  const handleRemoveServiceState = (stateName: string) => {
+    setFormData(prev => {
+      const states = prev.serviceLocations.states.filter(s => s !== stateName);
+      // Also filter out any cities that belong to this state
+      const stateObj = allStates.find(s => s.name.toLowerCase() === stateName.toLowerCase());
+      let cities = prev.serviceLocations.cities;
+      if (stateObj) {
+        const citiesInRemovedState = City.getCitiesOfState("IN", stateObj.isoCode).map(c => c.name);
+        cities = cities.filter(c => !citiesInRemovedState.includes(c));
+      }
+      return {
+        ...prev,
+        serviceLocations: {
+          ...prev.serviceLocations,
+          states,
+          cities
+        }
+      };
+    });
+  };
+
+  const handleAddServiceCity = (cityName: string) => {
+    setFormData(prev => {
+      const cities = prev.serviceLocations.cities.includes(cityName)
+        ? prev.serviceLocations.cities
+        : [...prev.serviceLocations.cities, cityName];
+      return {
+        ...prev,
+        serviceLocations: {
+          ...prev.serviceLocations,
+          cities
+        }
+      };
+    });
+  };
+
+  const handleRemoveServiceCity = (cityName: string) => {
+    setFormData(prev => {
+      const cities = prev.serviceLocations.cities.filter(c => c !== cityName);
+      return {
+        ...prev,
+        serviceLocations: {
+          ...prev.serviceLocations,
+          cities
+        }
+      };
+    });
+  };
+
   const resetForm = () => {
     setSelectedAreaName("");
     setFormData({
       fullName: "",
       mobileNumber: "",
       email: "",
+      about: "",
       gstNumber: "",
       businessName: "",
+      businessType: "",
+      legalName: "",
       businessCategory: "",
       subCategory: "",
       yearsOfExperience: null,
@@ -353,7 +462,11 @@ const MembersPage = () => {
       city: "",
       businessRegion: "",
       businessAddress: "",
-      serviceLocations: [],
+      serviceLocations: {
+        country: "India",
+        states: [],
+        cities: []
+      },
       productsServicesDescription: "",
       targetAudience: "",
       websiteUrl: "",
@@ -361,6 +474,7 @@ const MembersPage = () => {
       instagramFacebook: "",
       youtubeLink: "",
       profilePhoto: "",
+      profileBanner: "",
       workImages: [],
       certifications: [],
       businessDocuments: []
@@ -372,6 +486,7 @@ const MembersPage = () => {
     setErrors({});
     setFilesToUpload({
       profilePhoto: null,
+      profileBanner: null,
       workImages: [],
       certifications: [],
       businessDocuments: []
@@ -404,17 +519,38 @@ const MembersPage = () => {
           setSelectedAreaName("");
         }
 
+        let parsedServiceLocations = {
+          country: "India",
+          states: [] as string[],
+          cities: [] as string[]
+        };
+        if (fullData.serviceLocations) {
+          if (Array.isArray(fullData.serviceLocations)) {
+            parsedServiceLocations.cities = fullData.serviceLocations;
+          } else if (typeof fullData.serviceLocations === "object") {
+            parsedServiceLocations = {
+              country: fullData.serviceLocations.country || "India",
+              states: fullData.serviceLocations.states || [],
+              cities: fullData.serviceLocations.cities || []
+            };
+          }
+        }
+
         setFormData({
           ...fullData,
           businessCategory: fullData.businessCategory?._id || fullData.businessCategory || "",
           subCategory: fullData.subCategory?._id || fullData.subCategory || "",
+          about: fullData.about || "",
+          businessType: fullData.businessType || "",
+          legalName: fullData.legalName || "",
           companySize: fullData.companySize || "",
           yearsOfExperience: fullData.yearsOfExperience || null,
-          serviceLocations: fullData.serviceLocations || [],
+          serviceLocations: parsedServiceLocations,
           state: fullData.state || "",
           city: fullData.city || "",
           businessRegion: fullData.businessRegion?._id?.toString() ||
             (typeof fullData.businessRegion === 'string' ? fullData.businessRegion : "") || "",
+          profileBanner: fullData.profileBanner || "",
           workImages: fullData.workImages || [],
           certifications: fullData.certifications || [],
           businessDocuments: fullData.businessDocuments || []
@@ -471,10 +607,17 @@ const MembersPage = () => {
     }
   };
 
-  const handleToggleStatus = async (member: any) => {
-    const newStatus = member.status === "active" ? "inactive" : "active";
+  const handleToggleStatus = (member: any) => {
+    setMemberToToggle(member);
+    setStatusConfirmOpen(true);
+  };
+
+  const handleConfirmStatusToggle = async () => {
+    if (!memberToToggle) return;
+    const newStatus = memberToToggle.status === "active" ? "inactive" : "active";
+    setIsTogglingStatus(true);
     try {
-      const result = await updateMemberStatus(member._id, newStatus);
+      const result = await updateMemberStatus(memberToToggle._id, newStatus);
       if (result.success) {
         toast({
           title: "Status Updated",
@@ -482,6 +625,8 @@ const MembersPage = () => {
           variant: "success"
         });
         fetchMembers();
+        setStatusConfirmOpen(false);
+        setMemberToToggle(null);
       }
     } catch (error: any) {
       toast({
@@ -489,6 +634,8 @@ const MembersPage = () => {
         description: error.response?.data?.message || "Failed to update member status",
         variant: "destructive"
       });
+    } finally {
+      setIsTogglingStatus(false);
     }
   };
 
@@ -510,10 +657,12 @@ const MembersPage = () => {
           ...prev,
           fullName: gstData.legalName || prev.fullName,
           gstNumber: gstData.gstNumber,
-          businessName: gstData.businessName,
-          businessAddress: gstData.address,
-          state: gstData.state,
-          city: gstData.district,
+          businessName: gstData.businessName || gstData.tradeName || prev.businessName,
+          legalName: gstData.legalName || prev.legalName,
+          businessType: gstData.businessType || gstData.constitutionOfBusiness || prev.businessType,
+          businessAddress: gstData.address || gstData.businessAddress || prev.businessAddress,
+          state: gstData.state || prev.state,
+          city: gstData.district || gstData.city || prev.city,
         }));
 
         if (gstData.state) {
@@ -650,9 +799,12 @@ const MembersPage = () => {
         payload.businessRegion = null;
       }
 
-      const [profileUrls, workUrls, certUrls, docUrls] = await Promise.all([
+      const [profileUrls, bannerUrls, workUrls, certUrls, docUrls] = await Promise.all([
         filesToUpload.profilePhoto
           ? uploadBatch([filesToUpload.profilePhoto], "profiles")
+          : Promise.resolve([]),
+        filesToUpload.profileBanner
+          ? uploadBatch([filesToUpload.profileBanner], "profiles")
           : Promise.resolve([]),
         uploadBatch(filesToUpload.workImages, "portfolio"),
         uploadBatch(filesToUpload.certifications, "certifications"),
@@ -661,6 +813,9 @@ const MembersPage = () => {
 
       if (profileUrls.length > 0) {
         payload.profilePhoto = profileUrls[0];
+      }
+      if (bannerUrls.length > 0) {
+        payload.profileBanner = bannerUrls[0];
       }
       payload.workImages = [...payload.workImages, ...workUrls];
       payload.certifications = [...payload.certifications, ...certUrls];
@@ -745,6 +900,23 @@ const MembersPage = () => {
         </div>
       </div>
 
+      {regionIdFilter && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20 text-sm">
+          <MapPin size={15} className="text-primary flex-shrink-0" />
+          <span className="text-foreground font-medium flex-1">
+            Showing members filtered by <span className="font-bold text-primary">Business Region</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setSearchParams({})}
+            className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors"
+          >
+            <X size={13} />
+            Clear filter
+          </button>
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -827,10 +999,13 @@ const MembersPage = () => {
                     <TableCell className="px-6 py-4">
                       <Badge
                         variant="outline"
+                        onClick={canEdit ? () => handleToggleStatus(member) : undefined}
                         className={
-                          member.status === 'active'
-                            ? 'bg-green-500/10 text-green-600 border-green-200'
-                            : 'bg-amber-500/10 text-amber-600 border-amber-200'
+                          `cursor-pointer select-none transition-all hover:opacity-80 active:scale-95 ${
+                            member.status === 'active'
+                              ? 'bg-green-500/10 text-green-600 border-green-200'
+                              : 'bg-amber-500/10 text-amber-600 border-amber-200'
+                          }`
                         }
                       >
                         {member.status.toUpperCase()}
@@ -840,8 +1015,6 @@ const MembersPage = () => {
                       <ActionMenu
                         onEdit={canEdit ? () => handleEdit(member) : undefined}
                         onDelete={canDelete ? () => handleDeleteClick(member) : undefined}
-                        onToggleStatus={canEdit ? () => handleToggleStatus(member) : undefined}
-                        statusLabel={member.status}
                       />
                     </TableCell>
                   </TableRow>
@@ -956,37 +1129,85 @@ const MembersPage = () => {
                       <ErrorMsg message={errors.fullName} />
                     </div>
                     <div>
-                      <Label htmlFor="profilePhoto" className="text-xs font-bold text-slate-700 mb-2 block">
-                        Profile Photo <span className="text-destructive">*</span>
+                      <Label htmlFor="about" className="text-xs font-bold text-slate-700 mb-2 block">
+                        About / Bio
                       </Label>
-                      <Input
-                        id="profilePhoto"
-                        type="file"
-                        className={`bg-white border-slate-300 font-medium ${errors.profilePhoto ? "border-red-500 focus:border-red-500" : ""}`}
-                        onChange={(e) => onFileChange(e, "profilePhoto")}
+                      <Textarea
+                        id="about"
+                        placeholder="Brief description about the member or their business..."
+                        className="min-h-[80px] bg-white border-slate-300 font-medium"
+                        value={formData.about}
+                        onChange={handleInputChange}
                       />
-                      <ErrorMsg message={errors.profilePhoto} />
-                      {filesToUpload.profilePhoto ? (
-                        <div className="mt-3">
-                          <FilePreview
-                            file={filesToUpload.profilePhoto}
-                            onRemove={() => setFilesToUpload(prev => ({
-                              ...prev,
-                              profilePhoto: null
-                            }))}
-                          />
-                        </div>
-                      ) : formData.profilePhoto && (
-                        <div className="mt-3">
-                          <UrlPreview
-                            url={formData.profilePhoto}
-                            onRemove={() => setFormData(prev => ({
-                              ...prev,
-                              profilePhoto: ""
-                            }))}
-                          />
-                        </div>
-                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <Label htmlFor="profilePhoto" className="text-xs font-bold text-slate-700 mb-2 block">
+                          Profile Photo <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="profilePhoto"
+                          type="file"
+                          accept="image/*"
+                          className={`bg-white border-slate-300 font-medium ${errors.profilePhoto ? "border-red-500 focus:border-red-500" : ""}`}
+                          onChange={(e) => onFileChange(e, "profilePhoto")}
+                        />
+                        <ErrorMsg message={errors.profilePhoto} />
+                        {filesToUpload.profilePhoto ? (
+                          <div className="mt-3">
+                            <FilePreview
+                              file={filesToUpload.profilePhoto}
+                              onRemove={() => setFilesToUpload(prev => ({
+                                ...prev,
+                                profilePhoto: null
+                              }))}
+                            />
+                          </div>
+                        ) : formData.profilePhoto && (
+                          <div className="mt-3">
+                            <UrlPreview
+                              url={formData.profilePhoto}
+                              onRemove={() => setFormData(prev => ({
+                                ...prev,
+                                profilePhoto: ""
+                              }))}
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="profileBanner" className="text-xs font-bold text-slate-700 mb-2 block">
+                          Profile Banner
+                        </Label>
+                        <Input
+                          id="profileBanner"
+                          type="file"
+                          accept="image/*"
+                          className="bg-white border-slate-300 font-medium"
+                          onChange={(e) => onFileChange(e, "profileBanner")}
+                        />
+                        {filesToUpload.profileBanner ? (
+                          <div className="mt-3">
+                            <FilePreview
+                              file={filesToUpload.profileBanner}
+                              onRemove={() => setFilesToUpload(prev => ({
+                                ...prev,
+                                profileBanner: null
+                              }))}
+                            />
+                          </div>
+                        ) : formData.profileBanner && (
+                          <div className="mt-3">
+                            <UrlPreview
+                              url={formData.profileBanner}
+                              onRemove={() => setFormData(prev => ({
+                                ...prev,
+                                profileBanner: ""
+                              }))}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-5">
                       <div>
@@ -1056,49 +1277,153 @@ const MembersPage = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-5">
                       <div>
+                        <Label htmlFor="legalName" className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                          Legal Name
+                          {!editingMemberId && formData.legalName && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                              <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M4 0a4 4 0 100 8A4 4 0 004 0zm1.7 3.1L3.6 5.2a.4.4 0 01-.6 0L2.3 4.4a.4.4 0 01.6-.6l.4.4 1.8-1.8a.4.4 0 01.6.7z"/></svg>
+                              GST · Editable
+                            </span>
+                          )}
+                        </Label>
+                        <Input
+                          id="legalName"
+                          placeholder="Registered legal entity name"
+                          className="h-11 bg-white border-slate-300 font-medium"
+                          value={formData.legalName}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="businessType" className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                          Business Type
+                          {!editingMemberId && formData.businessType && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                              <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M4 0a4 4 0 100 8A4 4 0 004 0zm1.7 3.1L3.6 5.2a.4.4 0 01-.6 0L2.3 4.4a.4.4 0 01.6-.6l.4.4 1.8-1.8a.4.4 0 01.6.7z"/></svg>
+                              GST · Editable
+                            </span>
+                          )}
+                        </Label>
+                        <Input
+                          id="businessType"
+                          placeholder="e.g. Sole Proprietor, Pvt Ltd"
+                          className="h-11 bg-white border-slate-300 font-medium"
+                          value={formData.businessType}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
                         <Label className="text-xs font-bold text-slate-700 mb-2 block">Category</Label>
-                        <Select
-                          value={formData.businessCategory}
-                          onValueChange={(val) => handleSelectChange("businessCategory", val)}
-                        >
-                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {mainCategories.map(cat => (
-                              <SelectItem key={cat._id} value={cat._id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Popover modal={true} open={categoryOpen} onOpenChange={setCategoryOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={categoryOpen}
+                              className="w-full h-11 bg-white border border-slate-300 rounded-lg justify-between px-3 text-sm font-medium text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-slate-50 transition-all"
+                            >
+                              <span className="truncate">
+                                {formData.businessCategory
+                                  ? mainCategories.find(cat => cat._id === formData.businessCategory)?.name
+                                  : "Select Category"}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                            <Command className="w-full">
+                              <CommandInput placeholder="Search category..." className="h-10 text-xs" />
+                              <CommandEmpty>No category found.</CommandEmpty>
+                              <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                                <CommandGroup>
+                                  {mainCategories.map(cat => (
+                                    <CommandItem
+                                      key={cat._id}
+                                      value={cat.name}
+                                      onSelect={() => {
+                                        handleSelectChange("businessCategory", cat._id);
+                                        setCategoryOpen(false);
+                                      }}
+                                      className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-3.5 w-3.5",
+                                          formData.businessCategory === cat._id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {cat.name}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div>
                         <Label className="text-xs font-bold text-slate-700 mb-2 block">
                           Sub-Category {isSubCategoriesLoading && <Loader2 size={10} className="animate-spin inline ml-1" />}
                         </Label>
-                        <Select
-                          value={formData.subCategory}
-                          onValueChange={(val) => handleSelectChange("subCategory", val)}
-                          disabled={!formData.businessCategory || isSubCategoriesLoading}
-                        >
-                          <SelectTrigger className={`h-11 bg-white border-slate-300 font-medium ${!formData.businessCategory ? "opacity-50 cursor-not-allowed" : ""}`}>
-                            <SelectValue placeholder={!formData.businessCategory ? "Choose category first" : "Select"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {subCategories.length > 0 ? (
-                              subCategories.map(cat => (
-                                <SelectItem key={cat._id} value={cat._id}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <div className="p-2 text-xs text-muted-foreground text-center">
-                                No sub-categories found
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
+                        <Popover modal={true} open={subCategoryOpen} onOpenChange={setSubCategoryOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={subCategoryOpen}
+                              className={cn(
+                                "w-full h-11 bg-white border border-slate-300 rounded-lg justify-between px-3 text-sm font-medium text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-slate-50 transition-all",
+                                (!formData.businessCategory || isSubCategoriesLoading) && "opacity-50 cursor-not-allowed"
+                              )}
+                              disabled={!formData.businessCategory || isSubCategoriesLoading}
+                            >
+                              <span className="truncate">
+                                {formData.subCategory
+                                  ? subCategories.find(cat => cat._id === formData.subCategory)?.name
+                                  : (!formData.businessCategory ? "Choose category first" : "Select Sub-Category")}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                            <Command className="w-full">
+                              <CommandInput placeholder="Search sub-category..." className="h-10 text-xs" />
+                              <CommandEmpty>No sub-category found.</CommandEmpty>
+                              <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                                <CommandGroup>
+                                  {subCategories.length > 0 ? (
+                                    subCategories.map(cat => (
+                                      <CommandItem
+                                        key={cat._id}
+                                        value={cat.name}
+                                        onSelect={() => {
+                                          handleSelectChange("subCategory", cat._id);
+                                          setSubCategoryOpen(false);
+                                        }}
+                                        className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-3.5 w-3.5",
+                                            formData.subCategory === cat._id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        {cat.name}
+                                      </CommandItem>
+                                    ))
+                                  ) : (
+                                    <div className="p-2 text-xs text-muted-foreground text-center">
+                                      No sub-categories found
+                                    </div>
+                                  )}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-5">
@@ -1134,22 +1459,59 @@ const MembersPage = () => {
                       </div>
                       <div>
                         <Label className="text-xs font-bold text-slate-700 mb-2 block">Company Size</Label>
-                        <Select
-                          value={formData.companySize}
-                          onValueChange={(val) => handleSelectChange("companySize", val)}
-                        >
-                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1 - 5">1 - 5 Employees</SelectItem>
-                            <SelectItem value="6 - 10">6 - 10 Employees</SelectItem>
-                            <SelectItem value="11 - 20">11 - 20 Employees</SelectItem>
-                            <SelectItem value="21 - 50">21 - 50 Employees</SelectItem>
-                            <SelectItem value="51 - 100">51 - 100 Employees</SelectItem>
-                            <SelectItem value="100+">100+ Employees</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Popover modal={true} open={companySizeOpen} onOpenChange={setCompanySizeOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={companySizeOpen}
+                              className="w-full h-11 bg-white border border-slate-300 rounded-lg justify-between px-3 text-sm font-medium text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-slate-50 transition-all"
+                            >
+                              <span className="truncate">
+                                {formData.companySize
+                                  ? `${formData.companySize} Employees`
+                                  : "Select Company Size"}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                            <Command className="w-full">
+                              <CommandInput placeholder="Search company size..." className="h-10 text-xs" />
+                              <CommandEmpty>No company size found.</CommandEmpty>
+                              <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                                <CommandGroup>
+                                  {[
+                                    { value: "1 - 5", label: "1 - 5 Employees" },
+                                    { value: "6 - 10", label: "6 - 10 Employees" },
+                                    { value: "11 - 20", label: "11 - 20 Employees" },
+                                    { value: "21 - 50", label: "21 - 50 Employees" },
+                                    { value: "51 - 100", label: "51 - 100 Employees" },
+                                    { value: "100+", label: "100+ Employees" }
+                                  ].map(opt => (
+                                    <CommandItem
+                                      key={opt.value}
+                                      value={opt.label}
+                                      onSelect={() => {
+                                        handleSelectChange("companySize", opt.value);
+                                        setCompanySizeOpen(false);
+                                      }}
+                                      className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-3.5 w-3.5",
+                                          formData.companySize === opt.value ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      {opt.label}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
                   </div>
@@ -1165,95 +1527,186 @@ const MembersPage = () => {
                   </div>
                   <div className="grid grid-cols-1 gap-5">
                     <div className="grid grid-cols-2 gap-5">
+                      {/* State Combobox */}
                       <div>
                         <Label className="text-xs font-bold text-slate-700 mb-2 block">State</Label>
-                        <Select
-                          value={selectedStateCode}
-                          onValueChange={(val) => {
-                            setSelectedStateCode(val);
-                            const stateName = allStates.find(s => s.isoCode === val)?.name || "";
-                            setFormData(prev => ({
-                              ...prev,
-                              state: stateName,
-                              city: "",
-                              businessRegion: ""
-                            }));
-                            setAreasOptions([]);
-                          }}
-                        >
-                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
-                            <SelectValue placeholder="Select State" />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            {allStates.map((s) => (
-                              <SelectItem key={s.isoCode} value={s.isoCode}>{s.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Popover modal={true} open={stateOpen} onOpenChange={(o) => { setStateOpen(o); if (!o) setStateSearch(""); }}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={stateOpen}
+                              className="w-full h-11 bg-white border border-slate-300 rounded-lg justify-between px-3 text-sm font-medium text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-slate-50 transition-all"
+                            >
+                              <span className="truncate">
+                                {formData.state || "Select State"}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                            <Command className="w-full">
+                              <CommandInput
+                                placeholder="Search state..."
+                                className="h-10 text-xs"
+                                value={stateSearch}
+                                onValueChange={setStateSearch}
+                              />
+                              <CommandEmpty>No state found.</CommandEmpty>
+                              <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                                <CommandGroup>
+                                  {allStates
+                                    .filter(s => s.name.toLowerCase().includes(stateSearch.toLowerCase()))
+                                    .map(s => (
+                                      <CommandItem
+                                        key={s.isoCode}
+                                        value={s.name}
+                                        onSelect={() => {
+                                          setSelectedStateCode(s.isoCode);
+                                          setFormData(prev => ({ ...prev, state: s.name, city: "", businessRegion: "" }));
+                                          setAreasOptions([]);
+                                          setCitySearch("");
+                                          setRegionSearch("");
+                                          setStateOpen(false);
+                                          setStateSearch("");
+                                        }}
+                                        className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                                      >
+                                        <Check className={cn("mr-2 h-3.5 w-3.5", formData.state === s.name ? "opacity-100" : "opacity-0")} />
+                                        {s.name}
+                                      </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
+
+                      {/* City Combobox */}
                       <div>
                         <Label className="text-xs font-bold text-slate-700 mb-2 block">City</Label>
-                        <Select
-                          value={formData.city}
-                          onValueChange={(val) => setFormData(prev => ({ ...prev, city: val, businessRegion: "" }))}
-                          disabled={!selectedStateCode}
-                        >
-                          <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
-                            <SelectValue placeholder={selectedStateCode ? "Select City" : "Choose state first"} />
-                          </SelectTrigger>
-                          <SelectContent className="max-h-60">
-                            {citiesInState.map((c) => (
-                              <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>
-                            ))}
-                            {citiesInState.length === 0 && selectedStateCode && (
-                              <div className="p-2 text-xs text-muted-foreground text-center italic">No cities found</div>
-                            )}
-                          </SelectContent>
-                        </Select>
+                        <Popover modal={true} open={cityOpen} onOpenChange={(o) => { setCityOpen(o); if (!o) setCitySearch(""); }}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={cityOpen}
+                              disabled={!selectedStateCode}
+                              className={cn(
+                                "w-full h-11 bg-white border border-slate-300 rounded-lg justify-between px-3 text-sm font-medium text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-slate-50 transition-all",
+                                !selectedStateCode && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              <span className="truncate">
+                                {formData.city || (selectedStateCode ? "Select City" : "Choose state first")}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                            <Command className="w-full">
+                              <CommandInput
+                                placeholder="Search city..."
+                                className="h-10 text-xs"
+                                value={citySearch}
+                                onValueChange={setCitySearch}
+                              />
+                              <CommandEmpty>No city found.</CommandEmpty>
+                              <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                                <CommandGroup>
+                                  {citiesInState
+                                    .filter(c => c.name.toLowerCase().includes(citySearch.toLowerCase()))
+                                    .map(c => (
+                                      <CommandItem
+                                        key={c.name}
+                                        value={c.name}
+                                        onSelect={() => {
+                                          setFormData(prev => ({ ...prev, city: c.name, businessRegion: "" }));
+                                          setRegionSearch("");
+                                          setCityOpen(false);
+                                          setCitySearch("");
+                                        }}
+                                        className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                                      >
+                                        <Check className={cn("mr-2 h-3.5 w-3.5", formData.city === c.name ? "opacity-100" : "opacity-0")} />
+                                        {c.name}
+                                      </CommandItem>
+                                    ))}
+                                  {citiesInState.length === 0 && selectedStateCode && (
+                                    <div className="p-2 text-xs text-muted-foreground text-center italic">No cities found</div>
+                                  )}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
+
+                    {/* Business Region Combobox */}
                     <div>
-                      <Label htmlFor="businessRegion" className="text-xs font-bold text-slate-700 mb-2 block">
-                        Business Region {areasLoading && <Loader2 size={10} className="animate-spin inline ml-1" />}
+                      <Label className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                        Business Region
+                        {areasLoading && <Loader2 size={10} className="animate-spin" />}
                       </Label>
-                      <Select
-                        value={formData.businessRegion}
-                        onValueChange={(val) => {
-                          setFormData((prev) => ({
-                            ...prev,
-                            businessRegion: val === "none" ? "" : val
-                          }));
-                          const selectedObj = areasOptions.find((a: any) => a._id === val);
-                          if (selectedObj) {
-                            setSelectedAreaName(selectedObj.name);
-                          }
-                        }}
-                        disabled={!formData.state || !formData.city || areasLoading}
-                      >
-                        <SelectTrigger className="h-11 bg-white border-slate-300 font-medium">
-                          <SelectValue placeholder={!formData.state || !formData.city ? "Choose state and city first" : "Select Business Region"} />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-60">
-
-                          <SelectItem value="none">
-                            Select Business Region
-                          </SelectItem>
-
-                          {formData.businessRegion && !areasOptions.some((a: any) => a._id === formData.businessRegion) && (
-                            <SelectItem key={formData.businessRegion} value={formData.businessRegion}>
-                              {selectedAreaName || "Selected Region"}
-                            </SelectItem>
-                          )}
-                          {areasOptions.map((area: any) => (
-                            <SelectItem key={area._id} value={area._id}>
-                              {area.name}
-                            </SelectItem>
-                          ))}
-                          {areasOptions.length === 0 && !formData.businessRegion && (
-                            <div className="p-2 text-xs text-muted-foreground text-center italic">No regions found</div>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <Popover modal={true} open={regionOpen} onOpenChange={(o) => { setRegionOpen(o); if (!o) setRegionSearch(""); }}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={regionOpen}
+                            disabled={!formData.state || !formData.city || areasLoading}
+                            className={cn(
+                              "w-full h-11 bg-white border border-slate-300 rounded-lg justify-between px-3 text-sm font-medium text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-slate-50 transition-all",
+                              (!formData.state || !formData.city || areasLoading) && "opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            <span className="truncate">
+                              {formData.businessRegion
+                                ? (areasOptions.find((a: any) => a._id === formData.businessRegion)?.name || selectedAreaName || "Selected Region")
+                                : (!formData.state || !formData.city ? "Choose state and city first" : "Select Business Region")}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                          <Command className="w-full">
+                            <CommandInput
+                              placeholder="Search region..."
+                              className="h-10 text-xs"
+                              value={regionSearch}
+                              onValueChange={setRegionSearch}
+                            />
+                            <CommandEmpty>No region found.</CommandEmpty>
+                            <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                              <CommandGroup>
+                                {areasOptions
+                                  .filter((a: any) => a.name.toLowerCase().includes(regionSearch.toLowerCase()))
+                                  .map((area: any) => (
+                                    <CommandItem
+                                      key={area._id}
+                                      value={area.name}
+                                      onSelect={() => {
+                                        setFormData(prev => ({ ...prev, businessRegion: area._id }));
+                                        setSelectedAreaName(area.name);
+                                        setRegionOpen(false);
+                                        setRegionSearch("");
+                                      }}
+                                      className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                                    >
+                                      <Check className={cn("mr-2 h-3.5 w-3.5", formData.businessRegion === area._id ? "opacity-100" : "opacity-0")} />
+                                      {area.name}
+                                    </CommandItem>
+                                  ))}
+                                {areasOptions.length === 0 && !areasLoading && formData.city && (
+                                  <div className="p-2 text-xs text-muted-foreground text-center italic">No regions found for this city</div>
+                                )}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div>
                       <Label htmlFor="businessAddress" className="text-xs font-bold text-slate-700 mb-2 block">
@@ -1267,20 +1720,229 @@ const MembersPage = () => {
                       />
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="serviceLocations" className="text-xs font-bold text-slate-700 mb-2 block">
+                  <div className="space-y-4">
+                    <Label className="text-xs font-bold text-slate-700 block mb-1">
                       Service Locations
                     </Label>
-                    <Input
-                      id="serviceLocations"
-                      placeholder="City-wide, State-wide, etc."
-                      className="h-11 bg-white border-slate-300 font-medium"
-                      value={formData.serviceLocations.join(", ")}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        serviceLocations: e.target.value.split(",").map(s => s.trim())
-                      }))}
-                    />
+                    
+                    {/* Country Input (Disabled as it defaults to India) */}
+                    <div>
+                      <Label className="text-[10px] font-bold text-slate-500 mb-1 block">Country</Label>
+                      <Input
+                        value={formData.serviceLocations.country}
+                        disabled
+                        className="h-10 bg-slate-100 border-slate-200 font-medium text-slate-600 cursor-not-allowed"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Service States Selector */}
+                      <div>
+                        <Label className="text-[10px] font-bold text-slate-500 mb-1 block">Service States</Label>
+                        <Popover modal={true} open={serviceStateOpen} onOpenChange={(o) => { setServiceStateOpen(o); if (!o) setServiceStateSearch(""); }}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={serviceStateOpen}
+                              className="w-full h-10 bg-white border border-slate-300 rounded-lg justify-between px-3 text-xs font-medium text-slate-900 hover:text-slate-900 hover:bg-slate-50 transition-all"
+                            >
+                              <span className="truncate">Select States</span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                            <Command className="w-full">
+                              <CommandInput
+                                placeholder="Search state..."
+                                className="h-10 text-xs"
+                                value={serviceStateSearch}
+                                onValueChange={setServiceStateSearch}
+                              />
+                              <CommandEmpty>No state found.</CommandEmpty>
+                              <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                                <CommandGroup>
+                                  <CommandItem
+                                    value="select-all-states"
+                                    onSelect={() => {
+                                      const allStateNames = allStates.map(s => s.name);
+                                      const allSelected = allStateNames.every(name => formData.serviceLocations.states.includes(name));
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        serviceLocations: {
+                                          ...prev.serviceLocations,
+                                          states: allSelected ? [] : allStateNames,
+                                          cities: allSelected ? [] : prev.serviceLocations.cities
+                                        }
+                                      }));
+                                    }}
+                                    className="text-xs font-bold cursor-pointer text-primary hover:bg-secondary/50 rounded-lg border-b border-slate-100 flex items-center"
+                                  >
+                                    <Check className={cn("mr-2 h-3.5 w-3.5", allStates.length > 0 && allStates.every(s => formData.serviceLocations.states.includes(s.name)) ? "opacity-100" : "opacity-0")} />
+                                    Select All States
+                                  </CommandItem>
+                                  {allStates
+                                    .filter(s => s.name.toLowerCase().includes(serviceStateSearch.toLowerCase()))
+                                    .map(s => (
+                                      <CommandItem
+                                        key={s.isoCode}
+                                        value={s.name}
+                                        onSelect={() => {
+                                          if (formData.serviceLocations.states.includes(s.name)) {
+                                            handleRemoveServiceState(s.name);
+                                          } else {
+                                            handleAddServiceState(s.name);
+                                          }
+                                        }}
+                                        className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                                      >
+                                        <Check className={cn("mr-2 h-3.5 w-3.5", formData.serviceLocations.states.includes(s.name) ? "opacity-100" : "opacity-0")} />
+                                        {s.name}
+                                      </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        
+                        {/* Selected States Badges */}
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {formData.serviceLocations.states.slice(0, 2).map((st) => (
+                            <Badge
+                              key={st}
+                              variant="secondary"
+                              className="text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 font-semibold"
+                            >
+                              {st}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveServiceState(st)}
+                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                <X size={10} />
+                              </button>
+                            </Badge>
+                          ))}
+                          {formData.serviceLocations.states.length > 2 && (
+                            <Badge className="text-[10px] px-2 py-0.5 rounded-md bg-primary/10 border border-primary/30 text-primary font-bold">
+                              +{formData.serviceLocations.states.length - 2} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Service Cities Selector */}
+                      <div>
+                        <Label className="text-[10px] font-bold text-slate-500 mb-1 block">Service Cities</Label>
+                        <Popover modal={true} open={serviceCityOpen} onOpenChange={(o) => { setServiceCityOpen(o); if (!o) setServiceCitySearch(""); }}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={serviceCityOpen}
+                              disabled={formData.serviceLocations.states.length === 0}
+                              className={cn(
+                                "w-full h-10 bg-white border border-slate-300 rounded-lg justify-between px-3 text-xs font-medium text-slate-900 hover:text-slate-900 hover:bg-slate-50 transition-all",
+                                formData.serviceLocations.states.length === 0 && "opacity-50 cursor-not-allowed"
+                              )}
+                            >
+                              <span className="truncate">
+                                {formData.serviceLocations.states.length === 0 ? "Choose states first" : "Select Cities"}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                            <Command className="w-full">
+                              <CommandInput
+                                placeholder="Search city..."
+                                className="h-10 text-xs"
+                                value={serviceCitySearch}
+                                onValueChange={setServiceCitySearch}
+                              />
+                              <CommandEmpty>No city found.</CommandEmpty>
+                              <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
+                                <CommandGroup>
+                                  {(() => {
+                                    const availableCities = formData.serviceLocations.states.flatMap(stateName => {
+                                      const stateObj = allStates.find(s => s.name.toLowerCase() === stateName.toLowerCase());
+                                      if (!stateObj) return [];
+                                      return City.getCitiesOfState("IN", stateObj.isoCode);
+                                    });
+                                    const filteredCities = availableCities.filter(c => c.name.toLowerCase().includes(serviceCitySearch.toLowerCase()));
+                                    const allCityNames = availableCities.map(c => c.name);
+                                    const allCitiesSelected = allCityNames.length > 0 && allCityNames.every(name => formData.serviceLocations.cities.includes(name));
+                                    return (
+                                      <>
+                                        <CommandItem
+                                          value="select-all-cities"
+                                          onSelect={() => {
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              serviceLocations: {
+                                                ...prev.serviceLocations,
+                                                cities: allCitiesSelected ? [] : allCityNames
+                                              }
+                                            }));
+                                          }}
+                                          className="text-xs font-bold cursor-pointer text-primary hover:bg-secondary/50 rounded-lg border-b border-slate-100 flex items-center"
+                                        >
+                                          <Check className={cn("mr-2 h-3.5 w-3.5", allCitiesSelected ? "opacity-100" : "opacity-0")} />
+                                          Select All Cities
+                                        </CommandItem>
+                                        {filteredCities.map(c => (
+                                          <CommandItem
+                                            key={c.name}
+                                            value={c.name}
+                                            onSelect={() => {
+                                              if (formData.serviceLocations.cities.includes(c.name)) {
+                                                handleRemoveServiceCity(c.name);
+                                              } else {
+                                                handleAddServiceCity(c.name);
+                                              }
+                                            }}
+                                            className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
+                                          >
+                                            <Check className={cn("mr-2 h-3.5 w-3.5", formData.serviceLocations.cities.includes(c.name) ? "opacity-100" : "opacity-0")} />
+                                            {c.name}
+                                          </CommandItem>
+                                        ))}
+                                      </>
+                                    );
+                                  })()}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        
+                        {/* Selected Cities Badges */}
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {formData.serviceLocations.cities.slice(0, 2).map((ct) => (
+                            <Badge
+                              key={ct}
+                              variant="secondary"
+                              className="text-[10px] px-2 py-0.5 rounded-md flex items-center gap-1 bg-slate-100 border border-slate-200 text-slate-700 font-semibold"
+                            >
+                              {ct}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveServiceCity(ct)}
+                                className="text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                <X size={10} />
+                              </button>
+                            </Badge>
+                          ))}
+                          {formData.serviceLocations.cities.length > 2 && (
+                            <Badge className="text-[10px] px-2 py-0.5 rounded-md bg-primary/10 border border-primary/30 text-primary font-bold">
+                              +{formData.serviceLocations.cities.length - 2} more
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1304,6 +1966,8 @@ const MembersPage = () => {
                         onChange={handleInputChange}
                       />
                     </div>
+
+
                     <div>
                       <Label htmlFor="targetAudience" className="text-xs font-bold text-slate-700 mb-2 block">
                         Target Audience
@@ -1510,6 +2174,20 @@ const MembersPage = () => {
         confirmLabel="Yes, Delete"
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
+      />
+
+      <ConfirmDialog
+        open={statusConfirmOpen}
+        onOpenChange={setStatusConfirmOpen}
+        title={memberToToggle?.status === "active" ? "Deactivate Member?" : "Activate Member?"}
+        description={
+          memberToToggle?.status === "active"
+            ? `Are you sure you want to deactivate ${memberToToggle?.fullName}? They will lose access until reactivated.`
+            : `Are you sure you want to activate ${memberToToggle?.fullName}?`
+        }
+        confirmLabel={memberToToggle?.status === "active" ? "Yes, Deactivate" : "Yes, Activate"}
+        onConfirm={handleConfirmStatusToggle}
+        isLoading={isTogglingStatus}
       />
     </div>
   );
