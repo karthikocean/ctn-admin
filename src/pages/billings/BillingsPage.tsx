@@ -554,7 +554,6 @@ const BillingsPage = () => {
                 Select Member <span className="text-red-500">*</span>
               </Label>
               <Select
-                modal={true}
                 value={formData.memberId}
                 onValueChange={(val) => {
                   setFormData(prev => ({ ...prev, memberId: val }));
@@ -567,7 +566,7 @@ const BillingsPage = () => {
                 <SelectContent className="max-h-60 overflow-y-auto">
                   {members.map((m) => (
                     <SelectItem key={m._id} value={m._id}>
-                      {m.fullName} ({m.email || m.mobileNumber})
+                      {m.fullName}{m.businessName ? ` (${m.businessName})` : (m.mobileNumber ? ` (${m.mobileNumber})` : "")}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -582,7 +581,6 @@ const BillingsPage = () => {
                 Select Plan <span className="text-red-500">*</span>
               </Label>
               <Select
-                modal={true}
                 value={formData.planId}
                 onValueChange={(val) => {
                   handlePlanChange(val);
@@ -633,13 +631,12 @@ const BillingsPage = () => {
                   Payment Method <span className="text-red-500">*</span>
                 </Label>
                 <Select
-                  modal={true}
                   value={formData.paymentMethod}
                   onValueChange={(val) => {
-                    setFormData(prev => ({ 
-                      ...prev, 
+                    setFormData(prev => ({
+                      ...prev,
                       paymentMethod: val,
-                      transactionId: val === "Cash" ? "" : prev.transactionId 
+                      transactionId: val === "Cash" ? "" : prev.transactionId
                     }));
                     if (errors.paymentMethod) setErrors((prev) => ({ ...prev, paymentMethod: "" }));
                     if (val === "Cash") setErrors((prev) => ({ ...prev, transactionId: "" }));

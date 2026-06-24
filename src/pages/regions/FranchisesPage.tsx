@@ -29,6 +29,8 @@ import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 interface User {
   _id: string;
   fullName: string;
+  businessName?: string;
+  mobileNumber?: string;
 }
 
 interface Franchise {
@@ -145,7 +147,9 @@ const FranchisesPage = () => {
         if (franchiseUsers && franchiseUsers.length > 0) {
           const mappedUsers = franchiseUsers.map((u: any) => ({
             _id: u.id,
-            fullName: u.name
+            fullName: u.name,
+            businessName: u.businessName || u.member?.businessName || "",
+            mobileNumber: u.phone || u.phoneNumber || u.member?.mobileNumber || ""
           }));
           setUsersList(mappedUsers);
         } else {
@@ -183,7 +187,9 @@ const FranchisesPage = () => {
       if (franchiseUsers && franchiseUsers.length > 0) {
         const mappedUsers = franchiseUsers.map((u: any) => ({
           _id: u.id,
-          fullName: u.name
+          fullName: u.name,
+          businessName: u.businessName || u.member?.businessName || "",
+          mobileNumber: u.phone || u.phoneNumber || u.member?.mobileNumber || ""
         }));
         setUsersList(mappedUsers);
       } else {
@@ -210,7 +216,9 @@ const FranchisesPage = () => {
       if (franchiseUsers && franchiseUsers.length > 0) {
         const mappedUsers = franchiseUsers.map((u: any) => ({
           _id: u.id,
-          fullName: u.name
+          fullName: u.name,
+          businessName: u.businessName || u.member?.businessName || "",
+          mobileNumber: u.phone || u.phoneNumber || u.member?.mobileNumber || ""
         }));
         setUsersList(mappedUsers);
       } else {
@@ -340,9 +348,14 @@ const FranchisesPage = () => {
     }
   };
 
-  const filteredUsers = usersList.filter(u =>
-    u.fullName.toLowerCase().includes(userSearchQuery.toLowerCase())
-  );
+  const filteredUsers = usersList.filter(u => {
+    const q = userSearchQuery.toLowerCase();
+    return (
+      u.fullName.toLowerCase().includes(q) ||
+      (u.businessName || "").toLowerCase().includes(q) ||
+      (u.mobileNumber || "").toLowerCase().includes(q)
+    );
+  });
 
   const allAreas = regionsList.flatMap((r) => {
     if (r.areas && r.areas.length > 0) {
@@ -658,7 +671,12 @@ const FranchisesPage = () => {
                         checked={selectedUsers.some(u => u._id === user._id)}
                         onCheckedChange={() => toggleUser(user)}
                       />
-                      <span className="text-xs font-medium">{user.fullName}</span>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold">{user.fullName}</span>
+                        {user.businessName && (
+                          <span className="text-[10px] text-muted-foreground">{user.businessName}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {filteredUsers.length === 0 && (
@@ -670,7 +688,7 @@ const FranchisesPage = () => {
             <div className="flex flex-wrap gap-1.5 mt-2">
               {selectedUsers.map(u => (
                 <Badge key={u._id} variant="default" className="bg-primary/10 text-primary border-primary/20 text-[10px] py-0 px-2 flex items-center gap-1">
-                  {u.fullName}
+                  {u.fullName}{u.businessName ? ` (${u.businessName})` : ""}
                   <X size={10} className="cursor-pointer" onClick={() => toggleUser(u)} />
                 </Badge>
               ))}

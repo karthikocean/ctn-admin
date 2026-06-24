@@ -210,7 +210,7 @@ const SpotlightPage = () => {
         }
         return {
           ...prev,
-          selectedMembers: [...prev.selectedMembers, { _id: member._id, fullName: member.fullName }]
+          selectedMembers: [...prev.selectedMembers, { _id: member._id, fullName: member.fullName, businessName: member.businessName }]
         };
       }
     });
@@ -372,9 +372,14 @@ const SpotlightPage = () => {
                   </div>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto p-1">
-                  {members.filter(member =>
-                    member.fullName?.toLowerCase().includes(memberSearchQuery.toLowerCase())
-                  ).map((member) => (
+                  {members.filter(member => {
+                    const q = memberSearchQuery.toLowerCase();
+                    return (
+                      member.fullName?.toLowerCase().includes(q) ||
+                      member.businessName?.toLowerCase().includes(q) ||
+                      member.mobileNumber?.toLowerCase().includes(q)
+                    );
+                  }).map((member) => (
                     <div
                       key={member._id}
                       className="flex items-center space-x-2 px-2 py-2 hover:bg-slate-100 rounded-md cursor-pointer"
@@ -385,12 +390,22 @@ const SpotlightPage = () => {
                         onCheckedChange={() => toggleMember(member)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <span className="text-xs font-medium">{member.fullName}</span>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold">{member.fullName}</span>
+                        {member.businessName && (
+                          <span className="text-[10px] text-muted-foreground">{member.businessName}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
-                  {members.filter(member =>
-                    member.fullName?.toLowerCase().includes(memberSearchQuery.toLowerCase())
-                  ).length === 0 && (
+                  {members.filter(member => {
+                    const q = memberSearchQuery.toLowerCase();
+                    return (
+                      member.fullName?.toLowerCase().includes(q) ||
+                      member.businessName?.toLowerCase().includes(q) ||
+                      member.mobileNumber?.toLowerCase().includes(q)
+                    );
+                  }).length === 0 && (
                       <p className="text-center py-4 text-xs text-muted-foreground">No members found</p>
                     )}
                 </div>
@@ -399,7 +414,7 @@ const SpotlightPage = () => {
             <div className="flex flex-wrap gap-1.5 mt-2">
               {formData.selectedMembers.map(m => (
                 <Badge key={m._id} variant="default" className="bg-primary/10 text-primary border-primary/20 text-[10px] py-0 px-2 flex items-center gap-1">
-                  {m.fullName}
+                  {m.fullName}{m.businessName ? ` (${m.businessName})` : ""}
                   <X size={10} className="cursor-pointer" onClick={() => toggleMember(m)} />
                 </Badge>
               ))}

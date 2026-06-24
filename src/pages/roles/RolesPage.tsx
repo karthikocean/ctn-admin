@@ -1419,7 +1419,7 @@ const RolesPage = () => {
                       <SelectContent>
                         {(activeMembers.length > 0 ? activeMembers : mockMembers).map((member) => (
                           <SelectItem key={member._id || member.id} value={member._id || member.id}>
-                            {member.fullName || member.name}
+                            {member.fullName || member.name}{(member.businessName) ? ` (${member.businessName})` : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
