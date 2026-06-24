@@ -315,13 +315,8 @@ const MarketplaceCategoryPage = () => {
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       {page * 10 + index + 1}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <ShoppingBag size={14} className="text-foreground" />
-                        </div>
-                        <span className="text-sm text-foreground font-semibold">{c.name}</span>
-                      </div>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
+                      {c.name}
                     </td>
                     <td className="px-6 py-4">
                       <Badge

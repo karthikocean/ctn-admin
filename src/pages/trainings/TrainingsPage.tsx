@@ -184,6 +184,7 @@ const TrainingsPage = () => {
       if (!lesson.videoUrl && !lesson.videoFile) newErrors[`lesson_${lesson.id}_video`] = "Video is required";
       if (!lesson.thumbnail && !lesson.thumbnailFile) newErrors[`lesson_${lesson.id}_thumbnail`] = "Lesson thumbnail is required";
       if (!lesson.title.trim()) newErrors[`lesson_${lesson.id}_title`] = "Lesson title is required";
+      if (!lesson.description.trim()) newErrors[`lesson_${lesson.id}_description`] = "Lesson description is required";
     });
 
     setErrors(newErrors);
@@ -262,10 +263,10 @@ const TrainingsPage = () => {
       ...prev,
       lessons: prev.lessons.map(l => l.id === id ? { ...l, [field]: value } : l)
     }));
-    if (field === "title") {
+    if (field === "title" || field === "description") {
       setErrors(prev => {
         const next = { ...prev };
-        delete next[`lesson_${id}_title`];
+        delete next[`lesson_${id}_${field}`];
         return next;
       });
     }
@@ -788,8 +789,9 @@ const TrainingsPage = () => {
                           </div>
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] font-bold text-slate-500 uppercase">Description</Label>
-                          <Input placeholder="Short description..." className="h-10 rounded-xl text-sm" value={lesson.description} onChange={(e) => updateLesson(lesson.id, "description", e.target.value)} />
+                          <Label className="text-[10px] font-bold text-slate-500 uppercase">Description <span className="text-red-500">*</span></Label>
+                          <Input placeholder="Short description..." className={cn("h-10 rounded-xl text-sm", errors[`lesson_${lesson.id}_description`] && "border-red-500 focus-visible:ring-red-500")} value={lesson.description} onChange={(e) => updateLesson(lesson.id, "description", e.target.value)} />
+                          {errors[`lesson_${lesson.id}_description`] && <p className="text-red-500 text-[9px] font-bold mt-1">{errors[`lesson_${lesson.id}_description`]}</p>}
                         </div>
                       </div>
                     </div>

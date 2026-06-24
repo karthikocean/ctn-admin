@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -616,10 +617,21 @@ const AnnouncementsPage = () => {
 
           <div className="space-y-2">
             <Label htmlFor="announcementType" className="text-xs font-bold uppercase tracking-wider text-slate-600">Announcement Type <span className="text-red-500">*</span></Label>
-            <select id="announcementType" value={formData.announcementType} onChange={handleInputChange} className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm">
-              <option value="Event">Event</option>
-              <option value="Online Stall">Online Stall</option>
-            </select>
+            <Select
+              value={formData.announcementType}
+              onValueChange={(value) => {
+                setFormData(prev => ({ ...prev, announcementType: value }));
+                if (errors.announcementType) setErrors(prev => ({ ...prev, announcementType: "" }));
+              }}
+            >
+              <SelectTrigger id="announcementType" className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Event">Event</SelectItem>
+                <SelectItem value="Online Stall">Online Stall</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {formData.announcementType === "Event" && (
@@ -804,11 +816,22 @@ const AnnouncementsPage = () => {
 
           <div className="space-y-2">
             <Label htmlFor="status" className="text-xs font-bold uppercase tracking-wider text-slate-600">Status</Label>
-            <select id="status" value={formData.status} onChange={handleInputChange} className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm">
-              <option value="draft">Draft</option>
-              <option value="published">Published</option>
-              <option value="scheduled">Scheduled</option>
-            </select>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => {
+                setFormData(prev => ({ ...prev, status: value }));
+                if (errors.status) setErrors(prev => ({ ...prev, status: "" }));
+              }}
+            >
+              <SelectTrigger id="status" className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {formData.status === "scheduled" && (

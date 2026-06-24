@@ -626,7 +626,7 @@ const FranchisesPage = () => {
           {/* Multiple Users Selection */}
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Select Franchise Users</label>
-            <Popover>
+            <Popover modal={true}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full h-11 justify-start font-normal rounded-xl border-slate-200 bg-secondary/50">
                   <Users className="mr-2 h-4 w-4 opacity-50" />

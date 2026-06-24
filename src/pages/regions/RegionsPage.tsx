@@ -439,7 +439,7 @@ const RegionsPage = () => {
         <div className="space-y-5">
           <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Country</label>
-            <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+            <Popover modal={true} open={countryOpen} onOpenChange={setCountryOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -489,7 +489,7 @@ const RegionsPage = () => {
 
           <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">State</label>
-            <Popover open={stateOpen} onOpenChange={setStateOpen}>
+            <Popover modal={true} open={stateOpen} onOpenChange={setStateOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -543,7 +543,7 @@ const RegionsPage = () => {
 
           <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">City</label>
-            <Popover open={cityOpen} onOpenChange={setCityOpen}>
+            <Popover modal={true} open={cityOpen} onOpenChange={setCityOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"

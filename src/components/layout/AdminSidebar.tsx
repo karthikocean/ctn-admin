@@ -25,7 +25,7 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
       onToggleCollapse(); // Expand if collapsed when trying to open a group
     }
     setExpandedItems(prev =>
-      prev.includes(title) ? prev.filter(i => i !== title) : [...prev, title]
+      prev.includes(title) ? [] : [title]
     );
   };
 

@@ -48,11 +48,11 @@ const ConnectionsPage = () => {
   }, [search]);
 
   const getStatusLabel = (status: string) => {
-    if (status === "ACCEPTED") return "active";
+    if (status === "ACCEPTED") return "accepted";
     if (status === "PENDING") return "pending";
     if (status === "REJECTED") return "rejected";
     if (status === "CANCELLED") return "cancelled";
-    if (status === "BLOCKED") return "closed";
+    if (status === "BLOCKED") return "blocked";
     return status.toLowerCase();
   };
 
@@ -117,15 +117,14 @@ const ConnectionsPage = () => {
               <tr className="border-b border-border bg-secondary/50">
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">From</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">To</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Response</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Date</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {connections.length === 0 && !isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={4} className="px-6 py-8 text-center text-sm text-muted-foreground">
                     No connections found
                   </td>
                 </tr>
@@ -144,12 +143,11 @@ const ConnectionsPage = () => {
                         <p className="text-[10px] text-foreground font-semibold">{c.receiver?.businessName || ""}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{formatResponseText(c.status)}</td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">
-                      {c.createdAt ? c.createdAt.split("T")[0] : ""}
-                    </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={getStatusLabel(c.status)} />
+                    </td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">
+                      {c.createdAt ? c.createdAt.split("T")[0] : ""}
                     </td>
                   </tr>
                 ))

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, CreditCard, Eye, Loader2, IndianRupee, Plus } from "lucide-react";
+import { Search, Filter, CreditCard, Eye, Loader2, IndianRupee, Plus, Banknote, Landmark, CheckSquare, Globe, HelpCircle, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,139 @@ import { useAuth } from "@/context/AuthContext";
 import * as BillingsApi from "@/api/BillingsApi";
 import * as MembersApi from "@/api/MembersApi";
 import * as PlansApi from "@/api/PlansApi";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
+const getFullUrl = (path: string | null) => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  const baseUrl = import.meta.env.VITE_API_URL.replace("/api/admin", "");
+  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+const getPlanLeftBorder = (title: string = "") => {
+  const lower = title.toLowerCase();
+  if (lower.includes("premium")) return "border-l-purple-500 hover:border-l-purple-600";
+  if (lower.includes("gold")) return "border-l-amber-500 hover:border-l-amber-600";
+  if (lower.includes("basic") || lower.includes("free")) return "border-l-slate-400 hover:border-l-slate-500";
+  return "border-l-blue-500 hover:border-l-blue-600";
+};
+
+const getAvatarGradient = (name: string = "") => {
+  const charCode = name.charCodeAt(0) || 0;
+  const index = charCode % 5;
+  const gradients = [
+    "bg-gradient-to-br from-purple-100 to-indigo-100 text-purple-700 border-purple-200",
+    "bg-gradient-to-br from-pink-100 to-rose-100 text-rose-700 border-rose-200",
+    "bg-gradient-to-br from-amber-100 to-yellow-100 text-amber-700 border-amber-200",
+    "bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200",
+    "bg-gradient-to-br from-blue-100 to-sky-100 text-blue-700 border-blue-200"
+  ];
+  return gradients[index];
+};
+
+const getPlanBadge = (title: string = "") => {
+  const lower = title.toLowerCase();
+  if (lower.includes("premium")) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 border border-purple-200/80 shadow-sm shadow-purple-500/5 select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse" />
+        Premium
+      </span>
+    );
+  }
+  if (lower.includes("gold")) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 border border-amber-200/80 shadow-sm shadow-amber-500/5 select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+        Gold
+      </span>
+    );
+  }
+  if (lower.includes("basic") || lower.includes("free")) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-slate-50 to-slate-100 text-slate-700 border border-slate-200 shadow-sm shadow-slate-500/5 select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+        Basic
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-50 to-sky-50 text-blue-700 border border-blue-200 shadow-sm shadow-blue-500/5 select-none">
+      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+      {title || "Standard"}
+    </span>
+  );
+};
+
+const getPaymentMethodBadge = (method: string = "") => {
+  const lower = method.toLowerCase();
+  if (lower === "cash") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50 shadow-sm select-none">
+        <Banknote size={12} className="stroke-[2.5]" />
+        Cash
+      </span>
+    );
+  }
+  if (lower === "bank transfer") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/50 shadow-sm select-none">
+        <Landmark size={12} className="stroke-[2.5]" />
+        Bank Transfer
+      </span>
+    );
+  }
+  if (lower === "cheque") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/50 shadow-sm select-none">
+        <CheckSquare size={12} className="stroke-[2.5]" />
+        Cheque
+      </span>
+    );
+  }
+  if (lower === "online" || lower === "razorpay" || lower === "stripe") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/50 shadow-sm select-none">
+        <Globe size={12} className="stroke-[2.5]" />
+        {method}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 shadow-sm select-none">
+      <HelpCircle size={12} className="stroke-[2.5]" />
+      {method || "Other"}
+    </span>
+  );
+};
+
+const TransactionIdBadge = ({ id }: { id: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="group relative flex items-center gap-1 mt-1">
+      <code className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono border border-slate-200/60 select-all tracking-wide">
+        ID: {id}
+      </code>
+      <button
+        onClick={handleCopy}
+        className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-slate-200 rounded text-slate-500 hover:text-slate-700 transition-all duration-150"
+        title="Copy ID"
+      >
+        {copied ? <Check size={10} className="text-green-600 stroke-[3]" /> : <Copy size={10} />}
+      </button>
+    </div>
+  );
+};
 
 const BillingsPage = () => {
   const { toast } = useToast();
@@ -169,7 +302,7 @@ const BillingsPage = () => {
     if (!formData.paymentMethod.trim()) {
       newErrors.paymentMethod = "Payment method is required";
     }
-    if (!formData.transactionId.trim()) {
+    if (formData.paymentMethod !== "Cash" && !formData.transactionId.trim()) {
       newErrors.transactionId = "Transaction ID is required";
     }
     if (formData.amount <= 0) {
@@ -184,12 +317,17 @@ const BillingsPage = () => {
 
     setFormLoading(true);
     try {
+      const savePayload = {
+        ...formData,
+        transactionId: formData.paymentMethod === "Cash" ? "CASH" : formData.transactionId
+      };
+
       let response;
       if (editingId) {
-        response = await BillingsApi.updateBilling(editingId, formData);
+        response = await BillingsApi.updateBilling(editingId, savePayload);
         toast({ title: "Updated", description: response.message || "Billing record updated successfully", variant: "success" });
       } else {
-        response = await BillingsApi.createBilling(formData);
+        response = await BillingsApi.createBilling(savePayload);
         toast({ title: "Created", description: response.message || "Billing record created successfully", variant: "success" });
       }
       fetchBillings(searchTerm, page);
@@ -287,20 +425,20 @@ const BillingsPage = () => {
       {/* Main Table */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative glass-card overflow-hidden">
         {loading && billings.length > 0 && <TableLoader text="Fetching Billing Records..." />}
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="overflow-x-auto p-4">
+          <table className="w-full border-separate border-spacing-y-2">
             <thead>
-              <tr className="border-b border-border bg-secondary/50">
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Member</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Plan</th>
-                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Payment Type</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
-                <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+              <tr className="text-muted-foreground/80">
+                <th className="text-center px-4 py-2 text-[10px] font-bold uppercase tracking-widest w-16">S.No</th>
+                <th className="text-left px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Member</th>
+                <th className="text-left px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Plan</th>
+                <th className="text-center px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Amount</th>
+                <th className="text-left px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Payment Type</th>
+                <th className="text-left px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Date</th>
+                <th className="text-right px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {loading && billings.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-0">
@@ -309,49 +447,72 @@ const BillingsPage = () => {
                 </tr>
               ) : billings.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground bg-card border border-border rounded-xl">
                     No billing records found.
                   </td>
                 </tr>
               ) : (
                 billings.map((b, index) => (
-                  <tr key={b._id} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-foreground">{b.member?.fullName || "Unknown Member"}</span>
-                        <span className="text-xs text-foreground font-semibold">{b.member?.email}</span>
+                  <tr key={b._id} className="group hover:-translate-y-[1px] transition-all duration-200">
+                    <td className={cn("px-4 py-4 text-center text-sm font-semibold text-foreground border-t border-b border-l rounded-l-xl border-l-4 bg-card group-hover:bg-slate-50/60 transition-colors border-border", getPlanLeftBorder(b.plan?.title))}>
+                      {(page - 1) * pageSize + index + 1}
+                    </td>
+                    <td className="px-6 py-4 border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="w-10 h-10 border border-border/80 flex-shrink-0 shadow-sm">
+                          <AvatarImage
+                            src={getFullUrl(b.member?.profilePhoto)}
+                            alt={b.member?.fullName}
+                            className="object-cover"
+                          />
+                          <AvatarFallback className={cn("text-xs font-bold shadow-inner flex items-center justify-center border", getAvatarGradient(b.member?.fullName || "?"))}>
+                            {b.member?.fullName?.charAt(0).toUpperCase() || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{b.member?.fullName || "Unknown Member"}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{b.member?.email}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-semibold text-foreground bg-primary/5 px-2 py-1 rounded border border-primary/10">
-                        {b.plan?.title || "Unknown Plan"}
-                      </span>
+                    <td className="px-6 py-4 border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                      {getPlanBadge(b.plan?.title)}
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-bold text-foreground">₹{b.amount}</span>
+                    <td className="px-6 py-4 text-center border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                      <span className="text-sm font-extrabold text-foreground tracking-tight">₹{b.amount?.toLocaleString("en-IN")}</span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
                       <div className="flex flex-col gap-1 items-start">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-sm font-semibold bg-secondary border border-border text-foreground">
-                          {b.paymentMethod || b.paymentType}
-                        </span>
-                        {b.transactionId && (
-                          <span className="text-xs font-semibold text-foreground">
-                            ID: {b.transactionId}
-                          </span>
+                        {getPaymentMethodBadge(b.paymentMethod || b.paymentType)}
+                        {b.transactionId && b.transactionId !== "CASH" && (
+                          <TransactionIdBadge id={b.transactionId} />
                         )}
                         {b.source && (
-                          <span className="text-[9px] font-bold bg-primary/10 text-primary px-1 rounded uppercase tracking-wider scale-90 origin-left">
+                          <span className="text-[9px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5 select-none">
                             {b.source}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
-                      {new Date(b.createdAt).toLocaleDateString()}
+                    <td className="px-6 py-4 border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-semibold text-foreground">
+                          {new Date(b.createdAt).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric"
+                          })}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-medium">
+                          {new Date(b.createdAt).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true
+                          })}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right border-t border-b border-r rounded-r-xl border-border bg-card group-hover:bg-slate-50/60 transition-colors">
                       <ActionMenu
                         onView={() => handlePreview(b)}
                         onEdit={canEdit ? () => handleEdit(b) : undefined}
@@ -392,22 +553,25 @@ const BillingsPage = () => {
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Select Member <span className="text-red-500">*</span>
               </Label>
-              <select
-                className={`w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer border ${errors.memberId ? "border-red-500" : "border-border"
-                  }`}
+              <Select
+                modal={true}
                 value={formData.memberId}
-                onChange={(e) => {
-                  setFormData({ ...formData, memberId: e.target.value });
+                onValueChange={(val) => {
+                  setFormData(prev => ({ ...prev, memberId: val }));
                   if (errors.memberId) setErrors((prev) => ({ ...prev, memberId: "" }));
                 }}
               >
-                <option value="">Choose Member...</option>
-                {members.map((m) => (
-                  <option key={m._id} value={m._id}>
-                    {m.fullName} ({m.email || m.mobileNumber})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={`w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border ${errors.memberId ? "border-red-500" : "border-border"}`}>
+                  <SelectValue placeholder="Choose Member..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {members.map((m) => (
+                    <SelectItem key={m._id} value={m._id}>
+                      {m.fullName} ({m.email || m.mobileNumber})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.memberId && (
                 <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.memberId}</p>
               )}
@@ -417,22 +581,25 @@ const BillingsPage = () => {
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Select Plan <span className="text-red-500">*</span>
               </Label>
-              <select
-                className={`w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer border ${errors.planId ? "border-red-500" : "border-border"
-                  }`}
+              <Select
+                modal={true}
                 value={formData.planId}
-                onChange={(e) => {
-                  handlePlanChange(e.target.value);
+                onValueChange={(val) => {
+                  handlePlanChange(val);
                   if (errors.planId) setErrors((prev) => ({ ...prev, planId: "" }));
                 }}
               >
-                <option value="">Choose Plan...</option>
-                {plans.map((p) => (
-                  <option key={p._id} value={p._id}>
-                    {p.title} (₹{p.amount})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className={`w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border ${errors.planId ? "border-red-500" : "border-border"}`}>
+                  <SelectValue placeholder="Choose Plan..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {plans.map((p) => (
+                    <SelectItem key={p._id} value={p._id}>
+                      {p.title} (₹{p.amount})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.planId && (
                 <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.planId}</p>
               )}
@@ -465,48 +632,58 @@ const BillingsPage = () => {
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Payment Method <span className="text-red-500">*</span>
                 </Label>
-                <select
-                  className={`w-full mt-1.5 h-11 px-3 bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer border ${errors.paymentMethod ? "border-red-500" : "border-border"
-                    }`}
+                <Select
+                  modal={true}
                   value={formData.paymentMethod}
-                  onChange={(e) => {
-                    setFormData({ ...formData, paymentMethod: e.target.value });
+                  onValueChange={(val) => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      paymentMethod: val,
+                      transactionId: val === "Cash" ? "" : prev.transactionId 
+                    }));
                     if (errors.paymentMethod) setErrors((prev) => ({ ...prev, paymentMethod: "" }));
+                    if (val === "Cash") setErrors((prev) => ({ ...prev, transactionId: "" }));
                   }}
                 >
-                  <option value="">Select Payment Method...</option>
-                  <option value="Razorpay">Razorpay</option>
-                  <option value="Stripe">Stripe</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Cash">Cash</option>
-                  <option value="Online">Online</option>
-                  <option value="Cheque">Cheque</option>
-                  <option value="Other">Other</option>
-                </select>
+                  <SelectTrigger className={`w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border ${errors.paymentMethod ? "border-red-500" : "border-border"}`}>
+                    <SelectValue placeholder="Select Payment Method..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Razorpay">Razorpay</SelectItem>
+                    <SelectItem value="Stripe">Stripe</SelectItem>
+                    <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Online">Online</SelectItem>
+                    <SelectItem value="Cheque">Cheque</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
                 {errors.paymentMethod && (
                   <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.paymentMethod}</p>
                 )}
               </div>
             </div>
 
-            <div>
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Transaction ID <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                placeholder="Enter transaction/receipt ID"
-                value={formData.transactionId}
-                onChange={(e) => {
-                  setFormData({ ...formData, transactionId: e.target.value });
-                  if (errors.transactionId) setErrors((prev) => ({ ...prev, transactionId: "" }));
-                }}
-                className={`mt-1.5 h-11 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${errors.transactionId ? "border-red-500" : "border-border"
-                  }`}
-              />
-              {errors.transactionId && (
-                <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.transactionId}</p>
-              )}
-            </div>
+            {formData.paymentMethod !== "Cash" && (
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Transaction ID <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  placeholder="Enter transaction/receipt ID"
+                  value={formData.transactionId}
+                  onChange={(e) => {
+                    setFormData({ ...formData, transactionId: e.target.value });
+                    if (errors.transactionId) setErrors((prev) => ({ ...prev, transactionId: "" }));
+                  }}
+                  className={`mt-1.5 h-11 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${errors.transactionId ? "border-red-500" : "border-border"
+                    }`}
+                />
+                {errors.transactionId && (
+                  <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.transactionId}</p>
+                )}
+              </div>
+            )}
 
             <div>
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Remarks</Label>
