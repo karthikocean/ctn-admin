@@ -16,13 +16,13 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const getFullUrl = (path: string | null) => {
   if (!path) return "";
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  // Ensure starting slash
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${import.meta.env.VITE_API_URL}${cleanPath}`;
+  const baseUrl = import.meta.env.VITE_API_URL.replace("/api/admin", "");
+  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
 const SpotlightRequestsPage = () => {
@@ -35,6 +35,7 @@ const SpotlightRequestsPage = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
   // Delete dialog states
@@ -52,16 +53,9 @@ const SpotlightRequestsPage = () => {
         page: page,
         limit: 10,
         status: statusFilter === "all" ? undefined : statusFilter,
+        search: debouncedSearchQuery.trim() || undefined
       });
-      let fetchedData = result.data || [];
-
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        fetchedData = fetchedData.filter((r: any) =>
-          r.member?.fullName?.toLowerCase().includes(query) ||
-          r.member?.businessName?.toLowerCase().includes(query)
-        );
-      }
+      const fetchedData = result.data || [];
 
       setRequests(fetchedData);
       setTotalPages(result.totalPages || 1);
@@ -77,13 +71,23 @@ const SpotlightRequestsPage = () => {
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [statusFilter, debouncedSearchQuery]);
+
+  useEffect(() => {
     fetchRequests();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, debouncedSearchQuery]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setPage(0);
-    fetchRequests();
+    setDebouncedSearchQuery(searchQuery);
   };
 
   const handleApprove = async (id: string) => {
@@ -210,6 +214,7 @@ const SpotlightRequestsPage = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-secondary/30">
+              <TableHead className="w-[80px]">S.No</TableHead>
               <TableHead className="w-[300px]">Member</TableHead>
               <TableHead>Requested Date</TableHead>
               <TableHead>Status</TableHead>
@@ -219,30 +224,28 @@ const SpotlightRequestsPage = () => {
           <TableBody>
             {requests.length === 0 && !isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="h-48 text-center text-muted-foreground">
+                <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
                   No spotlight requests found
                 </TableCell>
               </TableRow>
             ) : (
-              requests.map((r) => (
+              requests.map((r, index) => (
                 <TableRow key={r._id} className="hover:bg-secondary/10 transition-colors">
+                  <TableCell className="text-sm font-semibold text-muted-foreground">
+                    {page * 10 + index + 1}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      {r.member?.profilePhoto ? (
-                        <img
-                          src={getFullUrl(r.member.profilePhoto)}
-                          alt={r.member.fullName}
-                          className="w-9 h-9 rounded-full object-cover border border-border"
-                          onError={(e) => {
-                            // Fallback to placeholder on error
-                            (e.target as HTMLImageElement).src = "";
-                          }}
+                      <Avatar className="w-9 h-9 border border-border">
+                        <AvatarImage
+                          src={getFullUrl(r.member?.profilePhoto)}
+                          alt={r.member?.fullName}
+                          className="object-cover"
                         />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center border border-border">
-                          <User size={16} className="text-primary" />
-                        </div>
-                      )}
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                          {r.member?.fullName?.charAt(0).toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <div className="text-sm font-semibold text-foreground">
                           {r.member?.fullName || "Unknown Member"}

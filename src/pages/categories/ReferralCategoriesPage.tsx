@@ -371,7 +371,7 @@ export const ReferralCategoriesPage = () => {
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold text-foreground ml-1">Sub Category Name</Label>
-            <Popover>
+            <Popover modal={true}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"

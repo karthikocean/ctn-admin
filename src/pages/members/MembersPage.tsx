@@ -32,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -781,18 +782,16 @@ const MembersPage = () => {
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border border-border">
-                          {member.profilePhoto ? (
-                            <img
-                              src={getFullUrl(member.profilePhoto)}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-primary font-bold">
-                              {member.fullName.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                        </div>
+                        <Avatar className="w-10 h-10 border border-border">
+                          <AvatarImage
+                            src={getFullUrl(member.profilePhoto)}
+                            alt={member.fullName}
+                            className="object-cover"
+                          />
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                            {member.fullName.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           <p className="text-sm text-foreground font-semibold">{member.fullName}</p>
                           <p className="text-sm text-foreground font-semibold">

@@ -4,6 +4,7 @@ export interface SpotlightQueryParams {
   page?: number;
   limit?: number;
   status?: string;
+  search?: string;
 }
 
 export interface CreateSpotlightData {

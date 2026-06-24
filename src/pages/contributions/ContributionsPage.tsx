@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Heart, Filter, RefreshCw } from "lucide-react";
+import { Search, Heart, Filter, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import EmptyState from "@/components/common/EmptyState";
-import { getContributions, getRoles } from "@/api/ContributionsApi";
+import { getContributions } from "@/api/ContributionsApi";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,10 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -34,11 +39,9 @@ const ContributionsPage = () => {
 
   // Additional advanced filters
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [roles, setRoles] = useState<any[]>([]);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const fetchContributions = async () => {
     setLoading(true);
@@ -49,10 +52,9 @@ const ContributionsPage = () => {
       };
       if (search) params.search = search;
       if (typeFilter && typeFilter !== "all") params.type = typeFilter;
-      if (roleFilter && roleFilter !== "all") params.roleId = roleFilter;
       if (statusFilter && statusFilter !== "all") params.status = statusFilter;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
+      if (startDate) params.startDate = format(startDate, "yyyy-MM-dd");
+      if (endDate) params.endDate = format(endDate, "yyyy-MM-dd");
 
       const response = await getContributions(params);
       if (response && response.data) {
@@ -76,21 +78,12 @@ const ContributionsPage = () => {
 
   useEffect(() => {
     fetchContributions();
-  }, [page, typeFilter, roleFilter, statusFilter, startDate, endDate]);
+  }, [page, typeFilter, statusFilter, startDate, endDate]);
 
+  // Reset page to 1 when filters change to avoid empty out-of-range pages
   useEffect(() => {
-    const fetchRolesData = async () => {
-      try {
-        const response = await getRoles();
-        if (response && response.data) {
-          setRoles(response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching roles:", error);
-      }
-    };
-    fetchRolesData();
-  }, []);
+    setPage(1);
+  }, [typeFilter, statusFilter, startDate, endDate]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -179,7 +172,9 @@ const ContributionsPage = () => {
             variant="outline"
             onClick={() => setFiltersExpanded(!filtersExpanded)}
             className={`h-10 rounded-xl px-4 flex items-center gap-1.5 border border-border text-sm shadow-sm transition-all ${
-              filtersExpanded ? "bg-primary/10 text-primary border-primary/30" : "bg-card hover:bg-secondary/50"
+              filtersExpanded 
+                ? "bg-primary/10 text-primary border-primary/30 hover:bg-primary/15 hover:text-primary" 
+                : "bg-card text-foreground hover:bg-secondary/50 hover:text-foreground"
             }`}
           >
             <Filter size={15} />
@@ -193,26 +188,8 @@ const ContributionsPage = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-border rounded-xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"
+          className="bg-card border border-border rounded-xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4"
         >
-          {/* User Role */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-muted-foreground">User Role</label>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="h-10 rounded-xl border border-border bg-transparent text-sm">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border border-border bg-card">
-                <SelectItem value="all">All Roles</SelectItem>
-                {roles.map((role) => (
-                  <SelectItem key={role._id} value={role._id}>
-                    {role.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Status */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground">Status</label>
@@ -231,37 +208,68 @@ const ContributionsPage = () => {
           </div>
 
           {/* Start Date */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-semibold text-muted-foreground">Start Date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="h-10 w-full px-3 rounded-xl border border-border bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
-            />
+            <Popover modal={true}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full h-10 justify-start text-left font-normal rounded-xl border-border bg-transparent text-sm shadow-sm",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                  {startDate ? format(startDate, "PPP") : <span>Pick start date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* End Date */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-semibold text-muted-foreground">End Date</label>
             <div className="flex gap-2">
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="h-10 w-full px-3 rounded-xl border border-border bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
-              />
-              {(roleFilter !== "all" || statusFilter !== "all" || startDate || endDate) && (
+              <Popover modal={true}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-10 justify-start text-left font-normal rounded-xl border-border bg-transparent text-sm shadow-sm",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick end date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              {(statusFilter !== "all" || startDate || endDate) && (
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    setRoleFilter("all");
                     setStatusFilter("all");
-                    setStartDate("");
-                    setEndDate("");
+                    setStartDate(undefined);
+                    setEndDate(undefined);
                   }}
-                  className="h-10 w-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/30"
+                  className="h-10 w-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/30 shrink-0"
                   title="Reset filters"
                 >
                   <RefreshCw size={14} />
@@ -306,33 +314,27 @@ const ContributionsPage = () => {
                       <div className="flex items-center gap-3">
                         <div className="flex -space-x-3">
                           {/* Sender profile photo */}
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-background shadow-sm">
-                            {c.sender?.profilePhoto ? (
-                              <img
-                                src={getFullUrl(c.sender.profilePhoto)}
-                                className="w-full h-full object-cover"
-                                alt={c.sender?.fullName}
-                              />
-                            ) : (
-                              <span className="text-[10px] text-primary font-bold">
-                                {c.sender?.fullName?.charAt(0).toUpperCase() || "?"}
-                              </span>
-                            )}
-                          </div>
+                          <Avatar className="w-8 h-8 border-2 border-background shadow-sm">
+                            <AvatarImage
+                              src={getFullUrl(c.sender?.profilePhoto)}
+                              alt={c.sender?.fullName}
+                              className="object-cover"
+                            />
+                            <AvatarFallback className="bg-primary/10 text-[10px] text-primary font-bold">
+                              {c.sender?.fullName?.charAt(0).toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
                           {/* Receiver profile photo */}
-                          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border-2 border-background shadow-sm">
-                            {c.receiver?.profilePhoto ? (
-                              <img
-                                src={getFullUrl(c.receiver.profilePhoto)}
-                                className="w-full h-full object-cover"
-                                alt={c.receiver?.fullName}
-                              />
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground font-bold">
-                                {c.receiver?.fullName?.charAt(0).toUpperCase() || "?"}
-                              </span>
-                            )}
-                          </div>
+                          <Avatar className="w-8 h-8 border-2 border-background shadow-sm">
+                            <AvatarImage
+                              src={getFullUrl(c.receiver?.profilePhoto)}
+                              alt={c.receiver?.fullName}
+                              className="object-cover"
+                            />
+                            <AvatarFallback className="bg-slate-100 text-[10px] text-muted-foreground font-bold">
+                              {c.receiver?.fullName?.charAt(0).toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
                         <div>
                           <p className="font-semibold text-sm text-foreground flex items-center gap-1.5 flex-wrap">
