@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Search, Shield, Users, Filter, X, Lock, CheckCircle2, ChevronRight, ChevronLeft, Network } from "lucide-react";
+import { Search, Shield, Users, Filter, X, Lock, CheckCircle2, ChevronRight, ChevronLeft, Network, User } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,6 +150,8 @@ const RolesPage = () => {
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [activeMembers, setActiveMembers] = useState<any[]>([]);
+  const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
   // New user form state
   const [newUser, setNewUser] = useState({
@@ -1385,45 +1388,112 @@ const RolesPage = () => {
                 {!isEditMode && selectedRole === "Franchise Owner" && (
                   <div className="grid gap-2">
                     <Label htmlFor="memberId">Link Active Member</Label>
-                    <Select
-                      value={newUser.memberId}
-                      onValueChange={(val) => {
-                        const membersToDisplay = activeMembers.length > 0 ? activeMembers : mockMembers;
-                        const selectedMember = membersToDisplay.find(m => (m._id === val || m.id === val));
-                        if (selectedMember) {
-                          setNewUser({
-                            ...newUser,
-                            memberId: val,
-                            name: (selectedMember.fullName || selectedMember.name || "").replace(/[^A-Za-z\s]/g, ""),
-                            email: selectedMember.email || "",
-                            phone: (selectedMember.mobileNumber || selectedMember.phone || "").replace(/\D/g, "").slice(0, 10),
-                          });
-                          // Clear errors since fields are auto-filled
-                          setFormErrors(prev => ({
-                            ...prev,
-                            name: "",
-                            email: "",
-                            phone: ""
-                          }));
-                        } else {
-                          setNewUser({
-                            ...newUser,
-                            memberId: val,
-                          });
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select an active member" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(activeMembers.length > 0 ? activeMembers : mockMembers).map((member) => (
-                          <SelectItem key={member._id || member.id} value={member._id || member.id}>
-                            {member.fullName || member.name}{(member.businessName) ? ` (${member.businessName})` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={memberDropdownOpen} onOpenChange={setMemberDropdownOpen} modal={true}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="w-full h-10 flex items-center gap-2 px-3 rounded-lg border border-input bg-background text-sm text-left hover:bg-accent transition-colors"
+                        >
+                          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <span className={cn("flex-1 truncate", !newUser.memberId && "text-muted-foreground")}>
+                            {newUser.memberId
+                              ? (() => {
+                                  const m = (activeMembers.length > 0 ? activeMembers : mockMembers).find(m => (m._id === newUser.memberId || m.id === newUser.memberId));
+                                  return m ? (m.fullName || m.name) : "Select an active member";
+                                })()
+                              : "Select an active member"}
+                          </span>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[360px] p-0 shadow-xl rounded-2xl border border-slate-200 overflow-hidden" align="start" style={{ pointerEvents: "auto" }}>
+                        {/* Search bar */}
+                        <div className="px-3 pt-3 pb-2">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                            <input
+                              className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400"
+                              placeholder="Search members..."
+                              value={memberSearchQuery}
+                              onChange={(e) => setMemberSearchQuery(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        {/* Member list */}
+                        <div className="max-h-[280px] overflow-y-auto px-2 pb-2">
+                          {(activeMembers.length > 0 ? activeMembers : mockMembers)
+                            .filter(m => {
+                              const q = memberSearchQuery.toLowerCase();
+                              return (
+                                (m.fullName || m.name || "").toLowerCase().includes(q) ||
+                                (m.businessName || "").toLowerCase().includes(q) ||
+                                (m.mobileNumber || "").toLowerCase().includes(q)
+                              );
+                            })
+                            .map((member) => {
+                              const memberId = member._id || member.id;
+                              const isSelected = newUser.memberId === memberId;
+                              return (
+                                <div
+                                  key={memberId}
+                                  className={cn(
+                                    "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
+                                    isSelected ? "bg-primary/8" : "hover:bg-slate-50"
+                                  )}
+                                  onClick={() => {
+                                    const membersToDisplay = activeMembers.length > 0 ? activeMembers : mockMembers;
+                                    const selectedMember = membersToDisplay.find(m => (m._id === memberId || m.id === memberId));
+                                    if (selectedMember) {
+                                      setNewUser({
+                                        ...newUser,
+                                        memberId,
+                                        name: (selectedMember.fullName || selectedMember.name || "").replace(/[^A-Za-z\s]/g, ""),
+                                        email: selectedMember.email || "",
+                                        phone: (selectedMember.mobileNumber || selectedMember.phone || "").replace(/\D/g, "").slice(0, 10),
+                                      });
+                                      setFormErrors(prev => ({ ...prev, name: "", email: "", phone: "" }));
+                                    } else {
+                                      setNewUser({ ...newUser, memberId });
+                                    }
+                                    setMemberDropdownOpen(false);
+                                    setMemberSearchQuery("");
+                                  }}
+                                >
+                                  {/* Avatar circle */}
+                                  <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                                    <User className="h-4 w-4 text-slate-500" />
+                                  </div>
+                                  {/* Name & business */}
+                                  <div className="flex flex-col flex-1 min-w-0">
+                                    <span className="text-xs font-semibold text-slate-800 truncate">{member.fullName || member.name}</span>
+                                    <span className="text-[10px] text-slate-400 truncate">
+                                      {member.businessName || "—"}
+                                    </span>
+                                  </div>
+                                  {/* Selection indicator */}
+                                  <div className={cn(
+                                    "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                                    isSelected
+                                      ? "bg-primary border-primary"
+                                      : "border-slate-300 bg-white"
+                                  )}>
+                                    {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          {(activeMembers.length > 0 ? activeMembers : mockMembers).filter(m => {
+                            const q = memberSearchQuery.toLowerCase();
+                            return (
+                              (m.fullName || m.name || "").toLowerCase().includes(q) ||
+                              (m.businessName || "").toLowerCase().includes(q) ||
+                              (m.mobileNumber || "").toLowerCase().includes(q)
+                            );
+                          }).length === 0 && (
+                            <p className="text-center py-6 text-xs text-slate-400">No members found</p>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
                 {isEditMode && selectedRole === "Franchise Owner" && newUser.memberId && (
