@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Loader2, Store, MapPin, Users, X, Check, ChevronsUpDown } from "lucide-react";
+import { Search, Filter, Loader2, Store, MapPin, Users, X, Check, ChevronsUpDown, User } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -146,10 +145,13 @@ const FranchisesPage = () => {
         const franchiseUsers = await getFranchiseUsers();
         if (franchiseUsers && franchiseUsers.length > 0) {
           const mappedUsers = franchiseUsers.map((u: any) => ({
-            _id: u.id,
-            fullName: u.name,
-            businessName: u.businessName || u.member?.businessName || "",
-            mobileNumber: u.phone || u.phoneNumber || u.member?.mobileNumber || ""
+            _id: u.id || u._id,
+            fullName: u.name || u.fullName || "",
+            businessName: u.businessName || u.business_name || u.tradeName ||
+              u.member?.businessName || u.member?.business_name || u.member?.tradeName ||
+              u.memberData?.businessName || "",
+            mobileNumber: u.phone || u.phoneNumber || u.mobile || u.mobileNumber ||
+              u.member?.mobileNumber || u.member?.phone || ""
           }));
           setUsersList(mappedUsers);
         } else {
@@ -186,10 +188,13 @@ const FranchisesPage = () => {
       const franchiseUsers = await getFranchiseUsers();
       if (franchiseUsers && franchiseUsers.length > 0) {
         const mappedUsers = franchiseUsers.map((u: any) => ({
-          _id: u.id,
-          fullName: u.name,
-          businessName: u.businessName || u.member?.businessName || "",
-          mobileNumber: u.phone || u.phoneNumber || u.member?.mobileNumber || ""
+          _id: u.id || u._id,
+          fullName: u.name || u.fullName || "",
+          businessName: u.businessName || u.business_name || u.tradeName ||
+            u.member?.businessName || u.member?.business_name || u.member?.tradeName ||
+            u.memberData?.businessName || "",
+          mobileNumber: u.phone || u.phoneNumber || u.mobile || u.mobileNumber ||
+            u.member?.mobileNumber || u.member?.phone || ""
         }));
         setUsersList(mappedUsers);
       } else {
@@ -215,10 +220,13 @@ const FranchisesPage = () => {
       const franchiseUsers = await getFranchiseUsers(franchise._id);
       if (franchiseUsers && franchiseUsers.length > 0) {
         const mappedUsers = franchiseUsers.map((u: any) => ({
-          _id: u.id,
-          fullName: u.name,
-          businessName: u.businessName || u.member?.businessName || "",
-          mobileNumber: u.phone || u.phoneNumber || u.member?.mobileNumber || ""
+          _id: u.id || u._id,
+          fullName: u.name || u.fullName || "",
+          businessName: u.businessName || u.business_name || u.tradeName ||
+            u.member?.businessName || u.member?.business_name || u.member?.tradeName ||
+            u.memberData?.businessName || "",
+          mobileNumber: u.phone || u.phoneNumber || u.mobile || u.mobileNumber ||
+            u.member?.mobileNumber || u.member?.phone || ""
         }));
         setUsersList(mappedUsers);
       } else {
@@ -648,39 +656,57 @@ const FranchisesPage = () => {
                     : "Choose users"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                <div className="p-3 border-b border-border">
+              <PopoverContent className="w-[320px] p-0 shadow-xl rounded-2xl border border-slate-200 overflow-hidden" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                {/* Search bar */}
+                <div className="px-3 pt-3 pb-2">
                   <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                     <input
-                      className="w-full pl-7 py-1 text-xs outline-none bg-transparent"
+                      className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400"
                       placeholder="Search users..."
                       value={userSearchQuery}
                       onChange={(e) => setUserSearchQuery(e.target.value)}
                     />
                   </div>
                 </div>
-                <div className="max-h-[250px] overflow-y-auto p-1">
-                  {filteredUsers.map((user) => (
-                    <div
-                      key={user._id}
-                      className="flex items-center space-x-2 px-2 py-2 hover:bg-slate-100 rounded-md cursor-pointer"
-                      onClick={() => toggleUser(user)}
-                    >
-                      <Checkbox
-                        checked={selectedUsers.some(u => u._id === user._id)}
-                        onCheckedChange={() => toggleUser(user)}
-                      />
-                      <div className="flex flex-col">
-                        <span className="text-xs font-semibold">{user.fullName}</span>
-                        {user.businessName && (
-                          <span className="text-[10px] text-muted-foreground">{user.businessName}</span>
+                {/* User list */}
+                <div className="max-h-[280px] overflow-y-auto px-2 pb-2">
+                  {filteredUsers.map((user) => {
+                    const isSelected = selectedUsers.some(u => u._id === user._id);
+                    return (
+                      <div
+                        key={user._id}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
+                          isSelected ? "bg-primary/8" : "hover:bg-slate-50"
                         )}
+                        onClick={() => toggleUser(user)}
+                      >
+                        {/* Avatar circle */}
+                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                          <User className="h-4 w-4 text-slate-500" />
+                        </div>
+                        {/* Name & business */}
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <span className="text-xs font-semibold text-slate-800 truncate">{user.fullName}</span>
+                          <span className="text-[10px] text-slate-400 truncate">
+                            {user.businessName || "—"}
+                          </span>
+                        </div>
+                        {/* Selection indicator */}
+                        <div className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                          isSelected
+                            ? "bg-primary border-primary"
+                            : "border-slate-300 bg-white"
+                        )}>
+                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {filteredUsers.length === 0 && (
-                    <p className="text-center py-4 text-xs text-muted-foreground">No users found</p>
+                    <p className="text-center py-6 text-xs text-slate-400">No users found</p>
                   )}
                 </div>
               </PopoverContent>
