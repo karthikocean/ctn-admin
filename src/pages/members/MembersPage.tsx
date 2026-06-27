@@ -763,9 +763,7 @@ const MembersPage = () => {
     }
 
     // Photo validation
-    if (!formData.profilePhoto && !filesToUpload.profilePhoto) {
-      newErrors.profilePhoto = "Profile Photo is required";
-    }
+    // Profile Photo is now optional, no validation needed
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -1143,7 +1141,7 @@ const MembersPage = () => {
                     <div className="grid grid-cols-2 gap-5">
                       <div>
                         <Label htmlFor="profilePhoto" className="text-xs font-bold text-slate-700 mb-2 block">
-                          Profile Photo <span className="text-destructive">*</span>
+                          Profile Photo
                         </Label>
                         <Input
                           id="profilePhoto"

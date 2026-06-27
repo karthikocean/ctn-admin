@@ -1025,6 +1025,7 @@ const RolesPage = () => {
                 <table className="w-full min-w-[800px] md:min-w-full">
                   <thead>
                     <tr className="border-b border-border bg-secondary/50">
+                      <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-14">S.No</th>
                       <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User ID</th>
                       <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
                       <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
@@ -1037,19 +1038,22 @@ const RolesPage = () => {
                   <tbody className="divide-y divide-border">
                     {usersListLoading && memoizedUsersList.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-20">
+                        <td colSpan={8} className="px-6 py-20">
                           <PremiumLoader style="pulse" variant="centered" text="Loading admin users..." />
                         </td>
                       </tr>
                     ) : memoizedUsersList.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                        <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                           No users found matching the filter criteria.
                         </td>
                       </tr>
                     ) : (
                       memoizedUsersList.map((user, index) => (
                         <tr key={user._id || user.id || index} className={cn("hover:bg-secondary/30 transition-colors", usersListLoading && "opacity-50 pointer-events-none")}>
+                          <td className="px-4 py-4 text-sm font-semibold text-foreground text-center">
+                            {(usersListPage - 1) * pageSize + index + 1}
+                          </td>
                           <td className="px-6 py-4 text-sm font-semibold text-foreground">
                             {user.userId || "N/A"}
                           </td>
@@ -1231,7 +1235,7 @@ const RolesPage = () => {
                     <DialogDescription>
                       {usersLoading
                         ? "Fetching users..."
-                        : `Showing ${modalTotalCount} user(s) assigned`}
+                        : `Showing ${modalTotalCount} users assigned`}
                     </DialogDescription>
                   </div>
                 </div>
@@ -1296,6 +1300,7 @@ const RolesPage = () => {
                   <table className="w-full min-w-[700px] md:min-w-full">
                     <thead>
                       <tr className="border-b border-border bg-secondary/50">
+                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-14">S.No</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User ID</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
@@ -1308,7 +1313,7 @@ const RolesPage = () => {
                     <tbody className="divide-y divide-border">
                       {roleUsers.length === 0 ? (
                         <tr>
-                          <td colSpan={modalRoleFilter === "all" ? 7 : 6} className="px-6 py-12 text-center">
+                          <td colSpan={modalRoleFilter === "all" ? 8 : 7} className="px-6 py-12 text-center">
                             <div className="flex flex-col items-center gap-2">
                               <Users size={32} className="text-muted-foreground/30" />
                               <p className="text-muted-foreground font-medium">No users found.</p>
@@ -1318,6 +1323,9 @@ const RolesPage = () => {
                       ) : (
                         memoizedRoleUsers.map((user, index) => (
                           <tr key={user._id || user.id || index} className={cn("hover:bg-secondary/30 transition-colors", usersLoading && "opacity-50 pointer-events-none")}>
+                            <td className="px-4 py-4 text-sm font-semibold text-foreground text-center">
+                              {(usersPage - 1) * pageSize + index + 1}
+                            </td>
                             <td className="px-6 py-4 text-sm font-semibold text-foreground">
                               {user.userId || "N/A"}
                             </td>

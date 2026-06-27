@@ -629,7 +629,6 @@ const AnnouncementsPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Event">Event</SelectItem>
-                <SelectItem value="Online Stall">Online Stall</SelectItem>
               </SelectContent>
             </Select>
           </div>

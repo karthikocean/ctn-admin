@@ -132,7 +132,10 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
               ) : item.path ? (
                 <Link
                   to={item.path}
-                  onClick={onMobileClose}
+                  onClick={() => {
+                    onMobileClose();
+                    setExpandedItems([]);
+                  }}
                   className={cn(
                     "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
                     active

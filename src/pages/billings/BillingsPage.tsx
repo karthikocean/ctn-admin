@@ -612,9 +612,16 @@ const BillingsPage = () => {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">₹</span>
                   <Input
                     type="number"
+                    min="1"
                     value={formData.amount}
+                    onKeyDown={(e) => {
+                      if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                        e.preventDefault();
+                      }
+                    }}
                     onChange={(e) => {
-                      setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 });
+                      const val = parseFloat(e.target.value);
+                      setFormData({ ...formData, amount: val > 0 ? val : 0 });
                       if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }));
                     }}
                     className={`h-11 pl-7 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${errors.amount ? "border-red-500" : "border-border"

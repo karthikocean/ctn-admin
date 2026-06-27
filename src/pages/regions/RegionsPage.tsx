@@ -190,6 +190,17 @@ const RegionsPage = () => {
       return;
     }
 
+    // Check for duplicate area names (case-insensitive)
+    const areaNameList = filteredAreas.map(a => a.name.trim().toLowerCase());
+    if (areaNameList.length !== new Set(areaNameList).size) {
+      toast({
+        title: "Duplicate Area",
+        description: "Duplicate business region names are not allowed. Please enter unique area names.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
