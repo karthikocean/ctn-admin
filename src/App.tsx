@@ -66,12 +66,12 @@ const App = () => (
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/members" element={<MembersPage />} />
               <Route path="/spotlight" element={
-                <PermissionRoute module="spotlight" action="view">
+                <PermissionRoute module="spotlight_creation" action="view">
                   <SpotlightPage />
                 </PermissionRoute>
               } />
               <Route path="/spotlight/requests" element={
-                <PermissionRoute module="spotlight" action="view">
+                <PermissionRoute module="spotlight_request" action="view">
                   <SpotlightRequestsPage />
                 </PermissionRoute>
               } />
@@ -99,7 +99,11 @@ const App = () => (
               <Route path="/announcements" element={<AnnouncementsPage />} />
               <Route path="/blogs" element={<BlogsPage />} />
               <Route path="/trainings" element={<TrainingsPage />} />
-              <Route path="/trainings/categories" element={<TrainingCategoriesPage />} />
+              <Route path="/trainings/categories" element={
+                <PermissionRoute module="training_categories" action="view">
+                  <TrainingCategoriesPage />
+                </PermissionRoute>
+              } />
               <Route path="/points" element={<PointsPage />} />
               <Route path="/allocate-points" element={<AllocatePointsPage />} />
               <Route path="/allocate-points/edit/:id" element={<AllocatePointsPage />} />
@@ -108,12 +112,12 @@ const App = () => (
               <Route path="/connections" element={<ConnectionsPage />} />
               <Route path="/contributions" element={<ContributionsPage />} />
               <Route path="/reports/franchise-commission" element={
-                <PermissionRoute module="reports" action="view">
+                <PermissionRoute module="franchise_commission_report" action="view">
                   <FranchiseCommissionReportPage />
                 </PermissionRoute>
               } />
               <Route path="/reports/history" element={
-                <PermissionRoute module="reports" action="view">
+                <PermissionRoute module="report_history" action="view">
                   <ReportHistoryPage />
                 </PermissionRoute>
               } />

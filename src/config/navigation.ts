@@ -27,7 +27,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
     title: "Trainings", icon: GraduationCap, moduleId: "trainings",
     children: [
       { title: "Trainings Management", path: "/trainings", moduleId: "trainings" },
-      { title: "Training Categories", path: "/trainings/categories", moduleId: "trainings" },
+      { title: "Training Categories", path: "/trainings/categories", moduleId: "training_categories" },
     ],
   },
   {
@@ -59,8 +59,8 @@ export const sidebarNavItems: SidebarNavItem[] = [
     icon: Star,
     moduleId: "spotlight",
     children: [
-      { title: "Spotlight Request", path: "/spotlight/requests", moduleId: "spotlight" },
-      { title: "Spotlight Creation", path: "/spotlight", moduleId: "spotlight" },
+      { title: "Spotlight Request", path: "/spotlight/requests", moduleId: "spotlight_request" },
+      { title: "Spotlight Creation", path: "/spotlight", moduleId: "spotlight_creation" },
 
     ],
   },
@@ -69,8 +69,8 @@ export const sidebarNavItems: SidebarNavItem[] = [
   {
     title: "Reports", icon: BarChart3, moduleId: "reports",
     children: [
-      { title: "Franchise Commission Report", path: "/reports/franchise-commission", moduleId: "reports" },
-      { title: "Report History", path: "/reports/history", moduleId: "reports" },
+      { title: "Franchise Commission Report", path: "/reports/franchise-commission", moduleId: "franchise_commission_report" },
+      { title: "Report History", path: "/reports/history", moduleId: "report_history" },
     ],
   },
 

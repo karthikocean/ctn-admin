@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, Loader2, Store, MapPin, Users, X, Check, ChevronsUpDown, User } from "lucide-react";
+import { Search, Filter, Loader2, Store, MapPin, Users, X, Check, ChevronsUpDown, User, Globe } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -408,7 +408,7 @@ const FranchisesPage = () => {
         {/* Title Block */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Store size={16} className="text-primary" />
+            <Globe size={16} className="text-primary" />
           </div>
           <div>
             <h1 className="text-base font-semibold text-foreground">Franchises</h1>

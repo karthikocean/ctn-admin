@@ -140,6 +140,7 @@ export interface Post {
     profilePhoto: string;
     businessName: string;
   };
+  status: string;
 }
 
 export interface PointEntry {
