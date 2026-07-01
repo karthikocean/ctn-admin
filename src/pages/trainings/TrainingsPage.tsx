@@ -179,6 +179,7 @@ const TrainingsPage = () => {
 
     if (!form.authorName.trim()) newErrors.authorName = "Instructor name is required";
     if (!form.authorImage && !form.authorImageFile) newErrors.authorImage = "Instructor image is required";
+    if (!form.authorBio.trim()) newErrors.authorBio = "Instructor bio is required";
 
     form.lessons.forEach((lesson) => {
       if (!lesson.videoUrl && !lesson.videoFile) newErrors[`lesson_${lesson.id}_video`] = "Video is required";
@@ -188,7 +189,7 @@ const TrainingsPage = () => {
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;
   };
 
   const formatDuration = (seconds: number) => {
@@ -273,11 +274,12 @@ const TrainingsPage = () => {
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
       toast({ title: "Validation Error", description: "Please fill all required fields marked with *", variant: "destructive" });
-      const errorKeys = Object.keys(errors);
+      const errorKeys = Object.keys(validationErrors);
       if (errorKeys.some(k => ["title", "thumbnail", "banner"].includes(k))) setActiveTab("basic");
-      else if (errorKeys.some(k => ["authorName", "authorImage"].includes(k))) setActiveTab("author");
+      else if (errorKeys.some(k => ["authorName", "authorImage", "authorBio"].includes(k))) setActiveTab("author");
       else setActiveTab("lessons");
       return;
     }
@@ -696,8 +698,23 @@ const TrainingsPage = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Instructor Bio</Label>
-                  <Textarea placeholder="Brief bio..." className="min-h-[150px] rounded-2xl" value={form.authorBio} onChange={(e) => setForm(prev => ({ ...prev, authorBio: e.target.value }))} />
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Instructor Bio <span className="text-red-500">*</span></Label>
+                  <Textarea
+                    placeholder="Brief bio..."
+                    className={cn("min-h-[150px] rounded-2xl", errors.authorBio && "border-red-500 focus-visible:ring-red-500")}
+                    value={form.authorBio}
+                    onChange={(e) => {
+                      setForm(prev => ({ ...prev, authorBio: e.target.value }));
+                      if (errors.authorBio) {
+                        setErrors(prev => {
+                          const next = { ...prev };
+                          delete next.authorBio;
+                          return next;
+                        });
+                      }
+                    }}
+                  />
+                  {errors.authorBio && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.authorBio}</p>}
                 </div>
               </motion.div>
             )}

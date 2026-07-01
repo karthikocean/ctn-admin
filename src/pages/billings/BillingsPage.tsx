@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, CreditCard, Eye, Loader2, IndianRupee, Plus, Banknote, Landmark, CheckSquare, Globe, HelpCircle, Copy, Check } from "lucide-react";
+import { Search, Filter, CreditCard, Eye, Loader2, IndianRupee, Plus, Banknote, Landmark, CheckSquare, Globe, HelpCircle, Copy, Check, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ import * as MembersApi from "@/api/MembersApi";
 import * as PlansApi from "@/api/PlansApi";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 const getFullUrl = (path: string | null) => {
@@ -178,6 +179,8 @@ const BillingsPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [billingToDelete, setBillingToDelete] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [memberPopoverOpen, setMemberPopoverOpen] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
 
   const [formData, setFormData] = useState<{
     memberId: string;
@@ -259,6 +262,7 @@ const BillingsPage = () => {
   const resetForm = () => {
     setEditingId(null);
     setErrors({});
+    setMemberSearchQuery("");
     setFormData({
       memberId: "",
       planId: "",
@@ -553,24 +557,103 @@ const BillingsPage = () => {
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Select Member <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={formData.memberId}
-                onValueChange={(val) => {
-                  setFormData(prev => ({ ...prev, memberId: val }));
-                  if (errors.memberId) setErrors((prev) => ({ ...prev, memberId: "" }));
-                }}
-              >
-                <SelectTrigger className={`w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border ${errors.memberId ? "border-red-500" : "border-border"}`}>
-                  <SelectValue placeholder="Choose Member..." />
-                </SelectTrigger>
-                <SelectContent className="max-h-60 overflow-y-auto">
-                  {members.map((m) => (
-                    <SelectItem key={m._id} value={m._id}>
-                      {m.fullName}{m.businessName ? ` (${m.businessName})` : (m.mobileNumber ? ` (${m.mobileNumber})` : "")}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={memberPopoverOpen} onOpenChange={setMemberPopoverOpen} modal={true}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "w-full mt-1.5 h-11 flex items-center justify-between font-normal rounded-xl bg-secondary/30 border text-sm hover:bg-secondary/45 focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all duration-150 px-3",
+                      errors.memberId ? "border-red-500" : "border-border",
+                      !formData.memberId ? "text-slate-400" : "text-foreground"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 text-left">
+                      <User className={cn("h-4 w-4 text-slate-500", !formData.memberId ? "opacity-50" : "opacity-80")} />
+                      <span className="truncate">
+                        {formData.memberId
+                          ? members.find((m) => m._id === formData.memberId)?.fullName || "Choose Member..."
+                          : "Choose Member..."}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-slate-500 opacity-50 flex-shrink-0" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[320px] p-0 shadow-xl rounded-2xl border border-slate-200 overflow-hidden" align="start" style={{ pointerEvents: "auto" }}>
+                  {/* Search bar */}
+                  <div className="px-3 pt-3 pb-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400"
+                        placeholder="Search members..."
+                        value={memberSearchQuery}
+                        onChange={(e) => setMemberSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {/* Member list */}
+                  <div className="max-h-[240px] overflow-y-auto px-2 pb-2">
+                    {members
+                      .filter((member) => {
+                        const q = memberSearchQuery.toLowerCase();
+                        return (
+                          member.fullName?.toLowerCase().includes(q) ||
+                          member.businessName?.toLowerCase().includes(q) ||
+                          member.mobileNumber?.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((member) => {
+                        const isSelected = formData.memberId === member._id;
+                        return (
+                          <div
+                            key={member._id}
+                            className={cn(
+                              "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
+                              isSelected ? "bg-primary/8" : "hover:bg-slate-50"
+                            )}
+                            onClick={() => {
+                              setFormData((prev) => ({ ...prev, memberId: member._id }));
+                              if (errors.memberId) setErrors((prev) => ({ ...prev, memberId: "" }));
+                              setMemberPopoverOpen(false);
+                              setMemberSearchQuery("");
+                            }}
+                          >
+                            {/* Avatar circle */}
+                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                              <User className="h-4 w-4 text-slate-500" />
+                            </div>
+                            {/* Name & business */}
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className="text-xs font-semibold text-slate-800 truncate">{member.fullName}</span>
+                              <span className="text-[10px] text-slate-400 truncate">
+                                {member.businessName || "—"}
+                              </span>
+                            </div>
+                            {/* Selection indicator */}
+                            <div
+                              className={cn(
+                                "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                                isSelected ? "bg-primary border-primary" : "border-slate-300 bg-white"
+                              )}
+                            >
+                              {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {members.filter((member) => {
+                      const q = memberSearchQuery.toLowerCase();
+                      return (
+                        member.fullName?.toLowerCase().includes(q) ||
+                        member.businessName?.toLowerCase().includes(q) ||
+                        member.mobileNumber?.toLowerCase().includes(q)
+                      );
+                    }).length === 0 && (
+                      <p className="text-center py-6 text-xs text-slate-400">No members found</p>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
               {errors.memberId && (
                 <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.memberId}</p>
               )}
@@ -590,7 +673,7 @@ const BillingsPage = () => {
                 <SelectTrigger className={`w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border ${errors.planId ? "border-red-500" : "border-border"}`}>
                   <SelectValue placeholder="Choose Plan..." />
                 </SelectTrigger>
-                <SelectContent className="max-h-60 overflow-y-auto">
+                <SelectContent className="max-h-60 overflow-y-auto w-[var(--radix-select-trigger-width)]">
                   {plans.map((p) => (
                     <SelectItem key={p._id} value={p._id}>
                       {p.title} (₹{p.amount})
@@ -652,7 +735,7 @@ const BillingsPage = () => {
                   <SelectTrigger className={`w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border ${errors.paymentMethod ? "border-red-500" : "border-border"}`}>
                     <SelectValue placeholder="Select Payment Method..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="w-[var(--radix-select-trigger-width)]">
                     <SelectItem value="Razorpay">Razorpay</SelectItem>
                     <SelectItem value="Stripe">Stripe</SelectItem>
                     <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
