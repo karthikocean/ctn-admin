@@ -17,6 +17,15 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const getFullUrl = (path: string | null) => {
   if (!path) return "";
@@ -42,6 +51,12 @@ const SpotlightRequestsPage = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [requestToDelete, setRequestToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Reject dialog states
+  const [rejectConfirmOpen, setRejectConfirmOpen] = useState(false);
+  const [requestToReject, setRequestToReject] = useState<any>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const canEdit = hasPermission("spotlight", "edit");
   const canDelete = hasPermission("spotlight", "delete");
@@ -111,15 +126,33 @@ const SpotlightRequestsPage = () => {
     }
   };
 
-  const handleReject = async (id: string) => {
-    setIsProcessing(id);
+  const handleRejectClick = (request: any) => {
+    setRequestToReject(request);
+    setRejectReason("");
+    setRejectConfirmOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
+    if (!requestToReject) return;
+    if (!rejectReason.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Reason is required to reject a spotlight request.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setIsRejecting(true);
     try {
-      await rejectSpotlightRequest(id);
+      await rejectSpotlightRequest(requestToReject._id, rejectReason.trim());
       toast({
         title: "Rejected",
         description: "Spotlight request rejected successfully",
         variant: "success"
       });
+      setRejectConfirmOpen(false);
+      setRequestToReject(null);
+      setRejectReason("");
       fetchRequests();
     } catch (error: any) {
       toast({
@@ -128,7 +161,7 @@ const SpotlightRequestsPage = () => {
         variant: "destructive"
       });
     } finally {
-      setIsProcessing(null);
+      setIsRejecting(false);
     }
   };
 
@@ -286,17 +319,13 @@ const SpotlightRequestsPage = () => {
                             size="sm"
                             variant="ghost"
                             className="h-8 px-2.5 rounded-lg text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200/50"
-                            onClick={() => handleReject(r._id)}
-                            disabled={isProcessing !== null}
+                            onClick={() => handleRejectClick(r)}
+                            disabled={isProcessing !== null || isRejecting}
                           >
-                            {isProcessing === r._id ? (
-                              <Loader2 className="animate-spin h-3.5 w-3.5" />
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <XCircle size={14} />
-                                <span>Reject</span>
-                              </div>
-                            )}
+                            <div className="flex items-center gap-1">
+                              <XCircle size={14} />
+                              <span>Reject</span>
+                            </div>
                           </Button>
                         </>
                       )}
@@ -340,6 +369,66 @@ const SpotlightRequestsPage = () => {
         confirmLabel="Delete"
         variant="destructive"
       />
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectConfirmOpen} onOpenChange={setRejectConfirmOpen}>
+        <DialogContent className="sm:max-w-[420px] border-border rounded-2xl shadow-2xl p-6 bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center border border-red-100">
+                <XCircle className="text-red-500 w-4 h-4" />
+              </div>
+              Reject Spotlight Request
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2 text-xs">
+              Are you sure you want to reject the spotlight request from <span className="font-semibold text-foreground">{requestToReject?.member?.fullName || "this member"}</span>? A rejection reason is required and will be sent to the member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-4">
+            <div className="grid gap-1.5">
+              <label htmlFor="reject-reason" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Rejection Reason <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                id="reject-reason"
+                placeholder="Explain why this request is being rejected..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="min-h-[100px] rounded-xl bg-background border border-border focus:ring-2 focus:ring-ring focus-visible:ring-ring resize-none text-xs"
+                required
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              className="rounded-xl border-border text-xs"
+              onClick={() => {
+                setRejectConfirmOpen(false);
+                setRequestToReject(null);
+                setRejectReason("");
+              }}
+              disabled={isRejecting}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs"
+              onClick={handleConfirmReject}
+              disabled={isRejecting || !rejectReason.trim()}
+            >
+              {isRejecting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  Rejecting...
+                </>
+              ) : (
+                "Reject Request"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

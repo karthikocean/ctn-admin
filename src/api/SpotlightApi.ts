@@ -48,8 +48,8 @@ export const approveSpotlightRequest = async (id: string) => {
   return response.data;
 };
 
-export const rejectSpotlightRequest = async (id: string) => {
-  const response = await api.put(`/spotlights/requests/${id}/reject`);
+export const rejectSpotlightRequest = async (id: string, reason: string) => {
+  const response = await api.put(`/spotlights/requests/${id}/reject`, { reason });
   return response.data;
 };
 
@@ -57,4 +57,17 @@ export const deleteSpotlightRequest = async (id: string) => {
   const response = await api.delete(`/spotlights/requests/${id}`);
   return response.data;
 };
+
+export interface SpotlightHistoryQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  action?: string;
+}
+
+export const getSpotlightHistory = async (params: SpotlightHistoryQueryParams) => {
+  const response = await api.get("/spotlights/history", { params });
+  return response.data;
+};
+
 
