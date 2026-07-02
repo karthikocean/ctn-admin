@@ -64,6 +64,7 @@ interface TrainingForm {
   authorBio: string;
   lessons: Lesson[];
   categoryId: string | null;
+  isFree?: boolean;
 }
 
 const TrainingsPage = () => {
@@ -101,7 +102,8 @@ const TrainingsPage = () => {
     lessons: [
       { id: Date.now().toString(), title: "", description: "", thumbnail: null, videoUrl: null, points: 0, duration: "" }
     ],
-    categoryId: null
+    categoryId: null,
+    isFree: false
   };
 
   const [form, setForm] = useState<TrainingForm>(initialForm);
@@ -341,7 +343,8 @@ const TrainingsPage = () => {
         authorImage,
         authorBio: form.authorBio,
         lessons,
-        categoryId: form.categoryId
+        categoryId: form.categoryId,
+        isFree: form.isFree
       };
 
       if (editingId) {
@@ -384,7 +387,8 @@ const TrainingsPage = () => {
         ...l,
         _id: l._id
       })),
-      categoryId: training.categoryId || (training.category?._id || null)
+      categoryId: training.categoryId || (training.category?._id || null),
+      isFree: !!training.isFree
     });
     setDrawerOpen(true);
     setActiveTab("basic");
@@ -655,6 +659,17 @@ const TrainingsPage = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="flex items-center space-x-2 bg-white/50 p-4 rounded-2xl border border-slate-200/50">
+                  <input
+                    type="checkbox"
+                    id="isFree"
+                    checked={form.isFree || false}
+                    onChange={(e) => setForm(prev => ({ ...prev, isFree: e.target.checked }))}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                  />
+                  <Label htmlFor="isFree" className="text-xs font-bold uppercase tracking-wider text-slate-600 cursor-pointer">Is Free Course</Label>
                 </div>
               </motion.div>
             )}

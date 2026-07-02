@@ -61,7 +61,6 @@ export const sidebarNavItems: SidebarNavItem[] = [
     children: [
       { title: "Spotlight Request", path: "/spotlight/requests", moduleId: "spotlight_request" },
       { title: "Spotlight Creation", path: "/spotlight", moduleId: "spotlight_creation" },
-
     ],
   },
   { title: "Connections", path: "/connections", icon: Link2, moduleId: "connections" },
