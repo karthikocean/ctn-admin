@@ -115,6 +115,7 @@ const ConnectionsPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
+                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16 whitespace-nowrap">S.No</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">From</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">To</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
@@ -124,13 +125,14 @@ const ConnectionsPage = () => {
             <tbody className="divide-y divide-border">
               {connections.length === 0 && !isLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={5} className="px-6 py-8 text-center text-sm text-muted-foreground">
                     No connections found
                   </td>
                 </tr>
               ) : (
-                connections.map((c) => (
+                connections.map((c, index) => (
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * 10 + index + 1}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-foreground">
                       <div>
                         <p className="font-semibold">{c.sender?.fullName || "Unknown"}</p>

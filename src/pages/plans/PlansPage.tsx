@@ -172,6 +172,14 @@ const PlansPage = () => {
     const hasEmptyModule = formData.modules.some(m => !m.moduleName);
     if (hasEmptyModule) {
       newErrors.modules = "Please select a valid module name for all modules";
+    } else {
+      const hasInvalidLimit = formData.modules.some(m => m.countLimit <= 0);
+      if (hasInvalidLimit) {
+        newErrors.modules = "Limit must be greater than zero for all modules";
+      }
+    }
+    if (formData.benefits.requirementResponseLimit <= 0) {
+      newErrors.requirementResponseLimit = "Requirement response limit must be greater than zero";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -502,9 +510,12 @@ const PlansPage = () => {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">₹</span>
                   <Input
                     type="number"
+                    min={0.01}
+                    step="any"
                     value={formData.amount}
                     onChange={(e) => {
-                      setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 });
+                      const val = parseFloat(e.target.value);
+                      setFormData({ ...formData, amount: val < 0 ? 0 : (isNaN(val) ? 0 : val) });
                       if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }));
                     }}
                     className={`h-11 pl-7 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${errors.amount ? "border-red-500" : "border-border"
@@ -615,8 +626,12 @@ const PlansPage = () => {
                       <Input
                         type="number"
                         placeholder="0"
+                        min={1}
                         value={module.countLimit}
-                        onChange={(e) => handleModuleChange(index, "countLimit", parseInt(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          handleModuleChange(index, "countLimit", val < 0 ? 0 : (isNaN(val) ? 0 : val));
+                        }}
                         className="h-10 rounded-lg border-border bg-background text-xs font-bold focus:ring-primary/20 text-center px-1.5"
                       />
                     </div>
@@ -755,19 +770,27 @@ const PlansPage = () => {
                 </Label>
                 <Input
                   type="number"
-                  min={0}
+                  min={1}
                   value={formData.benefits.requirementResponseLimit}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
                     setFormData({
                       ...formData,
                       benefits: {
                         ...formData.benefits,
-                        requirementResponseLimit: Math.max(0, parseInt(e.target.value) || 0)
+                        requirementResponseLimit: val < 0 ? 0 : (isNaN(val) ? 0 : val)
                       }
-                    })
-                  }
-                  className="mt-1.5 h-10 rounded-lg border-border bg-secondary/30 text-xs font-bold"
+                    });
+                    if (errors.requirementResponseLimit) {
+                      setErrors((prev) => ({ ...prev, requirementResponseLimit: "" }));
+                    }
+                  }}
+                  className={`mt-1.5 h-10 rounded-lg bg-secondary/30 text-xs font-bold border ${errors.requirementResponseLimit ? "border-red-500" : "border-border"
+                    }`}
                 />
+                {errors.requirementResponseLimit && (
+                  <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.requirementResponseLimit}</p>
+                )}
               </div>
               <div>
                 <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest block ml-0.5">
@@ -862,15 +885,15 @@ const PlansPage = () => {
 
       {/* Preview Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl p-0 overflow-hidden bg-background border border-border rounded-2xl shadow-2xl">
+        <DialogContent className="max-w-2xl p-0 overflow-hidden bg-background border border-border rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
           {/* Glass background decoration blobs */}
           <div className="absolute -top-24 -left-20 w-56 h-56 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-20 w-56 h-56 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
 
           {viewingPlan && (
-            <div className="flex flex-col">
+            <div className="flex flex-col overflow-hidden h-full max-h-[90vh]">
               {/* Top Banner / Header Card */}
-              <div className="relative overflow-hidden p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-border/80">
+              <div className="relative overflow-hidden pt-8 pb-6 px-6 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-border/80 flex-shrink-0">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center flex-shrink-0 text-primary shadow-inner">
                     <PlanIcon size={24} />
@@ -897,151 +920,154 @@ const PlansPage = () => {
                 </div>
               </div>
 
-              {/* Stats Card bar */}
-              <div className="grid grid-cols-4 border-b border-border divide-x divide-border bg-secondary/10">
-                <div className="p-4 text-center">
-                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Plan Amount</span>
-                  <span className="text-xl font-extrabold text-primary">₹{viewingPlan.amount}</span>
-                </div>
-                <div className="p-4 text-center">
-                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Trial Days</span>
-                  <span className="text-xl font-extrabold text-foreground">
-                    {viewingPlan.trialDays !== null && viewingPlan.trialDays !== undefined ? viewingPlan.trialDays : "None"}
-                  </span>
-                </div>
-                <div className="p-4 text-center">
-                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Included Modules</span>
-                  <span className="text-xl font-extrabold text-foreground">{viewingPlan.modules?.length || 0}</span>
-                </div>
-                <div className="p-4 text-center">
-                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Member Count</span>
-                  <span className="text-xl font-extrabold text-foreground">{viewingPlan.memberCount ?? 0}</span>
-                </div>
-              </div>
-
-              {/* Modules Details */}
-              <div className="p-6">
-                <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
-                  Resource Limits & Frequencies
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[180px] overflow-y-auto p-1">
-                  {viewingPlan.modules?.map((m: any, i: number) => {
-                    const iconMap: Record<string, any> = {
-                      "Ask": HelpCircle,
-                      "Give": Gift,
-                      "Requirement": ClipboardList,
-                      "Post": Send,
-                      "Milestones": Trophy,
-                      "Trainings": GraduationCap,
-                      "One to One": Users,
-                      "Referral": Share2,
-                      "Thank you Slip": Receipt,
-                      "Event": Calendar,
-                      "Online Stall": Store,
-                      "Offline Stall": Store,
-                      "Marketplace": ShoppingBag,
-                    };
-                    const IconComponent = iconMap[m.moduleName] || Layers;
-                    const colorMap: Record<string, { hoverBorder: string, bg: string, text: string }> = {
-                      "Ask": { hoverBorder: "hover:border-sky-500", bg: "bg-sky-500/10", text: "text-sky-500" },
-                      "Give": { hoverBorder: "hover:border-emerald-500", bg: "bg-emerald-500/10", text: "text-emerald-500" },
-                      "Requirement": { hoverBorder: "hover:border-amber-500", bg: "bg-amber-500/10", text: "text-amber-500" },
-                      "Post": { hoverBorder: "hover:border-indigo-500", bg: "bg-indigo-500/10", text: "text-indigo-500" },
-                      "Milestones": { hoverBorder: "hover:border-yellow-500", bg: "bg-yellow-500/10", text: "text-yellow-600" },
-                      "Trainings": { hoverBorder: "hover:border-violet-500", bg: "bg-violet-500/10", text: "text-violet-500" },
-                      "One to One": { hoverBorder: "hover:border-rose-500", bg: "bg-rose-500/10", text: "text-rose-500" },
-                      "Referral": { hoverBorder: "hover:border-cyan-500", bg: "bg-cyan-500/10", text: "text-cyan-500" },
-                      "Thank you Slip": { hoverBorder: "hover:border-teal-500", bg: "bg-teal-500/10", text: "text-teal-500" },
-                      "Event": { hoverBorder: "hover:border-blue-500", bg: "bg-blue-500/10", text: "text-blue-500" },
-                      "Online Stall": { hoverBorder: "hover:border-fuchsia-500", bg: "bg-fuchsia-500/10", text: "text-fuchsia-500" },
-                      "Offline Stall": { hoverBorder: "hover:border-orange-500", bg: "bg-orange-500/10", text: "text-orange-500" },
-                      "Marketplace": { hoverBorder: "hover:border-pink-500", bg: "bg-pink-500/10", text: "text-pink-500" },
-                    };
-                    const colors = colorMap[m.moduleName] || { hoverBorder: "hover:border-primary", bg: "bg-primary/10", text: "text-primary" };
-
-                    return (
-                      <div
-                        key={i}
-                        className={cn(
-                          "flex items-center gap-3 p-4 rounded-xl bg-secondary/15 border border-border/80 transition-all duration-300 hover:scale-[1.01] hover:shadow-md hover:bg-background group",
-                          colors.hoverBorder
-                        )}
-                      >
-                        <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", colors.bg, colors.text)}>
-                          <IconComponent size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-bold text-foreground truncate">{m.moduleName}</h4>
-                          <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <span>Every</span>
-                            <span className="font-bold text-foreground/75">{m.frequencyValue || 1} {m.frequency || "monthly"}</span>
-                          </p>
-                        </div>
-                        <div className="text-right flex-shrink-0 flex flex-col justify-center pl-2">
-                          <span className="text-xl font-black text-foreground tracking-tight leading-none">{m.countLimit}</span>
-                          <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1 block">LIMIT</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Features & Benefits details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-6 pb-6 border-t border-border pt-4">
-                <div>
-                  <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <Shield size={12} className="text-primary" />
-                    Feature Access
-                  </h3>
-                  <div className="space-y-1.5">
-                    {Object.entries(viewingPlan.features || {
-                      monthlyMeeting: false,
-                      eventVisitor: false,
-                      eventStall: false,
-                      spotlights: false
-                    }).map(([key, val]) => (
-                      <div key={key} className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
-                        <span className="font-semibold text-foreground capitalize">
-                          {key.replace(/([A-Z])/g, " $1")}
-                        </span>
-                        <span className={val ? "text-emerald-500 font-bold" : "text-muted-foreground font-semibold"}>
-                          {val ? "Enabled" : "Disabled"}
-                        </span>
-                      </div>
-                    ))}
+              {/* Scrollable Middle Content */}
+              <div className="flex-1 overflow-y-auto">
+                {/* Stats Card bar */}
+                <div className="grid grid-cols-4 border-b border-border divide-x divide-border bg-secondary/10">
+                  <div className="p-4 text-center">
+                    <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Plan Amount</span>
+                    <span className="text-xl font-extrabold text-primary">₹{viewingPlan.amount}</span>
+                  </div>
+                  <div className="p-4 text-center">
+                    <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Trial Days</span>
+                    <span className="text-xl font-extrabold text-foreground">
+                      {viewingPlan.trialDays !== null && viewingPlan.trialDays !== undefined ? viewingPlan.trialDays : "None"}
+                    </span>
+                  </div>
+                  <div className="p-4 text-center">
+                    <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Included Modules</span>
+                    <span className="text-xl font-extrabold text-foreground">{viewingPlan.modules?.length || 0}</span>
+                  </div>
+                  <div className="p-4 text-center">
+                    <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Member Count</span>
+                    <span className="text-xl font-extrabold text-foreground">{viewingPlan.memberCount ?? 0}</span>
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <Trophy size={12} className="text-primary" />
-                    Plan Benefits
+
+                {/* Modules Details */}
+                <div className="p-6">
+                  <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+                    Resource Limits & Frequencies
                   </h3>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
-                      <span className="font-semibold text-foreground">Requirement Response Limit</span>
-                      <span className="font-bold text-foreground">{viewingPlan.benefits?.requirementResponseLimit ?? 0}</span>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[180px] overflow-y-auto p-1">
+                    {viewingPlan.modules?.map((m: any, i: number) => {
+                      const iconMap: Record<string, any> = {
+                        "Ask": HelpCircle,
+                        "Give": Gift,
+                        "Requirement": ClipboardList,
+                        "Post": Send,
+                        "Milestones": Trophy,
+                        "Trainings": GraduationCap,
+                        "One to One": Users,
+                        "Referral": Share2,
+                        "Thank you Slip": Receipt,
+                        "Event": Calendar,
+                        "Online Stall": Store,
+                        "Offline Stall": Store,
+                        "Marketplace": ShoppingBag,
+                      };
+                      const IconComponent = iconMap[m.moduleName] || Layers;
+                      const colorMap: Record<string, { hoverBorder: string, bg: string, text: string }> = {
+                        "Ask": { hoverBorder: "hover:border-sky-500", bg: "bg-sky-500/10", text: "text-sky-500" },
+                        "Give": { hoverBorder: "hover:border-emerald-500", bg: "bg-emerald-500/10", text: "text-emerald-500" },
+                        "Requirement": { hoverBorder: "hover:border-amber-500", bg: "bg-amber-500/10", text: "text-amber-500" },
+                        "Post": { hoverBorder: "hover:border-indigo-500", bg: "bg-indigo-500/10", text: "text-indigo-500" },
+                        "Milestones": { hoverBorder: "hover:border-yellow-500", bg: "bg-yellow-500/10", text: "text-yellow-600" },
+                        "Trainings": { hoverBorder: "hover:border-violet-500", bg: "bg-violet-500/10", text: "text-violet-500" },
+                        "One to One": { hoverBorder: "hover:border-rose-500", bg: "bg-rose-500/10", text: "text-rose-500" },
+                        "Referral": { hoverBorder: "hover:border-cyan-500", bg: "bg-cyan-500/10", text: "text-cyan-500" },
+                        "Thank you Slip": { hoverBorder: "hover:border-teal-500", bg: "bg-teal-500/10", text: "text-teal-500" },
+                        "Event": { hoverBorder: "hover:border-blue-500", bg: "bg-blue-500/10", text: "text-blue-500" },
+                        "Online Stall": { hoverBorder: "hover:border-fuchsia-500", bg: "bg-fuchsia-500/10", text: "text-fuchsia-500" },
+                        "Offline Stall": { hoverBorder: "hover:border-orange-500", bg: "bg-orange-500/10", text: "text-orange-500" },
+                        "Marketplace": { hoverBorder: "hover:border-pink-500", bg: "bg-pink-500/10", text: "text-pink-500" },
+                      };
+                      const colors = colorMap[m.moduleName] || { hoverBorder: "hover:border-primary", bg: "bg-primary/10", text: "text-primary" };
+
+                      return (
+                        <div
+                          key={i}
+                          className={cn(
+                            "flex items-center gap-3 p-4 rounded-xl bg-secondary/15 border border-border/80 transition-all duration-300 hover:scale-[1.01] hover:shadow-md hover:bg-background group",
+                            colors.hoverBorder
+                          )}
+                        >
+                          <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors", colors.bg, colors.text)}>
+                            <IconComponent size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-bold text-foreground truncate">{m.moduleName}</h4>
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <span>Every</span>
+                              <span className="font-bold text-foreground/75">{m.frequencyValue || 1} {m.frequency || "monthly"}</span>
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0 flex flex-col justify-center pl-2">
+                            <span className="text-xl font-black text-foreground tracking-tight leading-none">{m.countLimit}</span>
+                            <span className="text-[8px] font-black text-muted-foreground/60 uppercase tracking-widest mt-1 block">LIMIT</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Features & Benefits details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 px-6 pb-6 border-t border-border pt-4">
+                  <div>
+                    <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <Shield size={12} className="text-primary" />
+                      Feature Access
+                    </h3>
+                    <div className="space-y-1.5">
+                      {Object.entries(viewingPlan.features || {
+                        monthlyMeeting: false,
+                        eventVisitor: false,
+                        eventStall: false,
+                        spotlights: false
+                      }).map(([key, val]) => (
+                        <div key={key} className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                          <span className="font-semibold text-foreground capitalize">
+                            {key.replace(/([A-Z])/g, " $1")}
+                          </span>
+                          <span className={val ? "text-emerald-500 font-bold" : "text-muted-foreground font-semibold"}>
+                            {val ? "Enabled" : "Disabled"}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
-                      <span className="font-semibold text-foreground">Point Multiplier</span>
-                      <span className="font-bold text-primary">{viewingPlan.benefits?.pointMultiplier ?? 1}x</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
-                      <span className="font-semibold text-foreground">Training Discount</span>
-                      <span className="font-bold text-foreground">{viewingPlan.benefits?.trainingDiscountPercentage ?? 0}%</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
-                      <span className="font-semibold text-foreground">Referral Bonus Months</span>
-                      <span className="font-bold text-foreground">{viewingPlan.benefits?.referralBonusMonths ?? 0} months</span>
+                  </div>
+                  <div>
+                    <h3 className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <Trophy size={12} className="text-primary" />
+                      Plan Benefits
+                    </h3>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                        <span className="font-semibold text-foreground">Requirement Response Limit</span>
+                        <span className="font-bold text-foreground">{viewingPlan.benefits?.requirementResponseLimit ?? 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                        <span className="font-semibold text-foreground">Point Multiplier</span>
+                        <span className="font-bold text-primary">{viewingPlan.benefits?.pointMultiplier ?? 1}x</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                        <span className="font-semibold text-foreground">Training Discount</span>
+                        <span className="font-bold text-foreground">{viewingPlan.benefits?.trainingDiscountPercentage ?? 0}%</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                        <span className="font-semibold text-foreground">Referral Bonus Months</span>
+                        <span className="font-bold text-foreground">{viewingPlan.benefits?.referralBonusMonths ?? 0} months</span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Modal Footer */}
-              <div className="flex justify-end gap-3 p-4 bg-secondary/10 border-t border-border">
+              <div className="flex justify-end gap-3 pt-4 pb-6 px-6 bg-secondary/10 border-t border-border flex-shrink-0">
                 <Button variant="outline" className="h-10 rounded-xl px-6 font-bold" onClick={() => setViewDialogOpen(false)}>
                   Close Preview
                 </Button>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Star, CheckCircle, XCircle, Trash2, Loader2, User } from "lucide-react";
+import { Search, Star, CheckCircle, XCircle, Trash2, Loader2, User, Calendar as CalendarIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -8,8 +8,12 @@ import {
   getSpotlightRequests,
   approveSpotlightRequest,
   rejectSpotlightRequest,
-  deleteSpotlightRequest
+  deleteSpotlightRequest,
+  getBookedDates
 } from "@/api/SpotlightApi";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import PaginationBar from "@/components/common/PaginationBar";
 import { useAuth } from "@/context/AuthContext";
@@ -58,6 +62,14 @@ const SpotlightRequestsPage = () => {
   const [rejectReason, setRejectReason] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
 
+  // Approve dialog states
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [requestToApprove, setRequestToApprove] = useState<any>(null);
+  const [approveDate, setApproveDate] = useState<Date | undefined>(undefined);
+  const [approveStatus, setApproveStatus] = useState("schedule");
+  const [bookedDates, setBookedDates] = useState<string[]>([]);
+  const [isApproving, setIsApproving] = useState(false);
+
   const canEdit = hasPermission("spotlight", "edit");
   const canDelete = hasPermission("spotlight", "delete");
 
@@ -105,15 +117,38 @@ const SpotlightRequestsPage = () => {
     setDebouncedSearchQuery(searchQuery);
   };
 
-  const handleApprove = async (id: string) => {
-    setIsProcessing(id);
+  const handleApproveClick = async (request: any) => {
+    setRequestToApprove(request);
+    setApproveDate(undefined);
+    setApproveStatus("schedule");
+    setApproveDialogOpen(true);
     try {
-      await approveSpotlightRequest(id);
+      const res = await getBookedDates();
+      if (res && res.data) {
+        setBookedDates(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch booked dates:", err);
+    }
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!requestToApprove || !approveDate) return;
+    setIsApproving(true);
+    try {
+      const scheduleDateStr = format(approveDate, "yyyy-MM-dd");
+      await approveSpotlightRequest(requestToApprove._id, {
+        scheduleDate: scheduleDateStr,
+        status: approveStatus
+      });
       toast({
         title: "Approved",
         description: "Spotlight request approved successfully",
         variant: "success"
       });
+      setApproveDialogOpen(false);
+      setRequestToApprove(null);
+      setApproveDate(undefined);
       fetchRequests();
     } catch (error: any) {
       toast({
@@ -122,7 +157,7 @@ const SpotlightRequestsPage = () => {
         variant: "destructive"
       });
     } finally {
-      setIsProcessing(null);
+      setIsApproving(false);
     }
   };
 
@@ -303,17 +338,13 @@ const SpotlightRequestsPage = () => {
                             size="sm"
                             variant="ghost"
                             className="h-8 px-2.5 rounded-lg text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-200/50"
-                            onClick={() => handleApprove(r._id)}
+                            onClick={() => handleApproveClick(r)}
                             disabled={isProcessing !== null}
                           >
-                            {isProcessing === r._id ? (
-                              <Loader2 className="animate-spin h-3.5 w-3.5" />
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <CheckCircle size={14} />
-                                <span>Approve</span>
-                              </div>
-                            )}
+                            <div className="flex items-center gap-1">
+                              <CheckCircle size={14} />
+                              <span>Approve</span>
+                            </div>
                           </Button>
                           <Button
                             size="sm"
@@ -424,6 +455,108 @@ const SpotlightRequestsPage = () => {
                 </>
               ) : (
                 "Reject Request"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent className="sm:max-w-[420px] border-border rounded-2xl shadow-2xl p-6 bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-foreground">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center border border-emerald-100">
+                <CheckCircle className="text-emerald-500 w-4 h-4" />
+              </div>
+              Approve Spotlight Request
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2 text-xs">
+              Select the schedule date and status to approve the spotlight request for <span className="font-semibold text-foreground">{requestToApprove?.member?.fullName || "this member"}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            {/* Date Picker */}
+            <div className="grid gap-1.5 flex flex-col">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Schedule Date <span className="text-red-500">*</span>
+              </label>
+              <Popover modal={true}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-11 justify-start text-left font-normal rounded-xl border-border bg-transparent text-sm shadow-sm",
+                      !approveDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                    {approveDate ? format(approveDate, "PPP") : <span>Select date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={approveDate}
+                    onSelect={setApproveDate}
+                    disabled={(date) => {
+                      const dateStr = format(date, "yyyy-MM-dd");
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return bookedDates.includes(dateStr) || date < today;
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Status Select */}
+            <div className="grid gap-1.5">
+              <label htmlFor="approve-status" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Spotlight Status <span className="text-red-500">*</span>
+              </label>
+              <Select value={approveStatus} onValueChange={setApproveStatus}>
+                <SelectTrigger id="approve-status" className="h-11 rounded-xl border-border bg-transparent text-sm">
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-border bg-card">
+                  <SelectItem value="schedule">Schedule</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              className="rounded-xl border-border text-xs"
+              onClick={() => {
+                setApproveDialogOpen(false);
+                setRequestToApprove(null);
+                setApproveDate(undefined);
+                setApproveStatus("schedule");
+              }}
+              disabled={isApproving}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+              onClick={handleConfirmApprove}
+              disabled={isApproving || !approveDate}
+            >
+              {isApproving ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  Approving...
+                </>
+              ) : (
+                "Approve & Schedule"
               )}
             </Button>
           </DialogFooter>
