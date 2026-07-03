@@ -62,7 +62,11 @@ const App = () => (
                 <AdminLayout />
               </ProtectedRoute>
             }>
-              <Route path="/" element={<DashboardPage />} />
+              <Route path="/" element={
+                <PermissionRoute module="dashboard" action="view">
+                  <DashboardPage />
+                </PermissionRoute>
+              } />
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/members" element={<MembersPage />} />
               <Route path="/spotlight" element={
