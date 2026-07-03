@@ -134,19 +134,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (response.data.accessToken) {
         const { accessToken, user } = response.data;
 
-        // Store in state
-        setUser(user);
-        setAccessToken(accessToken);
+        setIsLoading(true);
 
-        // Persist session basic info
+        // Persist session basic info so API client can use it for requests
         localStorage.setItem("user", JSON.stringify(user));
         localStorage.setItem("accessToken", accessToken);
+
+        try {
+          // Fetch granular permissions
+          await fetchPermissions(user.roleId);
+        } catch (err) {
+          console.error("Failed to load permissions during login", err);
+          localStorage.removeItem("user");
+          localStorage.removeItem("accessToken");
+          setIsLoading(false);
+          return { success: false, message: "Failed to load permissions. Please try again." };
+        }
+
+        // Store in state (this triggers the route change)
+        setUser(user);
+        setAccessToken(accessToken);
 
         // Connect socket on login with token
         socketService.connect(user.id, accessToken);
 
-        // Fetch granular permissions
-        await fetchPermissions(user.roleId);
+        setIsLoading(false);
 
         return { success: true, message: response.data.message || "Login successful" };
       }
@@ -154,6 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login failed:", error);
       const errorMsg = error.response?.data?.message || "Login failed. Please try again.";
+      setIsLoading(false);
       return {
         success: false,
         message: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg
