@@ -87,8 +87,14 @@ const getPlanBadge = (title: string = "") => {
   );
 };
 
+const capitalizeFirstLetter = (val: string = "") => {
+  if (!val) return "";
+  return val.charAt(0).toUpperCase() + val.slice(1);
+};
+
 const getPaymentMethodBadge = (method: string = "") => {
   const lower = method.toLowerCase();
+  const capitalized = capitalizeFirstLetter(method);
   if (lower === "cash") {
     return (
       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50 shadow-sm select-none">
@@ -117,14 +123,14 @@ const getPaymentMethodBadge = (method: string = "") => {
     return (
       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/50 shadow-sm select-none">
         <Globe size={12} className="stroke-[2.5]" />
-        {method}
+        {capitalized}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 shadow-sm select-none">
       <HelpCircle size={12} className="stroke-[2.5]" />
-      {method || "Other"}
+      {capitalized || "Other"}
     </span>
   );
 };
@@ -866,7 +872,7 @@ const BillingsPage = () => {
                   <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
                     <span className="font-bold text-muted-foreground">Payment Method</span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-secondary border border-border text-foreground">
-                      {selectedBilling.paymentMethod || selectedBilling.paymentType}
+                      {capitalizeFirstLetter(selectedBilling.paymentMethod || selectedBilling.paymentType)}
                     </span>
                   </div>
 
