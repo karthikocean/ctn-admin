@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -40,8 +41,79 @@ import CouponsPage from "@/pages/coupons/CouponsPage";
 import MarketplaceCategoryPage from "@/pages/marketplace/MarketplaceCategoryPage";
 import ModulesPage from "@/pages/modules/ModulesPage";
 import NotFound from "@/pages/NotFound";
+import { sidebarNavItems } from "@/config/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
+
+const LandingRoute = () => {
+  const { hasPermission, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  // Find target path helper
+  const getFirstPermittedPath = () => {
+    for (const item of sidebarNavItems) {
+      if (!item.moduleId) continue;
+
+      if (item.children) {
+        const allowedChild = item.children.find(child => !child.moduleId || hasPermission(child.moduleId, "view"));
+        if (allowedChild) return allowedChild.path;
+      } else {
+        if (hasPermission(item.moduleId, "view") && item.path) {
+          return item.path;
+        }
+      }
+    }
+    return "";
+  };
+
+  const hasDashboardPerm = hasPermission("dashboard", "view");
+  const fallbackPath = getFirstPermittedPath();
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (hasDashboardPerm) return;
+
+    if (fallbackPath) {
+      navigate(fallbackPath, { replace: true });
+    }
+  }, [hasDashboardPerm, fallbackPath, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (hasDashboardPerm) {
+    return <DashboardPage />;
+  }
+
+  if (fallbackPath) {
+    // While redirecting
+    return (
+      <div className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Fallback if absolutely no permissions are granted
+  return (
+    <div className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center bg-card rounded-2xl border border-border">
+      <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4 text-red-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <h2 className="text-xl font-bold text-slate-900 mb-2">Access Denied</h2>
+      <p className="text-slate-500 max-w-xs">
+        You do not have permission to view any dashboard or administrative modules.
+      </p>
+    </div>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -62,11 +134,7 @@ const App = () => (
                 <AdminLayout />
               </ProtectedRoute>
             }>
-              <Route path="/" element={
-                <PermissionRoute module="dashboard" action="view">
-                  <DashboardPage />
-                </PermissionRoute>
-              } />
+              <Route path="/" element={<LandingRoute />} />
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/members" element={<MembersPage />} />
               <Route path="/spotlight" element={
