@@ -290,6 +290,7 @@ const ContributionsPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/30">
+                <th className="text-center px-4 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16 whitespace-nowrap">S.No</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Member Connection</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Details</th>
@@ -300,7 +301,7 @@ const ContributionsPage = () => {
             <tbody className="divide-y divide-border">
               {contributions.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={5} className="py-8">
+                  <td colSpan={6} className="py-8">
                     <EmptyState
                       title="No contributions found"
                       description="Try adjusting your search query or filters."
@@ -308,8 +309,9 @@ const ContributionsPage = () => {
                   </td>
                 </tr>
               ) : (
-                contributions.map((c) => (
+                contributions.map((c, index) => (
                   <tr key={c.id} className="hover:bg-secondary/10 transition-colors">
+                    <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * limit + index + 1}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex -space-x-3">

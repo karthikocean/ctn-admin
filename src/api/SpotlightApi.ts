@@ -43,8 +43,13 @@ export const getSpotlightRequests = async (params: SpotlightQueryParams) => {
   return response.data;
 };
 
-export const approveSpotlightRequest = async (id: string) => {
-  const response = await api.put(`/spotlights/requests/${id}/approve`);
+export const approveSpotlightRequest = async (id: string, data: { scheduleDate: string; status?: string }) => {
+  const response = await api.put(`/spotlights/requests/${id}/approve`, data);
+  return response.data;
+};
+
+export const getBookedDates = async () => {
+  const response = await api.get("/spotlights/booked-dates");
   return response.data;
 };
 
