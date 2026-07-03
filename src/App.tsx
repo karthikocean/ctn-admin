@@ -49,7 +49,6 @@ const queryClient = new QueryClient();
 
 const LandingRoute = () => {
   const { hasPermission, isLoading } = useAuth();
-  const navigate = useNavigate();
 
   // Find target path helper
   const getFirstPermittedPath = () => {
@@ -68,18 +67,6 @@ const LandingRoute = () => {
     return "";
   };
 
-  const hasDashboardPerm = hasPermission("dashboard", "view");
-  const fallbackPath = getFirstPermittedPath();
-
-  useEffect(() => {
-    if (isLoading) return;
-    if (hasDashboardPerm) return;
-
-    if (fallbackPath) {
-      navigate(fallbackPath, { replace: true });
-    }
-  }, [hasDashboardPerm, fallbackPath, isLoading, navigate]);
-
   if (isLoading) {
     return (
       <div className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center">
@@ -88,17 +75,13 @@ const LandingRoute = () => {
     );
   }
 
-  if (hasDashboardPerm) {
+  if (hasPermission("dashboard", "view")) {
     return <DashboardPage />;
   }
 
+  const fallbackPath = getFirstPermittedPath();
   if (fallbackPath) {
-    // While redirecting
-    return (
-      <div className="min-h-[400px] flex flex-col items-center justify-center p-8 text-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <Navigate to={fallbackPath} replace />;
   }
 
   // Fallback if absolutely no permissions are granted
