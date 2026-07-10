@@ -417,21 +417,16 @@ export const ReferralCategoriesPage = () => {
                                   : [...formData.subCategories, category._id];
                                 setFormData({ ...formData, subCategories: newSelection });
                               }}
-                              className={cn(
-                                "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-[#f1f5f9] last:border-0",
-                                isSelected
-                                  ? "bg-[#2563eb] text-white !data-[selected=true]:bg-[#2563eb] !data-[selected=true]:text-white"
-                                  : "text-[#1e293b] data-[selected=true]:bg-[#f8fafc] data-[selected=true]:text-[#2563eb]"
-                              )}
+                              className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-[#f1f5f9] last:border-0 text-[#1e293b] data-[selected=true]:bg-[#f8fafc] data-[selected=true]:text-[#2563eb]"
                             >
                               <div className={cn(
-                                "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
+                                "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
                                 isSelected
-                                  ? "border-white bg-white"
+                                  ? "border-[#2563eb] bg-[#2563eb] text-white"
                                   : "border-[#cbd5e1] bg-white"
                               )}>
                                 {isSelected && (
-                                  <div className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
+                                  <Check className="h-3 w-3 stroke-[3]" />
                                 )}
                               </div>
                               <span className="flex-grow text-[13px] font-medium leading-none">{category.name}</span>

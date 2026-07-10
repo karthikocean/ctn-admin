@@ -9,6 +9,33 @@ interface PaginationBarProps {
 }
 
 const PaginationBar = ({ currentPage, totalPages, onPageChange }: PaginationBarProps) => {
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      let start = currentPage - 2;
+      let end = currentPage + 2;
+      
+      if (start < 1) {
+        start = 1;
+        end = maxVisible;
+      } else if (end > totalPages) {
+        end = totalPages;
+        start = totalPages - maxVisible + 1;
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+    }
+    return pages;
+  };
+
   return (
     <div className="flex items-center justify-between pt-4">
       <p className="text-sm text-muted-foreground">
@@ -24,7 +51,7 @@ const PaginationBar = ({ currentPage, totalPages, onPageChange }: PaginationBarP
         >
           <ChevronLeft size={16} />
         </Button>
-        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
+        {getPageNumbers().map((page) => (
           <Button
             key={page}
             variant={page === currentPage ? "default" : "outline"}
