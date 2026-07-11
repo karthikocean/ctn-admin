@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, UserPlus, Loader2, AlertCircle } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
@@ -31,6 +31,67 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 
+const SubCategoryCell = ({ subCategories }: { subCategories: any[] }) => {
+  if (subCategories.length <= 2) {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {subCategories.map((sub) => (
+          <span
+            key={sub._id}
+            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20"
+          >
+            {sub.name}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  const visibleSubs = subCategories.slice(0, 2);
+  const remainingCount = subCategories.length - 2;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {visibleSubs.map((sub) => (
+        <span
+          key={sub._id}
+          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20"
+        >
+          {sub.name}
+        </span>
+      ))}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-2 py-0 text-xs font-semibold text-primary bg-primary/5 hover:bg-primary/20 hover:text-primary rounded-full transition-all"
+          >
+            +{remainingCount} more
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64 p-3 rounded-xl border border-border bg-white text-foreground shadow-xl">
+          <div className="space-y-2">
+            <h4 className="font-bold text-xs text-muted-foreground border-b pb-1">
+              Subcategories ({subCategories.length})
+            </h4>
+            <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto pt-1">
+              {subCategories.map((sub) => (
+                <span
+                  key={sub._id}
+                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border"
+                >
+                  {sub.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
+
 export const ReferralCategoriesPage = () => {
   const { toast } = useToast();
   const { hasPermission } = useAuth();
@@ -42,12 +103,13 @@ export const ReferralCategoriesPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [originalSubCategoryIds, setOriginalSubCategoryIds] = useState<string[]>([]);
+  const [subCategoryIdsToDelete, setSubCategoryIdsToDelete] = useState<string[]>([]);
 
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,6 +120,37 @@ export const ReferralCategoriesPage = () => {
     referralParent: "",
     status: "active"
   });
+
+  const groupedCategories = useMemo(() => {
+    return categories.reduce((acc: any[], current: any) => {
+      const parentId = current.referralParent?._id || "unassigned";
+      let group = acc.find((g) => g.referralParent?._id === parentId);
+      if (!group) {
+        group = {
+          _id: parentId,
+          referralParent: current.referralParent,
+          subCategories: [],
+        };
+        acc.push(group);
+      }
+      group.subCategories.push(current);
+      return acc;
+    }, []);
+  }, [categories]);
+
+  const totalPages = Math.ceil(groupedCategories.length / pageSize);
+
+  const displayedGroupedCategories = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return groupedCategories.slice(start, end);
+  }, [groupedCategories, page]);
+
+  useEffect(() => {
+    if (page > totalPages && totalPages > 0) {
+      setPage(1);
+    }
+  }, [totalPages, page]);
 
   const fetchParentCategories = async () => {
     try {
@@ -89,12 +182,11 @@ export const ReferralCategoriesPage = () => {
       const response = await api.get("/referral-categories", {
         params: {
           search,
-          limit: pageSize,
-          page: pageNum - 1
+          limit: 1000,
+          page: 0
         }
       });
       setCategories(response.data.data || []);
-      setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
     } catch (error) {
       console.error("Failed to fetch referral categories:", error);
     } finally {
@@ -119,7 +211,6 @@ export const ReferralCategoriesPage = () => {
 
   const handlePageChange = (p: number) => {
     setPage(p);
-    fetchCategories(searchTerm, p);
   };
 
   const handleSave = async () => {
@@ -144,19 +235,31 @@ export const ReferralCategoriesPage = () => {
       setFormLoading(true);
 
       if (editingId) {
-        if (!formData.subCategories.includes(editingId)) {
-          // Unlink the old subcategory mapping
-          await api.delete(`/referral-categories/${editingId}`);
-        }
-        // Update / link all selected subcategories
+        // Find which subcategories were removed
+        const removedSubCategoryIds = originalSubCategoryIds.filter(
+          (id) => !formData.subCategories.includes(id)
+        );
+        // Unlink the removed subcategories
         await Promise.all(
-          formData.subCategories.map((subId) =>
-            api.put(`/categories/${subId}`, {
-              referralParent: formData.referralParent,
-              status: formData.status
-            })
+          removedSubCategoryIds.map((subId) =>
+            api.delete(`/referral-categories/${subId}`)
           )
         );
+        // Link the selected subcategories
+        if (formData.subCategories.length > 0) {
+          await api.post("/referral-categories", {
+            subCategory: formData.subCategories.join(","),
+            refferalCategory: formData.referralParent
+          });
+          // Update status for all selected subcategories
+          await Promise.all(
+            formData.subCategories.map((subId) =>
+              api.put(`/categories/${subId}`, {
+                status: formData.status
+              })
+            )
+          );
+        }
       } else {
         // Use the new batch assignment endpoint
         await api.post("/referral-categories", {
@@ -173,6 +276,7 @@ export const ReferralCategoriesPage = () => {
 
       setDrawerOpen(false);
       setEditingId(null);
+      setOriginalSubCategoryIds([]);
       setFormData({ subCategories: [], referralParent: "", status: "active" });
       fetchCategories(searchTerm, page);
     } catch (error: any) {
@@ -187,29 +291,36 @@ export const ReferralCategoriesPage = () => {
     }
   };
 
-  const handleEdit = (category: any) => {
-    setEditingId(category._id);
+  const handleEdit = (group: any) => {
+    const subIds = group.subCategories.map((sub: any) => sub._id);
+    setEditingId(group.referralParent?._id || "editing");
+    setOriginalSubCategoryIds(subIds);
     setFormData({
-      subCategories: [category._id],
-      referralParent: typeof category.referralParent === 'object' ? category.referralParent._id : category.referralParent,
-      status: category.status?.toLowerCase() || (category.isActive ? "active" : "inactive")
+      subCategories: subIds,
+      referralParent: group.referralParent?._id || "",
+      status: group.subCategories[0]?.status?.toLowerCase() || "active"
     });
     setDrawerOpen(true);
   };
 
   const handleDelete = async () => {
-    if (!categoryToDelete) return;
+    if (subCategoryIdsToDelete.length === 0) return;
     try {
       setIsDeleting(true);
-      // Use the referral-categories endpoint to unlink
-      const response = await api.delete(`/referral-categories/${categoryToDelete}`);
+      // Unlink all subcategories in the group
+      await Promise.all(
+        subCategoryIdsToDelete.map((id) =>
+          api.delete(`/referral-categories/${id}`)
+        )
+      );
       toast({
         title: "Deleted",
-        description: response.data?.message || "Referral category deleted successfully",
+        description: "Referral category deleted successfully",
         variant: "success"
       });
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
+      setSubCategoryIdsToDelete([]);
       fetchCategories(searchTerm, page);
     } catch (error: any) {
       console.error("Failed to delete referral category:", error);
@@ -224,8 +335,9 @@ export const ReferralCategoriesPage = () => {
     }
   };
 
-  const confirmDelete = (id: string) => {
-    setCategoryToDelete(id);
+  const confirmDelete = (group: any) => {
+    setCategoryToDelete(group.referralParent?._id || "unassigned");
+    setSubCategoryIdsToDelete(group.subCategories.map((sub: any) => sub._id));
     setDeleteDialogOpen(true);
   };
 
@@ -301,29 +413,29 @@ export const ReferralCategoriesPage = () => {
                     <TableSkeleton rows={8} columns={5} />
                   </td>
                 </tr>
-              ) : categories.length === 0 ? (
+              ) : displayedGroupedCategories.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                     No referral categories found.
                   </td>
                 </tr>
               ) : (
-                categories.map((c, index) => (
-                  <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
+                displayedGroupedCategories.map((group, index) => (
+                  <tr key={group._id} className="hover:bg-secondary/30 transition-colors">
                     <td className="px-6 py-4 text-sm text-muted-foreground font-semibold">{(page - 1) * pageSize + index + 1}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-foreground">
-                      {c.referralParent?.name || "N/A"}
+                      {group.referralParent?.name || "N/A"}
                     </td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">
-                      {c.name}
+                      <SubCategoryCell subCategories={group.subCategories} />
                     </td>
                     <td className="px-6 py-4">
-                      <StatusBadge status={c.status?.toLowerCase() === "active" || c.isActive ? "Active" : "Inactive"} />
+                      <StatusBadge status={group.subCategories.some((sub: any) => sub.status?.toLowerCase() === "active" || sub.isActive) ? "Active" : "Inactive"} />
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
-                        onEdit={canEdit ? () => handleEdit(c) : undefined}
-                        onDelete={canDelete ? () => confirmDelete(c._id) : undefined}
+                        onEdit={canEdit ? () => handleEdit(group) : undefined}
+                        onDelete={canDelete ? () => confirmDelete(group) : undefined}
                       />
                     </td>
                   </tr>
@@ -349,6 +461,7 @@ export const ReferralCategoriesPage = () => {
           setDrawerOpen(open);
           if (!open) {
             setEditingId(null);
+            setOriginalSubCategoryIds([]);
             setFormData({ subCategories: [], referralParent: "", status: "active" });
           }
         }}
@@ -400,11 +513,15 @@ export const ReferralCategoriesPage = () => {
                     <CommandEmpty className="py-4 text-center text-xs text-muted-foreground">No sub category found.</CommandEmpty>
                     <CommandGroup className="p-0">
                       {(() => {
-                        const currentlyEditingCategory = editingId ? categories.find(c => c._id === editingId) : null;
+                        const currentGroupSubs = editingId 
+                          ? categories.filter(c => c.referralParent?._id === editingId)
+                          : [];
                         const dropdownList = [...availableSubCategories];
-                        if (currentlyEditingCategory && !dropdownList.some(c => c._id === currentlyEditingCategory._id)) {
-                          dropdownList.unshift(currentlyEditingCategory);
-                        }
+                        currentGroupSubs.forEach((sub) => {
+                          if (!dropdownList.some(c => c._id === sub._id)) {
+                            dropdownList.unshift(sub);
+                          }
+                        });
                         return dropdownList.map((category) => {
                           const isSelected = formData.subCategories.includes(category._id);
                           return (
@@ -417,21 +534,16 @@ export const ReferralCategoriesPage = () => {
                                   : [...formData.subCategories, category._id];
                                 setFormData({ ...formData, subCategories: newSelection });
                               }}
-                              className={cn(
-                                "flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-[#f1f5f9] last:border-0",
-                                isSelected
-                                  ? "bg-[#2563eb] text-white !data-[selected=true]:bg-[#2563eb] !data-[selected=true]:text-white"
-                                  : "text-[#1e293b] data-[selected=true]:bg-[#f8fafc] data-[selected=true]:text-[#2563eb]"
-                              )}
+                              className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-[#f1f5f9] last:border-0 text-[#1e293b] data-[selected=true]:bg-[#f8fafc] data-[selected=true]:text-[#2563eb]"
                             >
                               <div className={cn(
-                                "flex h-5 w-5 items-center justify-center rounded-full border transition-colors",
+                                "flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors",
                                 isSelected
-                                  ? "border-white bg-white"
+                                  ? "border-[#2563eb] bg-[#2563eb] text-white"
                                   : "border-[#cbd5e1] bg-white"
                               )}>
                                 {isSelected && (
-                                  <div className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
+                                  <Check className="h-3 w-3 stroke-[3]" />
                                 )}
                               </div>
                               <span className="flex-grow text-[13px] font-medium leading-none">{category.name}</span>
