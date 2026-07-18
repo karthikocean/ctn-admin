@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -456,7 +456,16 @@ const SpotlightPage = () => {
                 <Calendar
                   mode="single"
                   selected={formData.scheduleDate}
-                  onSelect={(date) => date && setFormData(prev => ({ ...prev, scheduleDate: date }))}
+                  disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                  onSelect={(date) => {
+                    if (!date) return;
+                    const dateIsToday = isToday(date);
+                    setFormData(prev => ({
+                      ...prev,
+                      scheduleDate: date,
+                      status: dateIsToday ? prev.status : "schedule"
+                    }));
+                  }}
                   initialFocus
                 />
               </PopoverContent>
@@ -468,15 +477,22 @@ const SpotlightPage = () => {
             <Select
               value={formData.status}
               onValueChange={(val) => setFormData(prev => ({ ...prev, status: val }))}
+              disabled={!isToday(formData.scheduleDate)}
             >
               <SelectTrigger className="h-11 rounded-xl border-slate-200">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="schedule">Schedule</SelectItem>
+                {isToday(formData.scheduleDate) ? (
+                  <>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="schedule">Schedule</SelectItem>
+                  </>
+                ) : (
+                  <SelectItem value="schedule">Schedule</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
