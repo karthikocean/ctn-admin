@@ -701,7 +701,7 @@ const TrainingsPage = () => {
                   <div className="flex-1 space-y-2">
                     <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Instructor Name <span className="text-red-500">*</span></Label>
                     <Input
-                      placeholder="Sneha Kapoor"
+                      placeholder="Enter Name"
                       className={cn("h-12 rounded-2xl", errors.authorName && "border-red-500 focus-visible:ring-red-500")}
                       value={form.authorName}
                       onChange={(e) => {
