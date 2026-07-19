@@ -78,6 +78,32 @@ const getFullUrl = (path: string) => {
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
+const getMemberLeftBorder = (name: string = "") => {
+  const charCode = name.charCodeAt(0) || 0;
+  const index = charCode % 5;
+  const borders = [
+    "border-l-purple-500 hover:border-l-purple-600",
+    "border-l-amber-500 hover:border-l-amber-600",
+    "border-l-emerald-500 hover:border-l-emerald-600",
+    "border-l-blue-500 hover:border-l-blue-600",
+    "border-l-rose-500 hover:border-l-rose-600"
+  ];
+  return borders[index];
+};
+
+const getAvatarGradient = (name: string = "") => {
+  const charCode = name.charCodeAt(0) || 0;
+  const index = charCode % 5;
+  const gradients = [
+    "bg-gradient-to-br from-purple-100 to-indigo-100 text-purple-700 border-purple-200",
+    "bg-gradient-to-br from-pink-100 to-rose-100 text-rose-700 border-rose-200",
+    "bg-gradient-to-br from-amber-100 to-yellow-100 text-amber-700 border-amber-200",
+    "bg-gradient-to-br from-emerald-100 to-teal-100 text-emerald-700 border-emerald-200",
+    "bg-gradient-to-br from-blue-100 to-sky-100 text-blue-700 border-blue-200"
+  ];
+  return gradients[index];
+};
+
 const FilePreview = ({ file, onRemove }: { file: File, onRemove: () => void }) => {
   const [preview, setPreview] = useState<string>("");
 
@@ -919,13 +945,13 @@ const MembersPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="bg-card rounded-xl border border-border shadow-sm overflow-hidden"
+        className="bg-card rounded-xl border border-border shadow-sm overflow-hidden relative"
       >
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-secondary/30">
               <TableRow>
-                <TableHead className="px-6 py-4 w-16">S.No</TableHead>
+                <TableHead className="px-6 py-4 w-16 text-center">S.No</TableHead>
                 <TableHead className="px-6 py-4">Member Details</TableHead>
                 <TableHead className="px-6 py-4">Business Name</TableHead>
                 <TableHead className="px-6 py-4 min-w-[220px]">Category</TableHead>
@@ -937,43 +963,38 @@ const MembersPage = () => {
             <TableBody>
               {members.length === 0 && !isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-64 text-center">
+                  <TableCell colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                     No members found
                   </TableCell>
                 </TableRow>
               ) : (
                 members.map((member, index) => (
-                  <TableRow
-                    key={member._id}
-                    className="hover:bg-secondary/10 transition-colors"
-                  >
-                    <TableCell className="px-6 py-4 text-sm text-foreground font-semibold">
+                  <TableRow key={member._id} className="hover:bg-secondary/10 transition-colors">
+                    <TableCell className="px-6 py-4 text-center text-sm font-semibold text-foreground">
                       {((page - 1) * 10) + index + 1}
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10 border border-border">
+                        <Avatar className="w-10 h-10 border border-border/80 flex-shrink-0 shadow-sm">
                           <AvatarImage
                             src={getFullUrl(member.profilePhoto)}
                             alt={member.fullName}
                             className="object-cover"
                           />
-                          <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                            {member.fullName.charAt(0).toUpperCase()}
+                          <AvatarFallback className={cn("text-xs font-bold shadow-inner flex items-center justify-center border", getAvatarGradient(member.fullName || "?"))}>
+                            {member.fullName?.charAt(0).toUpperCase() || "?"}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="text-sm text-foreground font-semibold">{member.fullName}</p>
-                          <p className="text-sm text-foreground font-semibold">
-                            {member.mobileNumber}
-                          </p>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{member.fullName}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{member.mobileNumber}</span>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <p className="text-sm text-foreground font-semibold">{member.businessName}</p>
                       {member.gstNumber && (
-                        <span className="text-sm text-foreground font-semibold block mt-0.5">
+                        <span className="text-xs text-muted-foreground font-medium block mt-0.5">
                           GST: {member.gstNumber}
                         </span>
                       )}
@@ -983,7 +1004,7 @@ const MembersPage = () => {
                         {member.businessCategory?.name || "N/A"}
                       </p>
                       {member.subCategory?.name && (
-                        <p className="text-sm text-foreground font-semibold mt-0.5">
+                        <p className="text-xs text-muted-foreground font-medium mt-0.5">
                           {member.subCategory.name}
                         </p>
                       )}
