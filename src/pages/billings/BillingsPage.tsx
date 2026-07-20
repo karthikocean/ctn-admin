@@ -24,6 +24,14 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 
 const getFullUrl = (path: string | null) => {
   if (!path) return "";
@@ -433,41 +441,46 @@ const BillingsPage = () => {
       </div>
 
       {/* Main Table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="relative glass-card overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-card rounded-xl border border-border shadow-sm overflow-hidden relative"
+      >
         {loading && billings.length > 0 && <TableLoader text="Fetching Billing Records..." />}
-        <div className="overflow-x-auto p-4">
-          <table className="w-full border-separate border-spacing-y-2">
-            <thead>
-              <tr className="text-muted-foreground/80">
-                <th className="text-center px-4 py-2 text-[10px] font-bold uppercase tracking-widest w-16">S.No</th>
-                <th className="text-left px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Member</th>
-                <th className="text-left px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Plan</th>
-                <th className="text-center px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Amount</th>
-                <th className="text-left px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Payment Type</th>
-                <th className="text-left px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Date</th>
-                <th className="text-right px-6 py-2 text-[10px] font-bold uppercase tracking-widest">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-secondary/30">
+              <TableRow>
+                <TableHead className="px-6 py-4 w-16 text-center">S.No</TableHead>
+                <TableHead className="px-6 py-4">Member</TableHead>
+                <TableHead className="px-6 py-4">Plan</TableHead>
+                <TableHead className="px-6 py-4 text-center">Amount</TableHead>
+                <TableHead className="px-6 py-4">Payment Type</TableHead>
+                <TableHead className="px-6 py-4">Date</TableHead>
+                <TableHead className="px-6 py-4 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {loading && billings.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-0">
+                <TableRow>
+                  <TableCell colSpan={7} className="p-0">
                     <TableSkeleton rows={5} columns={7} />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : billings.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground bg-card border border-border rounded-xl">
+                <TableRow>
+                  <TableCell colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                     No billing records found.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 billings.map((b, index) => (
-                  <tr key={b._id} className="group hover:-translate-y-[1px] transition-all duration-200">
-                    <td className={cn("px-4 py-4 text-center text-sm font-semibold text-foreground border-t border-b border-l rounded-l-xl border-l-4 bg-card group-hover:bg-slate-50/60 transition-colors border-border", getPlanLeftBorder(b.plan?.title))}>
+                  <TableRow key={b._id} className="hover:bg-secondary/10 transition-colors">
+                    <TableCell className="px-6 py-4 text-center text-sm font-semibold text-foreground">
                       {(page - 1) * pageSize + index + 1}
-                    </td>
-                    <td className="px-6 py-4 border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="w-10 h-10 border border-border/80 flex-shrink-0 shadow-sm">
                           <AvatarImage
@@ -484,14 +497,14 @@ const BillingsPage = () => {
                           <span className="text-xs text-muted-foreground font-medium">{b.member?.email}</span>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
                       {getPlanBadge(b.plan?.title)}
-                    </td>
-                    <td className="px-6 py-4 text-center border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-center">
                       <span className="text-sm font-extrabold text-foreground tracking-tight">₹{b.amount?.toLocaleString("en-IN")}</span>
-                    </td>
-                    <td className="px-6 py-4 border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
                       <div className="flex flex-col gap-1 items-start">
                         {getPaymentMethodBadge(b.paymentMethod || b.paymentType)}
                         {b.transactionId && b.transactionId !== "CASH" && (
@@ -503,8 +516,8 @@ const BillingsPage = () => {
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 border-t border-b border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                    </TableCell>
+                    <TableCell className="px-6 py-4">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-sm font-semibold text-foreground">
                           {new Date(b.createdAt).toLocaleDateString("en-IN", {
@@ -521,19 +534,19 @@ const BillingsPage = () => {
                           })}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-right border-t border-b border-r rounded-r-xl border-border bg-card group-hover:bg-slate-50/60 transition-colors">
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right">
                       <ActionMenu
                         onView={() => handlePreview(b)}
                         onEdit={canEdit ? () => handleEdit(b) : undefined}
                         onDelete={canDelete ? () => confirmDelete(b._id) : undefined}
                       />
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
         {/* Pagination Section */}
         {!loading && billings.length > 0 && (
