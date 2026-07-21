@@ -109,6 +109,7 @@ const RolesPage = () => {
   const [roleUsers, setRoleUsers] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersListLoading, setUsersListLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -236,6 +237,7 @@ const RolesPage = () => {
       console.error("Error fetching roles:", error);
     } finally {
       setLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
@@ -791,7 +793,7 @@ const RolesPage = () => {
         }
       `}} />
 
-      {loading && (
+      {isInitialLoad && loading && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="CTN Admin Network Data..."
@@ -799,7 +801,7 @@ const RolesPage = () => {
         />
       )}
 
-      {roles.length === 0 && loading ? (
+      {roles.length === 0 && isInitialLoad && loading ? (
         <div className="page-container relative min-h-[600px]">
           <GlobalNetworkLoader
             fullScreen={false}
@@ -834,12 +836,6 @@ const RolesPage = () => {
                   className="h-9 pl-8 pr-3 w-full md:w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
                 />
               </div>
-
-              {/* Filters */}
-              <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs flex-1 md:flex-initial">
-                <Filter size={14} className="mr-1.5" />
-                Filters
-              </Button>
 
               {/* View All Users */}
               <Button
@@ -1374,9 +1370,6 @@ const RolesPage = () => {
                 )}
               </div>
 
-              <DialogFooter className="mt-4">
-                <Button variant="outline" onClick={() => setUsersDialogOpen(false)}>Close</Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
 
