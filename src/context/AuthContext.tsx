@@ -38,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [modulesList, setModulesList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const navigate = useNavigate();
 
   const fetchPermissions = useCallback(async (roleId: string) => {
@@ -74,6 +75,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error("Failed to fetch permissions/modules:", error);
+    } finally {
+      setPermissionsLoaded(true);
     }
   }, []);
 
@@ -185,6 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setAccessToken(null);
       setPermissions([]);
+      setPermissionsLoaded(false);
       localStorage.removeItem("user");
       localStorage.removeItem("accessToken");
 
@@ -237,7 +241,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       permissions,
       login,
       logout,
-      isLoading,
+      isLoading: isLoading || (!!accessToken && !permissionsLoaded),
       isAuthenticated: !!accessToken,
       hasPermission,
       refreshPermissions

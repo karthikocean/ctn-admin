@@ -319,7 +319,11 @@ const LoginPage = () => {
           description: "A new OTP has been sent.",
           variant: "success"
         });
+        setOtp(["", "", "", ""]);
         setCountdown(60);
+        setTimeout(() => {
+          otpRefs[0].current?.focus();
+        }, 50);
       }
     } catch (err: any) {
       toast({
@@ -426,7 +430,7 @@ const LoginPage = () => {
                       />
                       {isPhoneValid && (
                         <div className="absolute right-4 text-green-500">
-                          <CheckCircle2 size={18} fill="currentColor" className="text-white" />
+                          <CheckCircle2 size={18} />
                         </div>
                       )}
                     </div>
@@ -529,7 +533,7 @@ const LoginPage = () => {
                       />
                       {isForgotPhoneValid && (
                         <div className="absolute right-4 text-green-500">
-                          <CheckCircle2 size={18} fill="currentColor" className="text-white" />
+                          <CheckCircle2 size={18} />
                         </div>
                       )}
                     </div>

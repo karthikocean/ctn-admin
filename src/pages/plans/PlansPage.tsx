@@ -67,6 +67,7 @@ const PlansPage = () => {
     description: string;
     amount: number;
     trialDays: number | null;
+    sort: number;
     modules: any[];
     status: string;
     billingType: string;
@@ -88,6 +89,7 @@ const PlansPage = () => {
     description: "",
     amount: 0,
     trialDays: null,
+    sort: 0,
     modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
     status: "active",
     billingType: "basic",
@@ -221,6 +223,7 @@ const PlansPage = () => {
       description: "",
       amount: 0,
       trialDays: null,
+      sort: 0,
       modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
       status: "active",
       billingType: "basic",
@@ -247,6 +250,7 @@ const PlansPage = () => {
       description: plan.description,
       amount: plan.amount,
       trialDays: plan.trialDays !== undefined && plan.trialDays !== null ? plan.trialDays : null,
+      sort: plan.sort !== undefined && plan.sort !== null ? plan.sort : 0,
       modules: plan.modules.map((m: any) => ({
         moduleName: m.moduleName,
         countLimit: m.countLimit,
@@ -361,6 +365,7 @@ const PlansPage = () => {
                 <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Amount</th>
                 <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Member Count</th>
                 <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Trial Days</th>
+                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Sort Order</th>
                 <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Modules</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Status</th>
                 <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Actions</th>
@@ -369,13 +374,13 @@ const PlansPage = () => {
             <tbody className="divide-y divide-border">
               {loading && plans.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-0">
-                    <TableSkeleton rows={5} columns={8} />
+                  <td colSpan={9} className="p-0">
+                    <TableSkeleton rows={5} columns={9} />
                   </td>
                 </tr>
               ) : plans.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
                     No plans found. Create one to get started.
                   </td>
                 </tr>
@@ -409,6 +414,11 @@ const PlansPage = () => {
                     <td className="px-6 py-4 text-center">
                       <span className="text-sm font-semibold text-foreground">
                         {plan.trialDays !== null && plan.trialDays !== undefined ? `${plan.trialDays} days` : "None"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-semibold text-foreground">
+                        {plan.sort !== undefined && plan.sort !== null ? plan.sort : 0}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -501,7 +511,7 @@ const PlansPage = () => {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Amount <span className="text-red-500">*</span>
@@ -537,6 +547,22 @@ const PlansPage = () => {
                     setFormData({
                       ...formData,
                       trialDays: val === "" ? null : (isNaN(parseInt(val)) ? null : parseInt(val))
+                    });
+                  }}
+                  className="mt-1.5 h-11 rounded-xl border-border bg-secondary/30 focus:ring-primary/20"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sort Order</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.sort}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setFormData({
+                      ...formData,
+                      sort: isNaN(val) ? 0 : val
                     });
                   }}
                   className="mt-1.5 h-11 rounded-xl border-border bg-secondary/30 focus:ring-primary/20"
