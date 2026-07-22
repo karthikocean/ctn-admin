@@ -218,9 +218,10 @@ const MembersPage = () => {
   const [stateOpen, setStateOpen] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
   const [regionOpen, setRegionOpen] = useState(false);
-  const [stateSearch, setStateSearch] = useState("");
-  const [citySearch, setCitySearch] = useState("");
   const [regionSearch, setRegionSearch] = useState("");
+  const [visibleMemberRegionCount, setVisibleMemberRegionCount] = useState(10);
+  const [citySearch, setCitySearch] = useState("");
+  const [stateSearch, setStateSearch] = useState("");
 
   const [serviceStateOpen, setServiceStateOpen] = useState(false);
   const [serviceCityOpen, setServiceCityOpen] = useState(false);
@@ -273,6 +274,18 @@ const MembersPage = () => {
   const [areasOptions, setAreasOptions] = useState<any[]>([]);
   const [selectedAreaName, setSelectedAreaName] = useState<string>("");
   const [areasLoading, setAreasLoading] = useState(false);
+
+  const filteredAreas = areasOptions.filter((a: any) => a.name.toLowerCase().includes(regionSearch.toLowerCase()));
+  const visibleMemberAreas = filteredAreas.slice(0, visibleMemberRegionCount);
+
+  const handleMemberRegionScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    if (target.scrollHeight - target.scrollTop <= target.clientHeight + 20) {
+      if (visibleMemberRegionCount < filteredAreas.length) {
+        setVisibleMemberRegionCount(prev => prev + 10);
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchMainCategories = async () => {

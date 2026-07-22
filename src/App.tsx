@@ -32,6 +32,7 @@ import ConnectionsPage from "@/pages/connections/ConnectionsPage";
 import ContributionsPage from "@/pages/contributions/ContributionsPage";
 import FranchiseCommissionReportPage from "@/pages/reports/FranchiseCommissionReportPage"; // Newly added report page
 import ReportHistoryPage from "@/pages/reports/ReportHistoryPage";
+import ReportsPage from "@/pages/reports/ReportsPage";
 
 import SubscriptionPage from "@/pages/subscription/SubscriptionPage";
 import PlansPage from "@/pages/plans/PlansPage";
@@ -167,6 +168,21 @@ const App = () => (
               <Route path="/awards/members" element={<MemberAwardsPage />} />
               <Route path="/connections" element={<ConnectionsPage />} />
               <Route path="/contributions" element={<ContributionsPage />} />
+              <Route path="/reports" element={
+                <PermissionRoute module="reports" action="view">
+                  <ReportsPage />
+                </PermissionRoute>
+              } />
+              <Route path="/reports/subscription-renewals" element={
+                <PermissionRoute module="subscription_renewal_report" action="view">
+                  <ReportsPage defaultTab="renewals" />
+                </PermissionRoute>
+              } />
+              <Route path="/reports/free-subscription-endings" element={
+                <PermissionRoute module="free_subscription_ending_report" action="view">
+                  <ReportsPage defaultTab="free-endings" />
+                </PermissionRoute>
+              } />
               <Route path="/reports/franchise-commission" element={
                 <PermissionRoute module="franchise_commission_report" action="view">
                   <FranchiseCommissionReportPage />

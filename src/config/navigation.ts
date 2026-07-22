@@ -37,13 +37,13 @@ export const sidebarNavItems: SidebarNavItem[] = [
       { title: "Allocate Points", path: "/allocate-points", moduleId: "points" },
     ],
   },
-  {
-    title: "Awards", path: "/awards", icon: Medal, moduleId: "awards",
-    children: [
-      { title: "Awards Management", path: "/awards", moduleId: "awards" },
-      { title: "Member Awards", path: "/awards/members", moduleId: "awards" },
-    ],
-  },
+  // {
+  //   title: "Awards", path: "/awards", icon: Medal, moduleId: "awards",
+  //   children: [
+  //     { title: "Awards Management", path: "/awards", moduleId: "awards" },
+  //     { title: "Member Awards", path: "/awards/members", moduleId: "awards" },
+  //   ],
+  // },
   { title: "Members", path: "/members", icon: UserCheck, moduleId: "members" },
   {
     title: "Activities", icon: Activity, moduleId: "activities",
@@ -68,6 +68,8 @@ export const sidebarNavItems: SidebarNavItem[] = [
   {
     title: "Reports", icon: BarChart3, moduleId: "reports",
     children: [
+      { title: "Subscription Renewal Report", path: "/reports/subscription-renewals", moduleId: "subscription_renewal_report" },
+      { title: "Free Subscription Ending Report", path: "/reports/free-subscription-endings", moduleId: "free_subscription_ending_report" },
       { title: "Franchise Commission Report", path: "/reports/franchise-commission", moduleId: "franchise_commission_report" },
       { title: "Report History", path: "/reports/history", moduleId: "report_history" },
     ],

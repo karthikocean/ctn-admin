@@ -13,46 +13,6 @@ import { TableLoader, TableSkeleton } from "@/components/common/TableLoader";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import PaginationBar from "@/components/common/PaginationBar";
 
-// Mock Data
-const MOCK_REFERRALS = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john@example.com",
-    category: "Real Estate",
-    referredCount: 5,
-    referredBy: "Admin",
-    referredMembers: [
-      { id: "r1", name: "Alice Johnson", email: "alice@example.com", date: "2024-03-10", status: "Active" },
-      { id: "r2", name: "Bob Wilson", email: "bob@example.com", date: "2024-03-12", status: "Active" },
-      { id: "r3", name: "Charlie Davis", email: "charlie@example.com", date: "2024-03-15", status: "Pending" },
-    ]
-  },
-  {
-    id: "2",
-    name: "Sarah Smith",
-    email: "sarah@example.com",
-    category: "Software",
-    referredCount: 2,
-    referredBy: "John Doe",
-    referredMembers: [
-      { id: "r4", name: "David Miller", email: "david@example.com", date: "2024-04-01", status: "Active" },
-      { id: "r5", name: "Eve Brown", email: "eve@example.com", date: "2024-04-05", status: "Inactive" },
-    ]
-  },
-  {
-    id: "3",
-    name: "Michael Brown",
-    email: "michael@example.com",
-    category: "Finance",
-    referredCount: 8,
-    referredBy: "Sarah Smith",
-    referredMembers: [
-      { id: "r6", name: "Frank Wright", email: "frank@example.com", date: "2024-02-20", status: "Active" },
-    ]
-  }
-];
-
 const ReferralsPage = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,11 +22,8 @@ const ReferralsPage = () => {
 
   useEffect(() => {
     setLoading(true);
-    // Simulate API fetch
-    setTimeout(() => {
-      setReferrals(MOCK_REFERRALS);
-      setLoading(false);
-    }, 800);
+    setReferrals([]);
+    setLoading(false);
   }, []);
 
   const handlePreview = (referral: any) => {
@@ -75,8 +32,8 @@ const ReferralsPage = () => {
   };
 
   const filteredReferrals = referrals.filter(r => 
-    r.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    r.email.toLowerCase().includes(searchTerm.toLowerCase())
+    r.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    r.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -142,8 +99,20 @@ const ReferralsPage = () => {
                 </tr>
               ) : filteredReferrals.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
-                    No referrals found.
+                  <td colSpan={6} className="px-6 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center max-w-sm mx-auto space-y-3">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-100/80 border border-slate-200/80 flex items-center justify-center shadow-xs">
+                        <Users size={28} className="text-slate-400" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-bold text-slate-700">No Referrals Found</h3>
+                        <p className="text-xs text-slate-500 font-medium">
+                          {searchTerm
+                            ? `No referral records matching "${searchTerm}". Try adjusting your search.`
+                            : "There are currently no member referral records available."}
+                        </p>
+                      </div>
+                    </div>
                   </td>
                 </tr>
               ) : (
