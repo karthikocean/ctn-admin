@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye } from "lucide-react";
+import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye, Check, ChevronsUpDown } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, getAnnouncementDetails, getAnnouncementBookings } from "@/api/AnnouncementsApi";
+import { getRegions } from "@/api/RegionApi";
 import { uploadFiles } from "@/api/MediaApi";
 import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
@@ -20,6 +21,9 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -87,9 +91,26 @@ const AnnouncementsPage = () => {
   const canEdit = hasPermission("announcements", "edit");
   const canDelete = hasPermission("announcements", "delete");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [regionOpen, setRegionOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [regionsList, setRegionsList] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchRegions = async () => {
+      try {
+        const res = await getRegions({ limit: 1000 });
+        if (res && res.data) {
+          setRegionsList(res.data.filter((r: any) => r.status === "active"));
+        }
+      } catch (error) {
+        console.error("Error fetching regions:", error);
+      }
+    };
+    fetchRegions();
+  }, []);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -131,10 +152,22 @@ const AnnouncementsPage = () => {
     announcementType: "Event",
     date: "",
     time: "",
+    fromDate: "",
+    toDate: "",
+    fromHour: "10",
+    fromMinute: "00",
+    fromPeriod: "AM",
+    toHour: "11",
+    toMinute: "00",
+    toPeriod: "AM",
     location: "",
     points: "" as any,
     membersLimit: "" as any,
     scheduleDate: "",
+    scheduleHour: "10",
+    scheduleMinute: "00",
+    schedulePeriod: "AM",
+    regionId: "",
     isOfflineStallExist: false,
     stallConfig: {
       totalStallCount: 0,
@@ -235,26 +268,61 @@ const AnnouncementsPage = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.title) newErrors.title = "Title is required";
     if (!formData.content) newErrors.content = "Content is required";
-    if (!formData.date) newErrors.date = "Date is required";
-    if (!formData.time) newErrors.time = "Time is required";
+    if (!formData.fromDate) newErrors.fromDate = "From Date is required";
+    if (!formData.toDate) newErrors.toDate = "To Date is required";
     if (!formData.location) newErrors.location = "Location is required";
     if (!formData.image && !filesToUpload.image) newErrors.image = "Image is required";
+    
     if (formData.status === "scheduled" && !formData.scheduleDate) {
       newErrors.scheduleDate = "Schedule date is required";
     }
-    if (formData.date) {
-      const selectedDate = new Date(formData.date);
+
+    if (formData.fromDate) {
+      const selectedDate = new Date(formData.fromDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (selectedDate < today) {
-        newErrors.date = "Date cannot be in the past";
+        newErrors.fromDate = "From Date cannot be in the past";
       }
     }
-    if (formData.status === "scheduled" && formData.scheduleDate) {
-      const selectedSchedule = new Date(formData.scheduleDate);
-      const now = new Date();
-      if (selectedSchedule < now) {
-        newErrors.scheduleDate = "Schedule date cannot be in the past";
+
+    if (formData.fromDate && formData.toDate) {
+      const start = new Date(formData.fromDate);
+      const end = new Date(formData.toDate);
+      if (end < start) {
+        newErrors.toDate = "To Date cannot be before From Date";
+      } else if (formData.fromDate === formData.toDate) {
+        const getMinutes = (hour: string, minute: string, period: string) => {
+          let h = parseInt(hour, 10);
+          const m = parseInt(minute, 10);
+          if (period === 'PM' && h !== 12) h += 12;
+          if (period === 'AM' && h === 12) h = 0;
+          return h * 60 + m;
+        };
+
+        const fromMin = getMinutes(formData.fromHour, formData.fromMinute, formData.fromPeriod);
+        const toMin = getMinutes(formData.toHour, formData.toMinute, formData.toPeriod);
+        if (toMin <= fromMin) {
+          newErrors.toTime = "To Time must be after From Time on the same day";
+        }
+      }
+    }
+
+    if (formData.status === "scheduled") {
+      if (!formData.scheduleDate) {
+        newErrors.scheduleDate = "Schedule date is required";
+      } else {
+        const [year, month, day] = formData.scheduleDate.split('-').map(Number);
+        let h = parseInt(formData.scheduleHour || "10", 10);
+        const m = parseInt(formData.scheduleMinute || "00", 10);
+        const period = formData.schedulePeriod || "AM";
+        if (period === 'PM' && h !== 12) h += 12;
+        if (period === 'AM' && h === 12) h = 0;
+        const selectedSchedule = new Date(year, month - 1, day, h, m, 0, 0);
+        const now = new Date();
+        if (selectedSchedule < now) {
+          newErrors.scheduleDate = "Schedule date cannot be in the past";
+        }
       }
     }
     if (formData.points !== undefined && formData.points !== null && formData.points !== "" && formData.points < 0) {
@@ -303,10 +371,22 @@ const AnnouncementsPage = () => {
       announcementType: "Event",
       date: "",
       time: "",
+      fromDate: "",
+      toDate: "",
+      fromHour: "10",
+      fromMinute: "00",
+      fromPeriod: "AM",
+      toHour: "11",
+      toMinute: "00",
+      toPeriod: "AM",
       location: "",
       points: "" as any,
       membersLimit: "" as any,
       scheduleDate: "",
+      scheduleHour: "10",
+      scheduleMinute: "00",
+      schedulePeriod: "AM",
+      regionId: "",
       isOfflineStallExist: false,
       stallConfig: {
         totalStallCount: 0,
@@ -326,13 +406,38 @@ const AnnouncementsPage = () => {
 
     setIsSubmitting(true);
     try {
-      const { _id, createdAt, updatedAt, __v, ...dataToSave } = formData as any;
+      const { _id, createdAt, updatedAt, __v, fromHour, fromMinute, fromPeriod, toHour, toMinute, toPeriod, scheduleHour, scheduleMinute, schedulePeriod, scheduleDate: _scheduleDate, ...dataToSave } = formData as any;
+      
+      const parseDateTime = (dateStr: string, hour: string, minute: string, period: string) => {
+        if (!dateStr) return undefined;
+        const [year, month, day] = dateStr.split('-').map(Number);
+        let h = parseInt(hour, 10);
+        const m = parseInt(minute, 10);
+        if (period === 'PM' && h !== 12) h += 12;
+        if (period === 'AM' && h === 12) h = 0;
+        const d = new Date(year, month - 1, day, h, m, 0, 0);
+        return d.toISOString();
+      };
+
+      const finalFromDate = parseDateTime(formData.fromDate, formData.fromHour, formData.fromMinute, formData.fromPeriod);
+      const finalToDate = parseDateTime(formData.toDate, formData.toHour, formData.toMinute, formData.toPeriod);
+      const finalFromTime = `${formData.fromHour}:${formData.fromMinute} ${formData.fromPeriod}`;
+      const finalToTime = `${formData.toHour}:${formData.toMinute} ${formData.toPeriod}`;
+
       const payload = {
         ...dataToSave,
         points: formData.points === "" ? 0 : Number(formData.points),
         membersLimit: formData.membersLimit === "" ? 0 : Number(formData.membersLimit),
-        date: formData.date ? new Date(formData.date).toISOString() : undefined,
-        scheduleDate: formData.status === 'scheduled' && formData.scheduleDate ? new Date(formData.scheduleDate).toISOString() : undefined,
+        date: finalFromDate,
+        time: finalFromTime,
+        fromDate: finalFromDate,
+        toDate: finalToDate,
+        fromTime: finalFromTime,
+        toTime: finalToTime,
+        regionId: formData.regionId || undefined,
+        scheduleDate: formData.status === 'scheduled' && formData.scheduleDate
+          ? parseDateTime(formData.scheduleDate, formData.scheduleHour, formData.scheduleMinute, formData.schedulePeriod)
+          : undefined,
         stallConfig: formData.isOfflineStallExist 
           ? formData.stallConfig 
           : { totalStallCount: 0, stalls: [] }
@@ -405,6 +510,57 @@ const AnnouncementsPage = () => {
       if (result.success || result.status === 200) {
         const data = result.data;
         setEditingId(data._id);
+        
+        // Parse "HH:MM AM/PM" or ISO date into { hour, minute, period }
+        const parseTimeParts = (timeStr: string, isoDate?: string) => {
+          const defaults = { hour: "10", minute: "00", period: "AM" };
+          
+          // Try "HH:MM AM/PM" format first (e.g. "10:30 AM")
+          if (timeStr) {
+            const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+            if (match) {
+              return {
+                hour: String(parseInt(match[1], 10)).padStart(2, "0"),
+                minute: match[2].padStart(2, "0"),
+                period: match[3].toUpperCase()
+              };
+            }
+          }
+
+          // Fallback: extract from ISO date string using LOCAL getters
+          if (isoDate) {
+            const d = new Date(isoDate);
+            if (!isNaN(d.getTime())) {
+              let h = d.getHours();
+              const m = d.getMinutes();
+              const period = h >= 12 ? "PM" : "AM";
+              if (h > 12) h -= 12;
+              if (h === 0) h = 12;
+              return {
+                hour: String(h).padStart(2, "0"),
+                minute: String(m).padStart(2, "0"),
+                period
+              };
+            }
+          }
+
+          return defaults;
+        };
+
+        const formatLocalDateString = (isoStr: string) => {
+          if (!isoStr) return "";
+          const d = new Date(isoStr);
+          if (isNaN(d.getTime())) return isoStr.split('T')[0];
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}`;
+        };
+
+        const fromParts = parseTimeParts(data.fromTime || data.time, data.fromDate || data.date);
+        const toParts   = parseTimeParts(data.toTime, data.toDate);
+        const schedParts = parseTimeParts(undefined, data.scheduleDate);
+
         setFormData({
           title: data.title,
           content: data.content,
@@ -412,12 +568,24 @@ const AnnouncementsPage = () => {
           image: data.image || "",
           video: data.video || "",
           announcementType: data.announcementType || "Event",
-          date: data.date ? data.date.split('T')[0] : "",
+          date: formatLocalDateString(data.date),
           time: data.time || "",
+          fromDate: formatLocalDateString(data.fromDate || data.date),
+          toDate: formatLocalDateString(data.toDate),
+          fromHour:   fromParts.hour,
+          fromMinute: fromParts.minute,
+          fromPeriod: fromParts.period,
+          toHour:   toParts.hour,
+          toMinute: toParts.minute,
+          toPeriod: toParts.period,
           location: data.location || "",
           points: data.points || "",
           membersLimit: data.membersLimit || "",
-          scheduleDate: data.scheduleDate ? data.scheduleDate.slice(0, 16) : "",
+          scheduleDate: formatLocalDateString(data.scheduleDate),
+          scheduleHour: schedParts.hour,
+          scheduleMinute: schedParts.minute,
+          schedulePeriod: schedParts.period,
+          regionId: data.regionId || "",
           isOfflineStallExist: data.isOfflineStallExist || false,
           stallConfig: data.stallConfig || { totalStallCount: 0, stalls: [] }
         });
@@ -511,14 +679,40 @@ const AnnouncementsPage = () => {
                   <div className="mt-2.5 grid grid-cols-2 gap-y-2.5 gap-x-2 border-t border-slate-50 pt-3">
                     <div className="flex flex-col gap-1">
                       <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Date & Time</span>
-                      <div className="flex flex-col gap-1 text-[11px] font-semibold text-slate-600">
-                        {a.date ? (
+                      <div className="flex flex-col gap-0.5 text-[10px] sm:text-[11px] font-semibold text-slate-600">
+                        {a.fromDate ? (
                           <>
-                            <div className="flex items-center gap-1.5"><Calendar size={12} className="text-primary/60" /> {new Date(a.date).toLocaleDateString()}</div>
-                            <div className="flex items-center gap-1.5"><Clock size={12} className="text-primary/60" /> {a.time || "N/A"}</div>
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={12} className="text-primary/60 flex-shrink-0" />
+                              <span className="truncate">
+                                {new Date(a.fromDate).toLocaleDateString()}
+                                {a.toDate && ` - ${new Date(a.toDate).toLocaleDateString()}`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock size={12} className="text-primary/60 flex-shrink-0" />
+                              <span className="truncate">
+                                {a.fromTime || "N/A"}
+                                {a.toTime && ` - ${a.toTime}`}
+                              </span>
+                            </div>
+                          </>
+                        ) : a.date ? (
+                          <>
+                            <div className="flex items-center gap-1.5">
+                              <Calendar size={12} className="text-primary/60 flex-shrink-0" /> 
+                              <span>{new Date(a.date).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock size={12} className="text-primary/60 flex-shrink-0" /> 
+                              <span>{a.time || "N/A"}</span>
+                            </div>
                           </>
                         ) : (
-                          <div className="flex items-center gap-1.5"><Calendar size={12} className="text-primary/60" /> {new Date(a.createdAt).toLocaleDateString()}</div>
+                          <div className="flex items-center gap-1.5">
+                            <Calendar size={12} className="text-primary/60 flex-shrink-0" /> 
+                            <span>{new Date(a.createdAt).toLocaleDateString()}</span>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -541,6 +735,21 @@ const AnnouncementsPage = () => {
                         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
                           <MapPin size={12} className="text-red-400 flex-shrink-0" />
                           <span className="line-clamp-1">{a.location}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {a.regionId && (
+                      <div className="col-span-2 flex flex-col gap-1 pt-0.5">
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Region</span>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+                          <MapPin size={12} className="text-indigo-400 flex-shrink-0" />
+                          <span className="line-clamp-1">
+                            {(() => {
+                              const reg = regionsList.find(r => r._id === a.regionId);
+                              return reg ? `${reg.city}, ${reg.state}` : "Region specific";
+                            })()}
+                          </span>
                         </div>
                       </div>
                     )}
@@ -716,22 +925,128 @@ const AnnouncementsPage = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4 border-t border-slate-100 pt-4">
+            {/* From Date & Time */}
             <div className="space-y-2">
-              <Label htmlFor="date" className="text-xs font-bold uppercase tracking-wider text-slate-600">Date <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <Input type="date" id="date" min={getTodayDateString()} value={formData.date} onChange={handleInputChange} className={`h-11 pr-10 ${errors.date ? "border-red-500" : ""}`} />
-                <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">From Date & Time <span className="text-red-500">*</span></Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Input 
+                    type="date" 
+                    id="fromDate" 
+                    min={getTodayDateString()} 
+                    value={formData.fromDate} 
+                    onChange={handleInputChange} 
+                    className={`h-11 pr-10 ${errors.fromDate ? "border-red-500" : ""}`} 
+                  />
+                  <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+                <div className="flex gap-1.5 items-center flex-shrink-0">
+                  <span className="text-xs text-slate-400 font-semibold px-1">Time:</span>
+                  <Select 
+                    value={formData.fromHour} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, fromHour: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-16 bg-background text-sm">
+                      <SelectValue placeholder="Hour" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-slate-400 font-bold">:</span>
+                  <Select 
+                    value={formData.fromMinute} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, fromMinute: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-16 bg-background text-sm">
+                      <SelectValue placeholder="Min" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={formData.fromPeriod} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, fromPeriod: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-20 bg-background text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="PM">PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {errors.date && <p className="text-[10px] text-red-500 font-bold">{errors.date}</p>}
+              {errors.fromDate && <p className="text-[10px] text-red-500 font-bold leading-tight">{errors.fromDate}</p>}
             </div>
+
+            {/* To Date & Time */}
             <div className="space-y-2">
-              <Label htmlFor="time" className="text-xs font-bold uppercase tracking-wider text-slate-600">Time <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <Input type="time" id="time" value={formData.time} onChange={handleInputChange} className={`h-11 pr-10 ${errors.time ? "border-red-500" : ""}`} />
-                <Clock size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">To Date & Time <span className="text-red-500">*</span></Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Input 
+                    type="date" 
+                    id="toDate" 
+                    min={formData.fromDate || getTodayDateString()} 
+                    value={formData.toDate} 
+                    onChange={handleInputChange} 
+                    className={`h-11 pr-10 ${errors.toDate ? "border-red-500" : ""}`} 
+                  />
+                  <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+                <div className="flex gap-1.5 items-center flex-shrink-0">
+                  <span className="text-xs text-slate-400 font-semibold px-1">Time:</span>
+                  <Select 
+                    value={formData.toHour} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, toHour: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-16 bg-background text-sm">
+                      <SelectValue placeholder="Hour" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-slate-400 font-bold">:</span>
+                  <Select 
+                    value={formData.toMinute} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, toMinute: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-16 bg-background text-sm">
+                      <SelectValue placeholder="Min" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={formData.toPeriod} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, toPeriod: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-20 bg-background text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="PM">PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {errors.time && <p className="text-[10px] text-red-500 font-bold">{errors.time}</p>}
+              {errors.toDate && <p className="text-[10px] text-red-500 font-bold leading-tight">{errors.toDate}</p>}
+              {errors.toTime && <p className="text-[10px] text-red-500 font-bold leading-tight">{errors.toTime}</p>}
             </div>
           </div>
 
@@ -742,6 +1057,76 @@ const AnnouncementsPage = () => {
               <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             </div>
             {errors.location && <p className="text-[10px] text-red-500 font-bold">{errors.location}</p>}
+          </div>
+
+          <div className="space-y-2 flex flex-col">
+            <Label htmlFor="regionId" className="text-xs font-bold uppercase tracking-wider text-slate-600">Region <span className="text-slate-400 font-normal">(Optional)</span></Label>
+            <Popover modal={true} open={regionOpen} onOpenChange={setRegionOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  role="combobox"
+                  type="button"
+                  aria-expanded={regionOpen}
+                  className="w-full h-11 bg-background border border-input rounded-md justify-between px-3 text-sm font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-700 active:scale-[0.99] transition-all"
+                >
+                  <span className="truncate text-left">
+                    {formData.regionId
+                      ? (() => {
+                          const reg = regionsList.find((r) => r._id === formData.regionId);
+                          return reg ? `${reg.city}, ${reg.state}, ${reg.country}` : "Select Region (Optional)";
+                        })()
+                      : <span className="text-slate-400">Select Region (Optional)</span>}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-slate-400" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
+                <Command className="w-full">
+                  <CommandInput placeholder="Search region..." className="h-10 text-xs" />
+                  <CommandEmpty>No region found.</CommandEmpty>
+                  <CommandGroup className="max-h-[200px] overflow-y-auto">
+                    <CommandItem
+                      value="none"
+                      onSelect={() => {
+                        setFormData((prev) => ({ ...prev, regionId: "" }));
+                        setRegionOpen(false);
+                      }}
+                      className="text-xs font-semibold text-muted-foreground"
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          !formData.regionId ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      Select Region (Optional)
+                    </CommandItem>
+                    {regionsList.map((r) => {
+                      const label = `${r.city}, ${r.state}, ${r.country}`;
+                      return (
+                        <CommandItem
+                          key={r._id}
+                          value={label}
+                          onSelect={() => {
+                            setFormData((prev) => ({ ...prev, regionId: r._id }));
+                            setRegionOpen(false);
+                          }}
+                          className="text-xs"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              formData.regionId === r._id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {label}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -829,17 +1214,70 @@ const AnnouncementsPage = () => {
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="published">Published</SelectItem>
                 <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {formData.status === "scheduled" && (
-            <div className="space-y-2">
-              <Label htmlFor="scheduleDate" className="text-xs font-bold uppercase tracking-wider text-slate-600">Schedule Date & Time <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <Input type="datetime-local" id="scheduleDate" min={getMinDatetimeString()} value={formData.scheduleDate} onChange={handleInputChange} className={`h-11 ${errors.scheduleDate ? "border-red-500" : ""}`} />
+            <div className="space-y-2 border-t border-slate-100 pt-4">
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Schedule Date & Time <span className="text-red-500">*</span></Label>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Input 
+                    type="date" 
+                    id="scheduleDate" 
+                    min={getTodayDateString()} 
+                    value={formData.scheduleDate} 
+                    onChange={handleInputChange} 
+                    className={`h-11 pr-10 ${errors.scheduleDate ? "border-red-500" : ""}`} 
+                  />
+                  <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+                <div className="flex gap-1.5 items-center flex-shrink-0">
+                  <span className="text-xs text-slate-400 font-semibold px-1">Time:</span>
+                  <Select 
+                    value={formData.scheduleHour} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, scheduleHour: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-16 bg-background text-sm">
+                      <SelectValue placeholder="Hour" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-slate-400 font-bold">:</span>
+                  <Select 
+                    value={formData.scheduleMinute} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, scheduleMinute: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-16 bg-background text-sm">
+                      <SelectValue placeholder="Min" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px]">
+                      {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={formData.schedulePeriod} 
+                    onValueChange={(val) => setFormData(prev => ({ ...prev, schedulePeriod: val }))}
+                  >
+                    <SelectTrigger className="h-11 w-20 bg-background text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="PM">PM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              {errors.scheduleDate && <p className="text-[10px] text-red-500 font-bold">{errors.scheduleDate}</p>}
+              {errors.scheduleDate && <p className="text-[10px] text-red-500 font-bold leading-tight">{errors.scheduleDate}</p>}
             </div>
           )}
 
@@ -903,16 +1341,35 @@ const AnnouncementsPage = () => {
                     <div className="pt-3 border-t border-slate-100 grid grid-cols-1 gap-2.5">
                       <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                         <Calendar size={14} className="text-slate-400" />
-                        <span>Date: {previewData.date ? new Date(previewData.date).toLocaleDateString() : "N/A"}</span>
+                        <span>
+                          Date: {previewData.fromDate 
+                            ? `${new Date(previewData.fromDate).toLocaleDateString()}${previewData.toDate ? ` - ${new Date(previewData.toDate).toLocaleDateString()}` : ""}` 
+                            : (previewData.date ? new Date(previewData.date).toLocaleDateString() : "N/A")}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
                         <Clock size={14} className="text-slate-400" />
-                        <span>Time: {previewData.time || "N/A"}</span>
+                        <span>
+                          Time: {previewData.fromTime 
+                            ? `${previewData.fromTime}${previewData.toTime ? ` - ${previewData.toTime}` : ""}` 
+                            : (previewData.time || "N/A")}
+                        </span>
                       </div>
                       {previewData.location && (
                         <div className="flex items-start gap-2 text-xs text-slate-600 font-medium">
                           <MapPin size={14} className="text-slate-400 flex-shrink-0 mt-0.5" />
                           <span className="break-words">{previewData.location}</span>
+                        </div>
+                      )}
+                      {previewData.regionId && (
+                        <div className="flex items-start gap-2 text-xs text-slate-600 font-medium">
+                          <MapPin size={14} className="text-indigo-400 flex-shrink-0 mt-0.5" />
+                          <span className="break-words">
+                            Region: {(() => {
+                              const reg = regionsList.find(r => r._id === previewData.regionId);
+                              return reg ? `${reg.city}, ${reg.state}` : "Region specific";
+                            })()}
+                          </span>
                         </div>
                       )}
                       <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
