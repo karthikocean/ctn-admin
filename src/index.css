@@ -160,5 +160,19 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* Disable Microsoft Edge and Internet Explorer default password reveal eye icon */
+input::-ms-reveal,
+input::-ms-clear,
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 
 

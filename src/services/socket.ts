@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:4000";
+const SOCKET_URL = import.meta.env.VITE_API_URL?.replace("/api/admin", "").replace("/api", "") || "http://localhost:5001";
 
 class SocketService {
   private socket: Socket | null = null;
@@ -20,6 +20,7 @@ class SocketService {
     this.socket.on("connect", () => {
       console.log("Socket connected:", this.socket?.id);
       this.socket?.emit("join", userId);
+      this.socket?.emit("join_admin_room");
       this.onStatusChange?.(true);
     });
 

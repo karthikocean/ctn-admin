@@ -871,47 +871,66 @@ const AnnouncementsPage = () => {
                   </div>
 
                   {formData.stallConfig.totalStallCount > 0 && (
-                    <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Stalls Configuration</Label>
-                      <div className="grid grid-cols-1 gap-3 max-h-[300px] overflow-y-auto pr-1 border border-dashed border-border rounded-xl p-3 bg-slate-50/50">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Stalls Configuration
+                      </Label>
+                      <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 space-y-3 max-h-[340px] overflow-y-auto pr-1">
                         {formData.stallConfig.stalls.map((stall, index) => {
                           const nameErr = errors[`stall_${index}_name`];
                           const pointsErr = errors[`stall_${index}_points`];
                           return (
-                            <div key={index} className="border border-border p-3 rounded-lg bg-card space-y-3 shadow-sm relative">
-                              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                                <span className="text-[10px] font-bold uppercase text-primary tracking-wide">Stall #{index + 1}</span>
+                            <div 
+                              key={index} 
+                              className="rounded-lg border border-slate-200 bg-white p-3.5 space-y-3 shadow-xs transition-shadow hover:shadow-sm"
+                            >
+                              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-primary" />
+                                  <span className="text-xs font-bold uppercase text-slate-800 tracking-wider">
+                                    Stall #{index + 1}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="grid grid-cols-3 gap-2">
-                                <div className="space-y-1">
-                                  <Label className="text-[10px] font-semibold text-slate-500 uppercase">Stall Name <span className="text-red-500">*</span></Label>
+                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                                <div className="sm:col-span-6 space-y-1">
+                                  <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                    Stall Name <span className="text-red-500">*</span>
+                                  </Label>
                                   <Input 
                                     type="text" 
                                     value={stall.name} 
                                     onChange={(e) => handleStallFieldChange(index, "name", e.target.value)} 
-                                    className={`h-8 text-xs ${nameErr ? "border-red-500" : ""}`} 
+                                    className={`h-9 text-xs rounded-md bg-white ${nameErr ? "border-red-500" : ""}`} 
+                                    placeholder="Enter stall name"
                                   />
-                                  {nameErr && <p className="text-[8px] text-red-500 font-bold leading-tight mt-0.5">{nameErr}</p>}
+                                  {nameErr && <p className="text-[10px] text-red-500 font-bold leading-tight mt-0.5">{nameErr}</p>}
                                 </div>
-                                <div className="space-y-1">
-                                  <Label className="text-[10px] font-semibold text-slate-500 uppercase">Size</Label>
+                                <div className="sm:col-span-3 space-y-1">
+                                  <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                    Size
+                                  </Label>
                                   <Input 
                                     type="text" 
                                     value={stall.size} 
                                     onChange={(e) => handleStallFieldChange(index, "size", e.target.value)} 
-                                    className="h-8 text-xs" 
+                                    className="h-9 text-xs rounded-md bg-white" 
+                                    placeholder="e.g. 10x10"
                                   />
                                 </div>
-                                <div className="space-y-1">
-                                  <Label className="text-[10px] font-semibold text-slate-500 uppercase">Points <span className="text-red-500">*</span></Label>
+                                <div className="sm:col-span-3 space-y-1">
+                                  <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                    Points <span className="text-red-500">*</span>
+                                  </Label>
                                   <Input 
                                     type="number" 
                                     min="0" 
                                     value={stall.points === undefined || stall.points === null ? "" : stall.points} 
                                     onChange={(e) => handleStallFieldChange(index, "points", e.target.value)} 
-                                    className={`h-8 text-xs ${pointsErr ? "border-red-500" : ""}`} 
+                                    className={`h-9 text-xs rounded-md bg-white ${pointsErr ? "border-red-500" : ""}`} 
+                                    placeholder="0"
                                   />
-                                  {pointsErr && <p className="text-[8px] text-red-500 font-bold leading-tight mt-0.5">{pointsErr}</p>}
+                                  {pointsErr && <p className="text-[10px] text-red-500 font-bold leading-tight mt-0.5">{pointsErr}</p>}
                                 </div>
                               </div>
                             </div>

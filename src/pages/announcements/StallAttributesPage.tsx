@@ -614,30 +614,33 @@ const StallAttributesPage = () => {
               <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Stalls Configuration
               </label>
-              <div className="grid grid-cols-1 gap-3 max-h-[380px] overflow-y-auto pr-1 border border-dashed border-border rounded-2xl p-3 bg-slate-50/50">
+              <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 space-y-3 max-h-[360px] overflow-y-auto pr-1">
                 {formData.stalls.map((stall, index) => {
                   const stallErr = validationErrors.stalls?.[index];
                   return (
                     <div
                       key={index}
-                      className="border border-border p-3.5 rounded-xl bg-card space-y-3 relative shadow-sm hover:border-primary/20 transition-all"
+                      className="rounded-lg border border-slate-200 bg-white p-3.5 space-y-3 shadow-xs transition-shadow hover:shadow-sm"
                     >
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                        <span className="text-[11px] font-bold uppercase text-primary tracking-wide">
-                          Stall #{index + 1}
-                        </span>
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-primary" />
+                          <span className="text-xs font-bold uppercase text-slate-800 tracking-wider">
+                            Stall #{index + 1}
+                          </span>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-slate-500 uppercase">
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                        <div className="sm:col-span-6 space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             Stall Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
-                            className={`w-full px-2 py-1.5 rounded-lg border bg-secondary/35 text-xs focus:outline-none focus:ring-1 ${
+                            className={`w-full px-2.5 py-1.5 rounded-md border bg-white text-xs focus:outline-none focus:ring-1 ${
                               stallErr?.name
                                 ? "border-destructive focus:ring-destructive/30"
-                                : "border-border focus:ring-primary/30"
+                                : "border-slate-200 focus:ring-primary/30"
                             }`}
                             placeholder="e.g. Stall A1"
                             value={stall.name}
@@ -650,29 +653,29 @@ const StallAttributesPage = () => {
                             </p>
                           )}
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-slate-500 uppercase">
+                        <div className="sm:col-span-3 space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             Size
                           </label>
                           <input
                             type="text"
-                            className="w-full px-2 py-1.5 rounded-lg border border-border bg-secondary/35 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-xs focus:outline-none focus:ring-1 focus:ring-primary/30"
                             placeholder="e.g. 10x10 ft"
                             value={stall.size}
                             onChange={(e) => handleStallFieldChange(index, "size", e.target.value)}
                           />
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-semibold text-slate-500 uppercase">
+                        <div className="sm:col-span-3 space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                             Points <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="number"
                             min="0"
-                            className={`w-full px-2 py-1.5 rounded-lg border bg-secondary/35 text-xs focus:outline-none focus:ring-1 ${
+                            className={`w-full px-2.5 py-1.5 rounded-md border bg-white text-xs focus:outline-none focus:ring-1 ${
                               stallErr?.points
                                 ? "border-destructive focus:ring-destructive/30"
-                                : "border-border focus:ring-primary/30"
+                                : "border-slate-200 focus:ring-primary/30"
                             }`}
                             placeholder="0"
                             value={stall.points === undefined || stall.points === null ? "" : stall.points}

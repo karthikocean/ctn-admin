@@ -446,6 +446,7 @@ const LoginPage = () => {
                             type="password"
                             inputMode="numeric"
                             pattern="[0-9]*"
+                            autoComplete="new-password"
                             maxLength={1}
                             value={pin[index]}
                             onChange={(e) => handleDigitChange(index, e.target.value, pin, setPin, pinRefs)}
@@ -699,6 +700,7 @@ const LoginPage = () => {
                             type="password"
                             inputMode="numeric"
                             pattern="[0-9]*"
+                            autoComplete="new-password"
                             maxLength={1}
                             value={newPin[index]}
                             onChange={(e) => handleDigitChange(index, e.target.value, newPin, setNewPin, newPinRefs)}
@@ -734,6 +736,7 @@ const LoginPage = () => {
                             type="password"
                             inputMode="numeric"
                             pattern="[0-9]*"
+                            autoComplete="new-password"
                             maxLength={1}
                             value={confirmPin[index]}
                             onChange={(e) => handleDigitChange(index, e.target.value, confirmPin, setConfirmPin, confirmPinRefs)}
