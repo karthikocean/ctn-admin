@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, Loader2, Store, MapPin, Users, X, Check, ChevronsUpDown, User, Globe } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
@@ -97,6 +97,8 @@ const FranchisesPage = () => {
   const [userSearchQuery, setUserSearchQuery] = useState("");
   const [commissionPercentage, setCommissionPercentage] = useState<number | string>(0);
   const [regionOpen, setRegionOpen] = useState(false);
+  const [regionSearch, setRegionSearch] = useState("");
+  const [visibleRegionCount, setVisibleRegionCount] = useState(10);
   const [saving, setSaving] = useState(false);
 
   // Status dialog states
@@ -173,6 +175,28 @@ const FranchisesPage = () => {
     }, 400);
     return () => clearTimeout(timer);
   }, [page, searchTerm, statusFilter]);
+
+  // Dynamic API call when searching business regions in popover
+  useEffect(() => {
+    if (!regionOpen) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const regionRes = await getRegions({
+          search: regionSearch.trim() || undefined,
+          limit: 100,
+          status: "active"
+        });
+        if (regionRes && regionRes.data) {
+          setRegionsList(regionRes.data);
+        }
+      } catch (e) {
+        console.error("Failed to search business regions from API", e);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [regionSearch, regionOpen]);
 
   const handleOpenAdd = async () => {
     setEditingFranchise(null);
@@ -391,6 +415,30 @@ const FranchisesPage = () => {
     (currentAssignedRegionId && currentAssignedRegionId === area._id.toString())
   );
 
+  const filteredAreas = useMemo(() => {
+    if (!regionSearch.trim()) return availableAreas;
+    const q = regionSearch.toLowerCase().trim();
+    return availableAreas.filter(area =>
+      area.name.toLowerCase().includes(q) ||
+      area.city.toLowerCase().includes(q) ||
+      area.state.toLowerCase().includes(q) ||
+      area.country.toLowerCase().includes(q)
+    );
+  }, [availableAreas, regionSearch]);
+
+  const visibleAreas = useMemo(() => {
+    return filteredAreas.slice(0, visibleRegionCount);
+  }, [filteredAreas, visibleRegionCount]);
+
+  const handleRegionListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 30) {
+      if (visibleRegionCount < filteredAreas.length) {
+        setVisibleRegionCount(prev => prev + 10);
+      }
+    }
+  };
+
   const selectedArea = allAreas.find(a => a._id === selectedRegionId);
 
   return (
@@ -582,7 +630,16 @@ const FranchisesPage = () => {
 
           <div className="space-y-1.5 flex flex-col">
             <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Business Region</label>
-            <Popover open={regionOpen} onOpenChange={setRegionOpen}>
+            <Popover
+              open={regionOpen}
+              onOpenChange={(open) => {
+                setRegionOpen(open);
+                if (open) {
+                  setRegionSearch("");
+                  setVisibleRegionCount(10);
+                }
+              }}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -597,15 +654,27 @@ const FranchisesPage = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-card border border-border rounded-xl shadow-xl z-50 animate-none">
-                <Command className="w-full">
-                  <CommandInput placeholder="Search region or area..." className="h-10 text-xs" />
+                <Command shouldFilter={false} className="w-full">
+                  <CommandInput
+                    placeholder="Search region or area..."
+                    className="h-10 text-xs"
+                    value={regionSearch}
+                    onValueChange={(val) => {
+                      setRegionSearch(val);
+                      setVisibleRegionCount(10);
+                    }}
+                  />
                   <CommandEmpty>No regions found.</CommandEmpty>
-                  <CommandList className="max-h-60 overflow-y-auto" onWheel={(e) => e.stopPropagation()}>
+                  <CommandList
+                    className="max-h-60 overflow-y-auto"
+                    onScroll={handleRegionListScroll}
+                    onWheel={(e) => e.stopPropagation()}
+                  >
                     <CommandGroup>
-                      {availableAreas.map((area) => (
+                      {visibleAreas.map((area) => (
                         <CommandItem
                           key={area._id}
-                          value={area.name + ` ${area.city} ${area.state} ${area.country}`}
+                          value={area._id}
                           onSelect={() => {
                             setSelectedRegionId(area._id);
                             setRegionOpen(false);
