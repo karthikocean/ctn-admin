@@ -61,7 +61,7 @@ const ConfirmDialog = ({
         <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
           <Button
             variant="outline"
-            className="flex-1 h-12 rounded-2xl border-slate-200 bg-transparent hover:bg-slate-50 hover:text-slate-900 transition-all font-medium order-2 sm:order-1 text-slate-600"
+            className="flex-1 h-12 rounded-2xl border-border bg-background hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition-all font-semibold order-2 sm:order-1"
             onClick={() => onOpenChange(false)}
             disabled={isLoading}
           >

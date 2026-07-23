@@ -10,3 +10,8 @@ export const getRoles = async () => {
   return response.data;
 };
 
+export const getContributionDetails = async (id: string) => {
+  const response = await api.get(`/contributions/${id}`);
+  return response.data;
+};
+

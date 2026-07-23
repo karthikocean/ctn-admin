@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "@/services/api";
 import socketService from "@/services/socket";
+import { sidebarNavItems } from "@/config/navigation";
 
 interface Permission {
   moduleId: string;
@@ -40,6 +41,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const fetchPermissions = useCallback(async (roleId: string) => {
     try {
@@ -79,6 +81,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setPermissionsLoaded(true);
     }
   }, []);
+
+  const refreshPermissions = useCallback(async () => {
+    if (user?.roleId) {
+      await fetchPermissions(user.roleId);
+    }
+  }, [user?.roleId, fetchPermissions]);
+
+  const hasPermission = useCallback((moduleId: string, action: string) => {
+    // If no permissions loaded, deny by default
+    if (!permissions.length) return false;
+
+    // Find the module in modulesList to get its identifier mapping
+    const targetModule = modulesList.find(
+      m => String(m.slugName).toLowerCase() === moduleId.toLowerCase() ||
+           String(m.name).toLowerCase() === moduleId.toLowerCase()
+    );
+
+    const modulePerm = permissions.find(p => {
+      // 1. Match by module's ObjectId (preferred format)
+      if (targetModule && String(p.moduleId) === String(targetModule._id)) {
+        return true;
+      }
+      // 2. Backward compatibility fallback matching using raw string comparisons
+      const pModStr = String(p.moduleId).toLowerCase();
+      const reqModStr = moduleId.toLowerCase();
+      return pModStr === reqModStr ||
+             pModStr === reqModStr.replace(/_/g, " ") ||
+             pModStr.replace(/ /g, "_") === reqModStr;
+    });
+
+    if (!modulePerm) return false;
+
+    return modulePerm.actions.includes(action);
+  }, [permissions, modulesList]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -125,6 +161,79 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initializeAuth();
   }, [fetchPermissions]);
+
+  // Listen for real-time permission updates from the socket
+  useEffect(() => {
+    if (!user || !accessToken) return;
+
+    const handlePermissionsUpdated = async (data: any) => {
+      console.log("🔒 Permissions updated via Socket. Refreshing...", data);
+      await refreshPermissions();
+    };
+
+    socketService.on("permissionsUpdated", handlePermissionsUpdated);
+    return () => {
+      socketService.off("permissionsUpdated", handlePermissionsUpdated);
+    };
+  }, [user, accessToken, refreshPermissions]);
+
+  // Route protection redirect check when permissions, route path, or modules load
+  useEffect(() => {
+    if (!user || !permissions || permissions.length === 0 || modulesList.length === 0) return;
+
+    const currentPath = location.pathname;
+    // Don't run checks on login page
+    if (currentPath === "/login") return;
+
+    let currentModuleId: string | undefined = undefined;
+
+    // Find if the current path matches any navigation item
+    for (const item of sidebarNavItems) {
+      if (item.children) {
+        const matchingChild = item.children.find(child => {
+          if (!child.path) return false;
+          // Match exact path or subpaths (e.g. edit/detail pages)
+          return currentPath === child.path || currentPath.startsWith(child.path + "/");
+        });
+        if (matchingChild) {
+          currentModuleId = matchingChild.moduleId || item.moduleId;
+          break;
+        }
+      }
+      if (item.path) {
+        if (currentPath === item.path || (item.path !== "/" && currentPath.startsWith(item.path + "/"))) {
+          currentModuleId = item.moduleId;
+          break;
+        }
+      }
+    }
+
+    // Custom check: if the user is on the root path "/", they will be handled by LandingRoute in App.tsx.
+    if (currentPath === "/") return;
+
+    // If current path matches a module, but user no longer has "view" permission for it
+    if (currentModuleId && !hasPermission(currentModuleId, "view")) {
+      // Find the first permitted module path
+      let firstPermittedPath = "";
+      for (const item of sidebarNavItems) {
+        if (item.children) {
+          const allowedChild = item.children.find(child => !child.moduleId || hasPermission(child.moduleId, "view"));
+          if (allowedChild) {
+            firstPermittedPath = allowedChild.path;
+            break;
+          }
+        } else if (item.moduleId && hasPermission(item.moduleId, "view") && item.path) {
+          firstPermittedPath = item.path;
+          break;
+        }
+      }
+
+      if (firstPermittedPath && currentPath !== firstPermittedPath) {
+        console.warn(`🛑 Revoked access to: ${currentPath}. Redirecting to first permitted page: ${firstPermittedPath}`);
+        navigate(firstPermittedPath, { replace: true });
+      }
+    }
+  }, [permissions, modulesList, user, location.pathname, navigate, hasPermission]);
 
 
   const login = async (phoneNumber: string, pin: string): Promise<{ success: boolean; message: string }> => {
@@ -200,39 +309,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const refreshPermissions = async () => {
-    if (user?.roleId) {
-      await fetchPermissions(user.roleId);
-    }
-  };
-
-  const hasPermission = useCallback((moduleId: string, action: string) => {
-    // If no permissions loaded, deny by default
-    if (!permissions.length) return false;
-
-    // Find the module in modulesList to get its identifier mapping
-    const targetModule = modulesList.find(
-      m => String(m.slugName).toLowerCase() === moduleId.toLowerCase() ||
-           String(m.name).toLowerCase() === moduleId.toLowerCase()
-    );
-
-    const modulePerm = permissions.find(p => {
-      // 1. Match by module's ObjectId (preferred format)
-      if (targetModule && String(p.moduleId) === String(targetModule._id)) {
-        return true;
-      }
-      // 2. Backward compatibility fallback matching using raw string comparisons
-      const pModStr = String(p.moduleId).toLowerCase();
-      const reqModStr = moduleId.toLowerCase();
-      return pModStr === reqModStr ||
-             pModStr === reqModStr.replace(/_/g, " ") ||
-             pModStr.replace(/ /g, "_") === reqModStr;
-    });
-
-    if (!modulePerm) return false;
-
-    return modulePerm.actions.includes(action);
-  }, [permissions, modulesList]);
 
   return (
     <AuthContext.Provider value={{

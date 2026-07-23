@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Heart, Filter, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
+import { Search, Heart, Filter, RefreshCw, Calendar as CalendarIcon, Eye } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
@@ -28,6 +29,7 @@ const getFullUrl = (path: string) => {
 };
 
 const ContributionsPage = () => {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [search, setSearch] = useState("");
@@ -291,17 +293,16 @@ const ContributionsPage = () => {
             <thead>
               <tr className="border-b border-border bg-secondary/30">
                 <th className="text-center px-4 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16 whitespace-nowrap">S.No</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Member Connection</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Details</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Member Connection</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Type</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Details</th>
+                <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {contributions.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={6} className="py-8">
+                  <td colSpan={5} className="py-8">
                     <EmptyState
                       title="No contributions found"
                       description="Try adjusting your search query or filters."
@@ -310,7 +311,11 @@ const ContributionsPage = () => {
                 </tr>
               ) : (
                 contributions.map((c, index) => (
-                  <tr key={c.id} className="hover:bg-secondary/10 transition-colors">
+                  <tr
+                    key={c.id}
+                    onClick={() => navigate(`/contributions/${c.id}`)}
+                    className="hover:bg-secondary/15 transition-colors cursor-pointer"
+                  >
                     <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * limit + index + 1}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -350,8 +355,8 @@ const ContributionsPage = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border ${
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border whitespace-nowrap ${
                         c.type === "one_to_one" 
                           ? "bg-blue-50 text-blue-700 border-blue-100" 
                           : c.type === "thank_you_slip"
@@ -365,34 +370,35 @@ const ContributionsPage = () => {
                       <div>
                         <p className="text-sm font-semibold text-foreground">
                           {c.type === "thank_you_slip" && (
-                            <span className="text-emerald-600 font-bold mr-1.5">
+                            <span className="text-emerald-600 font-bold">
                               ₹{c.amount?.toLocaleString() || 0}
                             </span>
                           )}
                           {c.type === "referral" && (
-                            <span className="text-primary font-bold mr-1.5">
+                            <span className="text-primary font-bold">
                               {c.referralDetails?.referralName}
                             </span>
                           )}
-                          <span>{c.description}</span>
+                          {c.type === "one_to_one" && (
+                            <span>{c.description}</span>
+                          )}
                         </p>
                         {(c.businessDetails || c.referralDetails?.comments) && (
                           <p className="text-xs text-foreground font-semibold mt-0.5 max-w-md truncate">
                             {c.type === "thank_you_slip" ? c.businessDetails : c.referralDetails?.comments}
                           </p>
                         )}
-                        {c.type === "referral" && (c.referralDetails?.referralMobile || c.referralDetails?.referralEmail) && (
+                        {c.type === "referral" && (c.referralDetails?.referralMobile || c.referralDetails?.referralEmail || c.referralDetails?.location) && (
                           <p className="text-xs text-foreground font-semibold mt-0.5">
-                            {c.referralDetails.referralMobile} {c.referralDetails.referralEmail ? `| ${c.referralDetails.referralEmail}` : ""}
+                            {c.referralDetails.referralMobile} 
+                            {c.referralDetails.referralEmail ? ` | ${c.referralDetails.referralEmail}` : ""} 
+                            {c.referralDetails.location ? ` | ${c.referralDetails.location}` : ""}
                           </p>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold whitespace-nowrap">
                       {formatDate(c.date)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={c.status} />
                     </td>
                   </tr>
                 ))

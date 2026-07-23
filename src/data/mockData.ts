@@ -898,6 +898,10 @@ export const dashboardStats = {
   notAsked: 567,
   notGiven: 489,
   notRequirements: 612,
+  oneToOneCount: 156,
+  referralCount: 284,
+  thankYouSlipCount: 412,
+  thankYouSlipAmount: 1850000,
 };
 
 export const monthlyData = [

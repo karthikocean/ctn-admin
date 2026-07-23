@@ -463,7 +463,7 @@ const RegionsPage = () => {
             </tbody>
           </table>
         </div>
-        <div className="px-6 pb-4 border-t">
+        <div className="px-6 py-4 border-t border-border bg-secondary/10">
           <PaginationBar
             currentPage={page + 1}
             totalPages={totalPages}

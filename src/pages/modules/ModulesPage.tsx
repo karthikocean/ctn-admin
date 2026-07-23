@@ -341,7 +341,7 @@ const ModulesPage = () => {
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
                         onEdit={canEdit ? () => handleEdit(module) : undefined}
-                        onDelete={canDelete ? () => confirmDelete(module._id) : undefined}
+                        onDelete={(canDelete && module.slugName !== "modules" && module.name?.toLowerCase() !== "modules") ? () => confirmDelete(module._id) : undefined}
                       />
                     </td>
                   </tr>
