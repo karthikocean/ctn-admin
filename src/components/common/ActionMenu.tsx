@@ -33,7 +33,7 @@ const ActionMenu = ({ onView, onEdit, onDelete, onAddUser, onAssign, onToggleSta
         </Button>
       </DropdownMenuTrigger>
       {hasAnyAction && (
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-40" onCloseAutoFocus={(e) => e.preventDefault()}>
           {onAddUser && <DropdownMenuItem onClick={onAddUser} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Add User</DropdownMenuItem>}
           {onAssign && <DropdownMenuItem onClick={onAssign} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Assign Member</DropdownMenuItem>}
           {onView && <DropdownMenuItem onClick={onView} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Eye size={14} className="mr-2" /> View</DropdownMenuItem>}

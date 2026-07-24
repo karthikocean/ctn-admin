@@ -44,6 +44,7 @@ const CategoriesPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
@@ -62,7 +63,7 @@ const CategoriesPage = () => {
     status: "active"
   });
 
-  const fetchCategories = async (search: string = "", pageNum: number = 1) => {
+  const fetchCategories = async (search: string = "", pageNum: number = 1, status: string = statusFilter) => {
     try {
       setLoading(true);
       const response = await api.get("/categories", {
@@ -70,7 +71,8 @@ const CategoriesPage = () => {
           search,
           type: "MAIN",
           limit: pageSize,
-          page: pageNum - 1
+          page: pageNum - 1,
+          status: status === "all" ? undefined : status
         }
       });
       setCategories(response.data.data || []);
@@ -84,15 +86,15 @@ const CategoriesPage = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchCategories(searchTerm, 1);
+      fetchCategories(searchTerm, 1, statusFilter);
       setPage(1);
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter]);
 
   const handlePageChange = (p: number) => {
     setPage(p);
-    fetchCategories(searchTerm, p);
+    fetchCategories(searchTerm, p, statusFilter);
   };
 
   const handleSave = async () => {
@@ -133,7 +135,7 @@ const CategoriesPage = () => {
       setDrawerOpen(false);
       setEditingId(null);
       setFormData({ name: "", status: "active" });
-      fetchCategories(searchTerm, page);
+      fetchCategories(searchTerm, page, statusFilter);
     } catch (error: any) {
       console.error("Failed to save category:", error);
       toast({
@@ -167,7 +169,7 @@ const CategoriesPage = () => {
       });
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
-      fetchCategories(searchTerm, page);
+      fetchCategories(searchTerm, page, statusFilter);
     } catch (error: any) {
       console.error("Failed to delete category:", error);
       const errorMsg = error.response?.data?.message || "Failed to delete category";
@@ -196,7 +198,7 @@ const CategoriesPage = () => {
         description: `Status updated to ${newStatus}`,
         variant: "success"
       });
-      fetchCategories(searchTerm, page);
+      fetchCategories(searchTerm, page, statusFilter);
       setStatusDialogOpen(false);
     } catch (error: any) {
       toast({
@@ -245,10 +247,23 @@ const CategoriesPage = () => {
             />
           </div>
 
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
-            <Filter size={14} className="mr-1.5" />
-            Filters
-          </Button>
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => {
+              setStatusFilter(val);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-32 rounded-lg text-xs bg-secondary/30 border-border">
+              <Filter size={14} className="mr-1.5 text-muted-foreground/75" />
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
 
           {canCreate && (
             <Button
@@ -454,6 +469,7 @@ export const SubCategoriesPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
@@ -489,7 +505,7 @@ export const SubCategoriesPage = () => {
     }
   };
 
-  const fetchSubCategories = async (search: string = "", pageNum: number = 1) => {
+  const fetchSubCategories = async (search: string = "", pageNum: number = 1, status: string = statusFilter) => {
     try {
       setLoading(true);
       const response = await api.get("/categories", {
@@ -497,7 +513,8 @@ export const SubCategoriesPage = () => {
           search,
           type: "SUB",
           limit: pageSize,
-          page: pageNum - 1
+          page: pageNum - 1,
+          status: status === "all" ? undefined : status
         }
       });
       setSubCategories(response.data.data || []);
@@ -511,11 +528,11 @@ export const SubCategoriesPage = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchSubCategories(searchTerm, 1);
+      fetchSubCategories(searchTerm, 1, statusFilter);
       setPage(1);
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter]);
 
   useEffect(() => {
     if (drawerOpen) {
@@ -525,7 +542,7 @@ export const SubCategoriesPage = () => {
 
   const handlePageChange = (p: number) => {
     setPage(p);
-    fetchSubCategories(searchTerm, p);
+    fetchSubCategories(searchTerm, p, statusFilter);
   };
 
   const handleSave = async () => {
@@ -576,7 +593,7 @@ export const SubCategoriesPage = () => {
       setDrawerOpen(false);
       setEditingId(null);
       setFormData({ name: "", parentCategory: "", status: "active" });
-      fetchSubCategories(searchTerm, page);
+      fetchSubCategories(searchTerm, page, statusFilter);
     } catch (error: any) {
       console.error("Failed to save sub-category:", error);
       toast({
@@ -611,7 +628,7 @@ export const SubCategoriesPage = () => {
       });
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
-      fetchSubCategories(searchTerm, page);
+      fetchSubCategories(searchTerm, page, statusFilter);
     } catch (error: any) {
       console.error("Failed to delete sub-category:", error);
       const errorMsg = error.response?.data?.message || "Failed to delete sub-category";
@@ -640,7 +657,7 @@ export const SubCategoriesPage = () => {
         description: `Status updated to ${newStatus}`,
         variant: "success"
       });
-      fetchSubCategories(searchTerm, page);
+      fetchSubCategories(searchTerm, page, statusFilter);
       setStatusDialogOpen(false);
     } catch (error: any) {
       toast({
@@ -688,10 +705,23 @@ export const SubCategoriesPage = () => {
             />
           </div>
 
-          {/* <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
-            <Filter size={14} className="mr-1.5" />
-            Filters
-          </Button> */}
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => {
+              setStatusFilter(val);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-32 rounded-lg text-xs bg-secondary/30 border-border">
+              <Filter size={14} className="mr-1.5 text-muted-foreground/75" />
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
 
           {canCreate && (
             <Button

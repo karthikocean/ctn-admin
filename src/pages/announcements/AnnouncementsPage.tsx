@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye, Check, ChevronsUpDown } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -74,6 +74,14 @@ const getTodayDateString = () => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+const getHour24 = (hourStr: string, period: string) => {
+  let h = parseInt(hourStr, 10);
+  if (isNaN(h)) return 0;
+  if (period === "PM" && h !== 12) h += 12;
+  if (period === "AM" && h === 12) h = 0;
+  return h;
+};
+
 const getMinDatetimeString = () => {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -97,6 +105,27 @@ const AnnouncementsPage = () => {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [regionsList, setRegionsList] = useState<any[]>([]);
 
+  const allAreas = useMemo(() => {
+    return regionsList.flatMap((r) => {
+      if (r.areas && r.areas.length > 0) {
+        return r.areas.map((area: any) => ({
+          _id: typeof area === "string" ? area : area._id,
+          name: typeof area === "string" ? area : area.name,
+          city: r.city,
+          state: r.state,
+          country: r.country
+        }));
+      }
+      return [{
+        _id: r._id,
+        name: `${r.city}, ${r.state} (${r.country})`,
+        city: r.city,
+        state: r.state,
+        country: r.country
+      }];
+    });
+  }, [regionsList]);
+
   useEffect(() => {
     const fetchRegions = async () => {
       try {
@@ -112,6 +141,20 @@ const AnnouncementsPage = () => {
   }, []);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const isEditingExpired = useMemo(() => {
+    if (!editingId) return false;
+    const ann = announcements.find(a => a._id === editingId);
+    if (!ann) return false;
+    const now = new Date();
+    if (ann.toDate) {
+      return new Date(ann.toDate) < now;
+    }
+    if (ann.date) {
+      return new Date(ann.date) < now;
+    }
+    return false;
+  }, [editingId, announcements]);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -168,6 +211,7 @@ const AnnouncementsPage = () => {
     scheduleMinute: "00",
     schedulePeriod: "AM",
     regionId: "",
+    regionIds: [] as string[],
     isOfflineStallExist: false,
     stallConfig: {
       totalStallCount: 0,
@@ -278,11 +322,44 @@ const AnnouncementsPage = () => {
     }
 
     if (formData.fromDate) {
-      const selectedDate = new Date(formData.fromDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (selectedDate < today) {
-        newErrors.fromDate = "From Date cannot be in the past";
+      const [year, month, day] = formData.fromDate.split('-').map(Number);
+      let h = parseInt(formData.fromHour || "10", 10);
+      const m = parseInt(formData.fromMinute || "00", 10);
+      const period = formData.fromPeriod || "AM";
+      if (period === 'PM' && h !== 12) h += 12;
+      if (period === 'AM' && h === 12) h = 0;
+      const selectedStart = new Date(year, month - 1, day, h, m, 0, 0);
+      const now = new Date();
+      
+      const original = editingId ? announcements.find(a => a._id === editingId) : null;
+      const wasInFuture = original && (original.fromDate || original.date) ? new Date(original.fromDate || original.date) > now : false;
+      const isTimeModified = original ? (
+        new Date(original.fromDate || original.date).getTime() !== selectedStart.getTime()
+      ) : true;
+
+      if ((!editingId || wasInFuture || isTimeModified) && selectedStart < now) {
+        newErrors.fromDate = "From Date & Time cannot be in the past";
+      }
+    }
+
+    if (formData.toDate) {
+      const [year, month, day] = formData.toDate.split('-').map(Number);
+      let h = parseInt(formData.toHour || "11", 10);
+      const m = parseInt(formData.toMinute || "00", 10);
+      const period = formData.toPeriod || "AM";
+      if (period === 'PM' && h !== 12) h += 12;
+      if (period === 'AM' && h === 12) h = 0;
+      const selectedEnd = new Date(year, month - 1, day, h, m, 0, 0);
+      const now = new Date();
+
+      const original = editingId ? announcements.find(a => a._id === editingId) : null;
+      const wasInFuture = original && original.toDate ? new Date(original.toDate) > now : false;
+      const isTimeModified = original ? (
+        original.toDate && new Date(original.toDate).getTime() !== selectedEnd.getTime()
+      ) : true;
+
+      if ((!editingId || wasInFuture || isTimeModified) && selectedEnd < now) {
+        newErrors.toDate = "To Date & Time cannot be in the past";
       }
     }
 
@@ -387,6 +464,7 @@ const AnnouncementsPage = () => {
       scheduleMinute: "00",
       schedulePeriod: "AM",
       regionId: "",
+      regionIds: [],
       isOfflineStallExist: false,
       stallConfig: {
         totalStallCount: 0,
@@ -434,7 +512,8 @@ const AnnouncementsPage = () => {
         toDate: finalToDate,
         fromTime: finalFromTime,
         toTime: finalToTime,
-        regionId: formData.regionId || undefined,
+        regionId: formData.regionIds && formData.regionIds.length > 0 ? formData.regionIds[0] : undefined,
+        regionIds: formData.regionIds && formData.regionIds.length > 0 ? formData.regionIds : [],
         scheduleDate: formData.status === 'scheduled' && formData.scheduleDate
           ? parseDateTime(formData.scheduleDate, formData.scheduleHour, formData.scheduleMinute, formData.schedulePeriod)
           : undefined,
@@ -586,6 +665,7 @@ const AnnouncementsPage = () => {
           scheduleMinute: schedParts.minute,
           schedulePeriod: schedParts.period,
           regionId: data.regionId || "",
+          regionIds: data.regionIds || (data.regionId ? [data.regionId] : []),
           isOfflineStallExist: data.isOfflineStallExist || false,
           stallConfig: data.stallConfig || { totalStallCount: 0, stalls: [] }
         });
@@ -597,6 +677,12 @@ const AnnouncementsPage = () => {
       setIsLoading(false);
     }
   };
+
+  const now = new Date();
+  const todayStr = getTodayDateString();
+  const currentHour24 = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentPeriod = currentHour24 >= 12 ? "PM" : "AM";
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 space-y-4 max-w-[1600px] mx-auto relative overflow-hidden">
@@ -739,13 +825,19 @@ const AnnouncementsPage = () => {
                       </div>
                     )}
 
-                    {a.regionId && (
+                    {((a.regionIds && a.regionIds.length > 0) || a.regionId) && (
                       <div className="col-span-2 flex flex-col gap-1 pt-0.5">
                         <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Region</span>
                         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
                           <MapPin size={12} className="text-indigo-400 flex-shrink-0" />
                           <span className="line-clamp-1">
                             {(() => {
+                              if (a.regionIds && a.regionIds.length > 0) {
+                                return a.regionIds.map((id: string) => {
+                                  const area = allAreas.find(aa => aa._id === id);
+                                  return area ? area.name : "Region";
+                                }).join(", ");
+                              }
                               const reg = regionsList.find(r => r._id === a.regionId);
                               return reg ? `${reg.city}, ${reg.state}` : "Region specific";
                             })()}
@@ -971,7 +1063,7 @@ const AnnouncementsPage = () => {
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
                       {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
-                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                        <SelectItem key={h} value={h} disabled={formData.fromDate === todayStr && getHour24(h, formData.fromPeriod) < currentHour24}>{h}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -985,7 +1077,7 @@ const AnnouncementsPage = () => {
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
                       {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                        <SelectItem key={m} value={m} disabled={formData.fromDate === todayStr && getHour24(formData.fromHour, formData.fromPeriod) === currentHour24 && parseInt(m, 10) < currentMinute}>{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -997,7 +1089,7 @@ const AnnouncementsPage = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="AM" disabled={formData.fromDate === todayStr && currentPeriod === "PM"}>AM</SelectItem>
                       <SelectItem value="PM">PM</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1032,7 +1124,7 @@ const AnnouncementsPage = () => {
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
                       {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
-                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                        <SelectItem key={h} value={h} disabled={formData.toDate === todayStr && getHour24(h, formData.toPeriod) < currentHour24}>{h}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1046,7 +1138,7 @@ const AnnouncementsPage = () => {
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
                       {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                        <SelectItem key={m} value={m} disabled={formData.toDate === todayStr && getHour24(formData.toHour, formData.toPeriod) === currentHour24 && parseInt(m, 10) < currentMinute}>{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1058,7 +1150,7 @@ const AnnouncementsPage = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="AM" disabled={formData.toDate === todayStr && currentPeriod === "PM"}>AM</SelectItem>
                       <SelectItem value="PM">PM</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1079,7 +1171,7 @@ const AnnouncementsPage = () => {
           </div>
 
           <div className="space-y-2 flex flex-col">
-            <Label htmlFor="regionId" className="text-xs font-bold uppercase tracking-wider text-slate-600">Region <span className="text-slate-400 font-normal">(Optional)</span></Label>
+            <Label htmlFor="regionIds" className="text-xs font-bold uppercase tracking-wider text-slate-600">Region <span className="text-slate-400 font-normal">(Optional)</span></Label>
             <Popover modal={true} open={regionOpen} onOpenChange={setRegionOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -1089,11 +1181,8 @@ const AnnouncementsPage = () => {
                   className="w-full h-11 bg-background border border-input rounded-md justify-between px-3 text-sm font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-700 active:scale-[0.99] transition-all"
                 >
                   <span className="truncate text-left">
-                    {formData.regionId
-                      ? (() => {
-                          const reg = regionsList.find((r) => r._id === formData.regionId);
-                          return reg ? `${reg.city}, ${reg.state}, ${reg.country}` : "Select Region (Optional)";
-                        })()
+                    {formData.regionIds && formData.regionIds.length > 0
+                      ? `${formData.regionIds.length} Region(s) selected`
                       : <span className="text-slate-400">Select Region (Optional)</span>}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-slate-400" />
@@ -1104,38 +1193,28 @@ const AnnouncementsPage = () => {
                   <CommandInput placeholder="Search region..." className="h-10 text-xs" />
                   <CommandEmpty>No region found.</CommandEmpty>
                   <CommandGroup className="max-h-[200px] overflow-y-auto">
-                    <CommandItem
-                      value="none"
-                      onSelect={() => {
-                        setFormData((prev) => ({ ...prev, regionId: "" }));
-                        setRegionOpen(false);
-                      }}
-                      className="text-xs font-semibold text-muted-foreground"
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          !formData.regionId ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      Select Region (Optional)
-                    </CommandItem>
-                    {regionsList.map((r) => {
-                      const label = `${r.city}, ${r.state}, ${r.country}`;
+                    {allAreas.map((area) => {
+                      const label = `${area.name}, ${area.city}, ${area.country}`;
+                      const isSelected = formData.regionIds?.includes(area._id) || false;
                       return (
                         <CommandItem
-                          key={r._id}
+                          key={area._id}
                           value={label}
                           onSelect={() => {
-                            setFormData((prev) => ({ ...prev, regionId: r._id }));
-                            setRegionOpen(false);
+                            setFormData((prev) => {
+                              const ids = prev.regionIds || [];
+                              const newIds = ids.includes(area._id)
+                                ? ids.filter((id) => id !== area._id)
+                                : [...ids, area._id];
+                              return { ...prev, regionIds: newIds };
+                            });
                           }}
                           className="text-xs"
                         >
                           <Check
                             className={cn(
                               "mr-2 h-4 w-4",
-                              formData.regionId === r._id ? "opacity-100" : "opacity-0"
+                              isSelected ? "opacity-100" : "opacity-0"
                             )}
                           />
                           {label}
@@ -1146,6 +1225,31 @@ const AnnouncementsPage = () => {
                 </Command>
               </PopoverContent>
             </Popover>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {(formData.regionIds || []).map(id => {
+                const area = allAreas.find(aa => aa._id === id);
+                if (!area) return null;
+                return (
+                  <Badge
+                    key={id}
+                    variant="default"
+                    className="bg-primary/10 text-primary border-primary/20 text-[10px] py-0 px-2 flex items-center gap-1"
+                  >
+                    {area.name} ({area.city})
+                    <X
+                      size={10}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          regionIds: (prev.regionIds || []).filter((rid) => rid !== id)
+                        }));
+                      }}
+                    />
+                  </Badge>
+                );
+              })}
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -1220,13 +1324,14 @@ const AnnouncementsPage = () => {
           <div className="space-y-2">
             <Label htmlFor="status" className="text-xs font-bold uppercase tracking-wider text-slate-600">Status</Label>
             <Select
+              disabled={isEditingExpired}
               value={formData.status}
               onValueChange={(value) => {
                 setFormData(prev => ({ ...prev, status: value }));
                 if (errors.status) setErrors(prev => ({ ...prev, status: "" }));
               }}
             >
-              <SelectTrigger id="status" className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm">
+              <SelectTrigger id="status" className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm disabled:opacity-75 disabled:cursor-not-allowed">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -1234,6 +1339,7 @@ const AnnouncementsPage = () => {
                 <SelectItem value="published">Published</SelectItem>
                 <SelectItem value="scheduled">Scheduled</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -1264,7 +1370,7 @@ const AnnouncementsPage = () => {
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
                       {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
-                        <SelectItem key={h} value={h}>{h}</SelectItem>
+                        <SelectItem key={h} value={h} disabled={formData.scheduleDate === todayStr && getHour24(h, formData.schedulePeriod) < currentHour24}>{h}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1278,7 +1384,7 @@ const AnnouncementsPage = () => {
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px]">
                       {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                        <SelectItem key={m} value={m} disabled={formData.scheduleDate === todayStr && getHour24(formData.scheduleHour, formData.schedulePeriod) === currentHour24 && parseInt(m, 10) < currentMinute}>{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1290,7 +1396,7 @@ const AnnouncementsPage = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AM">AM</SelectItem>
+                      <SelectItem value="AM" disabled={formData.scheduleDate === todayStr && currentPeriod === "PM"}>AM</SelectItem>
                       <SelectItem value="PM">PM</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1300,9 +1406,17 @@ const AnnouncementsPage = () => {
             </div>
           )}
 
+          {isEditingExpired && (
+            <div className="mt-4 p-3 bg-amber-50/80 border border-amber-100 rounded-xl flex items-start gap-2.5">
+              <span className="text-xs text-amber-700 font-semibold leading-normal">
+                ⚠️ This announcement has expired. You cannot change its status or update its details.
+              </span>
+            </div>
+          )}
+
           <div className="pt-6 flex gap-3 pb-10">
             <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold" onClick={() => setDrawerOpen(false)}>Cancel</Button>
-            <Button className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={handleSave} disabled={isSubmitting}>
+            <Button className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={handleSave} disabled={isSubmitting || isEditingExpired}>
               {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <CheckCircle2 className="mr-2" size={18} />}
               {editingId ? "Update Announcement" : "Save Announcement"}
             </Button>
@@ -1322,8 +1436,8 @@ const AnnouncementsPage = () => {
       />
 
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto p-6">
-          <DialogHeader className="pb-4 border-b border-border">
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] flex flex-col p-6 overflow-hidden">
+          <DialogHeader className="pb-4 border-b border-border flex-shrink-0">
             <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-800">
               <Megaphone className="text-primary w-5 h-5 animate-pulse" />
               Announcement Details & Bookings
@@ -1332,6 +1446,8 @@ const AnnouncementsPage = () => {
               Real-time member registrations and stall allocations for this announcement
             </DialogDescription>
           </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto pr-1">
 
           {previewLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
@@ -1380,11 +1496,17 @@ const AnnouncementsPage = () => {
                           <span className="break-words">{previewData.location}</span>
                         </div>
                       )}
-                      {previewData.regionId && (
+                      {((previewData.regionIds && previewData.regionIds.length > 0) || previewData.regionId) && (
                         <div className="flex items-start gap-2 text-xs text-slate-600 font-medium">
                           <MapPin size={14} className="text-indigo-400 flex-shrink-0 mt-0.5" />
                           <span className="break-words">
                             Region: {(() => {
+                              if (previewData.regionIds && previewData.regionIds.length > 0) {
+                                return previewData.regionIds.map((id: string) => {
+                                  const area = allAreas.find(aa => aa._id === id);
+                                  return area ? area.name : "Region";
+                                }).join(", ");
+                              }
                               const reg = regionsList.find(r => r._id === previewData.regionId);
                               return reg ? `${reg.city}, ${reg.state}` : "Region specific";
                             })()}
@@ -1535,6 +1657,7 @@ const AnnouncementsPage = () => {
               Failed to load preview details.
             </div>
           )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

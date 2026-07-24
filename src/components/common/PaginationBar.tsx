@@ -46,7 +46,7 @@ const PaginationBar = ({
   };
 
   return (
-    <div className={cn("flex items-center justify-between w-full font-sans", className)}>
+    <div className={cn("flex items-center justify-between w-full font-sans pt-4 pb-1", className)}>
       {/* Left text: Page X of Y */}
       <p className="text-sm font-medium text-slate-500">
         Page {safeCurrentPage} of {safeTotalPages}
@@ -58,7 +58,7 @@ const PaginationBar = ({
         <Button
           variant="outline"
           size="icon"
-          className="w-9 h-9 rounded-xl border-slate-200/90 bg-slate-50/50 text-slate-600 hover:bg-slate-100 transition-all disabled:opacity-40"
+          className="w-9 h-9 rounded-xl border-slate-200/90 bg-slate-50/50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 flex items-center justify-center transition-all disabled:opacity-40"
           disabled={safeCurrentPage <= 1}
           onClick={() => onPageChange(safeCurrentPage - 1)}
         >
@@ -72,14 +72,14 @@ const PaginationBar = ({
             variant="outline"
             size="icon"
             className={cn(
-              "w-9 h-9 rounded-xl text-xs font-semibold transition-all",
+              "w-9 h-9 rounded-xl text-xs font-semibold flex items-center justify-center transition-all",
               p === safeCurrentPage
-                ? "bg-[#003B73] text-white border-[#003B73] font-bold shadow-xs hover:bg-[#002d59]"
-                : "border-slate-200/90 bg-slate-50/50 text-slate-700 hover:bg-slate-100"
+                ? "bg-[#003B73] text-white border-[#003B73] font-bold shadow-xs hover:bg-[#002d59] hover:text-white"
+                : "border-slate-200/90 bg-slate-50/50 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
             )}
             onClick={() => onPageChange(p)}
           >
-            {p}
+            <span className="leading-none flex items-center justify-center">{p}</span>
           </Button>
         ))}
 
@@ -87,7 +87,7 @@ const PaginationBar = ({
         <Button
           variant="outline"
           size="icon"
-          className="w-9 h-9 rounded-xl border-slate-200/90 bg-slate-50/50 text-slate-600 hover:bg-slate-100 transition-all disabled:opacity-40"
+          className="w-9 h-9 rounded-xl border-slate-200/90 bg-slate-50/50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 flex items-center justify-center transition-all disabled:opacity-40"
           disabled={safeCurrentPage >= safeTotalPages}
           onClick={() => onPageChange(safeCurrentPage + 1)}
         >

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Coins } from "lucide-react";
+import { Search, Coins, Phone, MessageCircle, MoreVertical, History } from "lucide-react";
 import PaginationBar from "@/components/common/PaginationBar";
 import { Button } from "@/components/ui/button";
 import { mockPoints, mockMembers } from "@/data/mockData";
@@ -15,11 +15,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+} from "@/components/ui/avatar";
 import { getPointsHistory } from "@/api/PointsApi";
+
+const getFullUrl = (path?: string | null) => {
+  if (!path) return "";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  return `${import.meta.env.VITE_API_URL || "http://localhost:5001"}/${path}`;
+};
 
 interface ExtendedPointEntry extends PointEntry {
   companyName?: string;
   region?: string;
+  memberCategory?: string;
+  dateOfJoin?: string;
+  subscriptionType?: string;
+  mobileNumber?: string;
+  profilePhoto?: string;
 }
 
 const PointsPage = () => {
@@ -30,6 +59,29 @@ const PointsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [page, setPage] = useState(1);
+
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [selectedMemberName, setSelectedMemberName] = useState<string>("");
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  const handleOpenHistory = (memberId: string, memberName: string) => {
+    setSelectedMemberId(memberId);
+    setSelectedMemberName(memberName);
+    setIsHistoryOpen(true);
+  };
+
+  const activeMemberHistory = useMemo(() => {
+    if (!selectedMemberId) return [];
+    let result = points.filter((p) => p.memberId === selectedMemberId);
+
+    if (selectedCategory && selectedCategory !== "all") {
+      result = result.filter(
+        (p) => p.category?.toLowerCase() === selectedCategory.toLowerCase()
+      );
+    }
+
+    return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [points, selectedMemberId, selectedCategory]);
 
   const fetchPoints = async () => {
     setLoading(true);
@@ -74,7 +126,8 @@ const PointsPage = () => {
       result = result.filter(
         (p) =>
           p.memberName.toLowerCase().includes(query) ||
-          p.category?.toLowerCase().includes(query)
+          p.category?.toLowerCase().includes(query) ||
+          p.memberCategory?.toLowerCase().includes(query)
       );
     }
 
@@ -96,6 +149,11 @@ const PointsPage = () => {
       points: number;
       latestModule: string;
       latestDate: string;
+      memberCategory: string;
+      dateOfJoin: string;
+      subscriptionType: string;
+      mobileNumber: string;
+      profilePhoto?: string;
     }> = {};
 
     filteredPoints.forEach((p) => {
@@ -111,6 +169,11 @@ const PointsPage = () => {
           points: 0,
           latestModule: p.category || "-",
           latestDate: p.date,
+          memberCategory: p.memberCategory || "-",
+          dateOfJoin: p.dateOfJoin || "-",
+          subscriptionType: p.subscriptionType || "BASIC",
+          mobileNumber: p.mobileNumber || "-",
+          profilePhoto: p.profilePhoto
         };
       }
 
@@ -124,7 +187,10 @@ const PointsPage = () => {
       }
     });
 
-    return Object.values(groups);
+    const result = Object.values(groups);
+    // ORDER BY LEAST POINT: Ascending order
+    result.sort((a, b) => a.points - b.points);
+    return result;
   }, [filteredPoints]);
 
   const paginatedGroupedPoints = useMemo(() => {
@@ -207,47 +273,103 @@ const PointsPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Member</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Region</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Module</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Points</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Date</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16 whitespace-nowrap">S.No</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Member Name / Category</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Date Of Join</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Region</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Subscription Plan</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Points</th>
+                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-20 whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {groupedPoints.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground whitespace-nowrap">
                     No points entries found.
                   </td>
                 </tr>
               ) : (
                 paginatedGroupedPoints.map((p, index) => (
                   <tr key={p.memberId} className="hover:bg-secondary/30 transition-colors">
-                    <td className="px-6 py-4 text-sm font-semibold text-foreground">
+                    <td className="px-6 py-4 text-sm font-semibold text-foreground whitespace-nowrap">
                       {(page - 1) * 10 + index + 1}
                     </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{p.memberName}</p>
-                        <p className="text-xs text-muted-foreground font-semibold">
-                          {p.company}
-                        </p>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={getFullUrl(p.profilePhoto)} alt={p.memberName} className="object-cover" />
+                          <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
+                            {p.memberName?.slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-bold text-foreground">{p.memberName.toUpperCase()}</p>
+                          <p className="text-xs text-muted-foreground font-semibold mt-0.5">
+                            {p.memberCategory}
+                          </p>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold whitespace-nowrap">
+                      {p.dateOfJoin}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-semibold text-foreground">{p.region}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-semibold text-foreground">{p.latestModule}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-sm font-bold ${p.points >= 0 ? "text-emerald-600" : "text-accent"}`}>
-                        {p.points >= 0 ? "+" : ""}{p.points}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs px-2.5 py-1 font-bold rounded-full bg-slate-100 text-slate-800 uppercase tracking-wide">
+                        {p.subscriptionType}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold hidden md:table-cell">{p.latestDate}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-foreground whitespace-nowrap">
+                      {p.points}
+                    </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-slate-100 rounded-full">
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4 text-slate-600" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 font-sans">
+                          <DropdownMenuItem
+                            onClick={() => handleOpenHistory(p.memberId, p.memberName)}
+                            className="cursor-pointer gap-2"
+                          >
+                            <History className="w-4 h-4 text-slate-500" />
+                            <span>History</span>
+                          </DropdownMenuItem>
+
+                          {p.mobileNumber && p.mobileNumber !== "-" && (
+                            <>
+                              <DropdownMenuItem asChild>
+                                <a
+                                  href={`tel:${p.mobileNumber}`}
+                                  className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer"
+                                >
+                                  <Phone className="w-4 h-4 text-slate-505" />
+                                  <span>Call Member</span>
+                                </a>
+                              </DropdownMenuItem>
+
+                              <DropdownMenuItem asChild>
+                                <a
+                                  href={`https://wa.me/${p.mobileNumber.replace(/[^0-9]/g, "")}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer"
+                                >
+                                  <MessageCircle className="w-4 h-4 text-slate-505" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
                   </tr>
                 ))
               )}
@@ -258,6 +380,72 @@ const PointsPage = () => {
           <PaginationBar currentPage={page} totalPages={Math.ceil(groupedPoints.length / 10)} onPageChange={setPage} />
         </div>
       </motion.div>
+
+      {/* Points History Modal Popup */}
+      <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+        <DialogContent className="max-w-xl w-[90vw] max-h-[80vh] flex flex-col p-6 overflow-hidden">
+          <DialogHeader className="pb-4 border-b border-border flex-shrink-0">
+            <DialogTitle className="text-base font-bold text-slate-800">
+              Points Ledger History
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Detailed transactions ledger for <span className="font-bold text-foreground">{selectedMemberName}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-grow overflow-y-auto pr-1 py-4">
+            <div className="border border-border rounded-xl overflow-hidden bg-white">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-border">
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase text-slate-500 w-28">Date</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase text-slate-500">Reason / Module</th>
+                    <th className="px-4 py-2.5 text-xs font-bold uppercase text-slate-500 text-right w-36">Points Change</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {activeMemberHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-8 text-center text-slate-400 text-xs font-semibold">
+                        No transactions recorded for this member.
+                      </td>
+                    </tr>
+                  ) : (
+                    activeMemberHistory.map((h) => (
+                      <tr key={h.id} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-3 text-xs text-slate-600 font-semibold">
+                          {h.date}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-xs font-bold text-slate-800">
+                            {h.reason || h.category || "Points Allocation"}
+                          </p>
+                          {h.category && h.category !== h.reason && (
+                            <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                              Module: {h.category}
+                            </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                              h.points >= 0
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-rose-50 text-rose-700"
+                            }`}
+                          >
+                            {h.points >= 0 ? "+" : ""}{h.points} {h.points >= 0 ? "Earned" : "Spent"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

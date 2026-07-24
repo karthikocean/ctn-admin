@@ -1,5 +1,25 @@
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, Users, UserCheck, UserX, Clock, FileText, MessageSquare, Gift, ClipboardList, Activity } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  UserCheck,
+  UserX,
+  Clock,
+  FileText,
+  MessageSquare,
+  Gift,
+  ClipboardList,
+  Activity,
+  FileX,
+  MessageSquareOff,
+  HeartOff,
+  ClipboardX,
+  Handshake,
+  UserPlus,
+  Receipt,
+  IndianRupee
+} from "lucide-react";
 import { ReactNode } from "react";
 
 const iconMap: Record<string, ReactNode> = {
@@ -12,6 +32,14 @@ const iconMap: Record<string, ReactNode> = {
   Gift: <Gift size={22} />,
   ClipboardList: <ClipboardList size={22} />,
   Activity: <Activity size={22} />,
+  FileX: <FileX size={22} />,
+  MessageSquareOff: <MessageSquareOff size={22} />,
+  HeartOff: <HeartOff size={22} />,
+  ClipboardX: <ClipboardX size={22} />,
+  Handshake: <Handshake size={22} />,
+  UserPlus: <UserPlus size={22} />,
+  Receipt: <Receipt size={22} />,
+  IndianRupee: <IndianRupee size={22} />,
 };
 
 interface StatCardProps {

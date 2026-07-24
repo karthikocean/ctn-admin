@@ -97,10 +97,18 @@ const DashboardPage = () => {
 
       {/* Gap Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Not Posted" value={dashboardStats.notPosted} icon="FileText" iconColor="bg-muted text-muted-foreground" delay={0.4} />
-        <StatCard title="Not Asked" value={dashboardStats.notAsked} icon="MessageSquare" iconColor="bg-muted text-muted-foreground" delay={0.45} />
-        <StatCard title="Not Given" value={dashboardStats.notGiven} icon="Gift" iconColor="bg-muted text-muted-foreground" delay={0.5} />
-        <StatCard title="No Requirements" value={dashboardStats.notRequirements} icon="ClipboardList" iconColor="bg-muted text-muted-foreground" delay={0.55} />
+        <StatCard title="Not Posted" value={dashboardStats.notPosted} icon="FileX" iconColor="bg-muted text-muted-foreground" delay={0.4} />
+        <StatCard title="Not Asked" value={dashboardStats.notAsked} icon="MessageSquareOff" iconColor="bg-muted text-muted-foreground" delay={0.45} />
+        <StatCard title="Not Given" value={dashboardStats.notGiven} icon="HeartOff" iconColor="bg-muted text-muted-foreground" delay={0.5} />
+        <StatCard title="No Requirements" value={dashboardStats.notRequirements} icon="ClipboardX" iconColor="bg-muted text-muted-foreground" delay={0.55} />
+      </div>
+
+      {/* Network Interactions Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title="One to One Count" value={dashboardStats.oneToOneCount} icon="Handshake" delay={0.6} />
+        <StatCard title="Referral Count" value={dashboardStats.referralCount} icon="UserPlus" delay={0.65} />
+        <StatCard title="Thank You Slip Count" value={dashboardStats.thankYouSlipCount} icon="Receipt" delay={0.7} />
+        <StatCard title="Thank You Slip Amount" value={`₹${dashboardStats.thankYouSlipAmount.toLocaleString('en-IN')}`} icon="IndianRupee" delay={0.75} />
       </div>
 
 

@@ -30,6 +30,13 @@ import {
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const SubCategoryCell = ({ subCategories }: { subCategories: any[] }) => {
   if (subCategories.length <= 2) {
@@ -104,6 +111,7 @@ export const ReferralCategoriesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
@@ -176,14 +184,15 @@ export const ReferralCategoriesPage = () => {
     }
   };
 
-  const fetchCategories = async (search: string = "", pageNum: number = 1) => {
+  const fetchCategories = async (search: string = "", pageNum: number = 1, status: string = statusFilter) => {
     try {
       setLoading(true);
       const response = await api.get("/referral-categories", {
         params: {
           search,
           limit: 1000,
-          page: 0
+          page: 0,
+          status: status === "all" ? undefined : status
         }
       });
       setCategories(response.data.data || []);
@@ -196,11 +205,11 @@ export const ReferralCategoriesPage = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchCategories(searchTerm, 1);
+      fetchCategories(searchTerm, 1, statusFilter);
       setPage(1);
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter]);
 
   useEffect(() => {
     if (drawerOpen) {
@@ -278,7 +287,7 @@ export const ReferralCategoriesPage = () => {
       setEditingId(null);
       setOriginalSubCategoryIds([]);
       setFormData({ subCategories: [], referralParent: "", status: "active" });
-      fetchCategories(searchTerm, page);
+      fetchCategories(searchTerm, page, statusFilter);
     } catch (error: any) {
       console.error("Failed to save referral category:", error);
       toast({
@@ -321,7 +330,7 @@ export const ReferralCategoriesPage = () => {
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
       setSubCategoryIdsToDelete([]);
-      fetchCategories(searchTerm, page);
+      fetchCategories(searchTerm, page, statusFilter);
     } catch (error: any) {
       console.error("Failed to delete referral category:", error);
       const errorMsg = error.response?.data?.message || "Failed to delete referral category";
@@ -376,10 +385,23 @@ export const ReferralCategoriesPage = () => {
             />
           </div>
 
-          <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
-            <Filter size={14} className="mr-1.5" />
-            Filters
-          </Button>
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => {
+              setStatusFilter(val);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-32 rounded-lg text-xs bg-secondary/30 border-border">
+              <Filter size={14} className="mr-1.5 text-muted-foreground/75" />
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
 
           {canCreate && (
             <Button

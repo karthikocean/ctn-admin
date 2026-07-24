@@ -30,6 +30,7 @@ import AwardsPage from "@/pages/awards/AwardsPage";
 import MemberAwardsPage from "@/pages/awards/MemberAwardsPage";
 import ConnectionsPage from "@/pages/connections/ConnectionsPage";
 import ContributionsPage from "@/pages/contributions/ContributionsPage";
+import ContributionDetailPage from "@/pages/contributions/ContributionDetailPage";
 import FranchiseCommissionReportPage from "@/pages/reports/FranchiseCommissionReportPage"; // Newly added report page
 import ReportHistoryPage from "@/pages/reports/ReportHistoryPage";
 import ReportsPage from "@/pages/reports/ReportsPage";
@@ -168,6 +169,7 @@ const App = () => (
               <Route path="/awards/members" element={<MemberAwardsPage />} />
               <Route path="/connections" element={<ConnectionsPage />} />
               <Route path="/contributions" element={<ContributionsPage />} />
+              <Route path="/contributions/:id" element={<ContributionDetailPage />} />
               <Route path="/reports" element={
                 <PermissionRoute module="reports" action="view">
                   <ReportsPage />

@@ -5,6 +5,7 @@ import StatusBadge from "@/components/common/StatusBadge";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import PaginationBar from "@/components/common/PaginationBar";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import api from "@/services/api";
@@ -42,6 +43,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import PremiumLoader from "@/components/common/PremiumLoader";
+
+const getIdString = (id: any): string => {
+  if (!id) return "";
+  if (typeof id === "string") return id;
+  if (typeof id === "object") {
+    if (id.$oid) return id.$oid;
+    if (id._id) return getIdString(id._id);
+    if (id.id) return getIdString(id.id);
+    if (typeof id.toString === "function") {
+      const str = id.toString();
+      if (str !== "[object Object]") return str;
+    }
+  }
+  return String(id);
+};
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -95,6 +111,7 @@ const RolesPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [permDialogOpen, setPermDialogOpen] = useState(false);
   const [usersDialogOpen, setUsersDialogOpen] = useState(false);
+  const isInitialModalLoad = useRef(true);
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
@@ -325,6 +342,10 @@ const RolesPage = () => {
 
   useEffect(() => {
     if (usersDialogOpen) {
+      if (isInitialModalLoad.current) {
+        isInitialModalLoad.current = false;
+        return;
+      }
       const delayDebounceFn = setTimeout(() => {
         fetchPaginatedUsers(1, modalSearchTerm, modalRoleFilter, modalStatusFilter);
       }, 300);
@@ -383,14 +404,17 @@ const RolesPage = () => {
   // Mock data no longer needed for recent users
 
 
-  const handleRoleCountClick = (roleName: string, roleId?: string) => {
+  const handleRoleCountClick = (roleName: string, roleId?: any) => {
     setSelectedRole(roleName);
-    setSelectedRoleId(roleId || null);
+    const stringRoleId = roleId ? getIdString(roleId) : null;
+    setSelectedRoleId(stringRoleId);
     setModalSearchTerm("");
-    setModalRoleFilter(roleId || "all");
+    setModalRoleFilter(stringRoleId || "all");
     setModalStatusFilter("all");
     setUsersPage(1);
+    setRoleUsers([]); // Clear previous users to prevent layout jerking
     setUsersDialogOpen(true);
+    fetchPaginatedUsers(1, "", stringRoleId || "all", "all"); // Fetch immediately on click
   };
 
 
@@ -473,8 +497,9 @@ const RolesPage = () => {
     });
 
     // Set selected role details so update preserves them
-    setSelectedRoleId(user.roleId || null);
-    setSelectedRole(roles.find(r => r._id === user.roleId)?.name || null);
+    const stringRoleId = user.roleId ? getIdString(user.roleId) : null;
+    setSelectedRoleId(stringRoleId);
+    setSelectedRole(roles.find(r => getIdString(r._id) === stringRoleId)?.name || null);
 
     setEditingUserId(userId);
     setIsEditMode(true);
@@ -670,7 +695,21 @@ const RolesPage = () => {
       fetchRoles();
     } catch (error: any) {
       console.error("Error saving role:", error);
-      const errorMsg = error.response?.data?.message || "Failed to save role";
+      let errorMsg = "Failed to save role";
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (Array.isArray(data.errors) && data.errors.length > 0) {
+          errorMsg = data.errors
+            .map((e: any) => {
+              if (e.message) return e.message;
+              if (e.constraints) return Object.values(e.constraints).join(", ");
+              return "Validation error";
+            })
+            .join(", ");
+        } else {
+          errorMsg = data.message || "Failed to save role";
+        }
+      }
       toast({ title: "Error", description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg, variant: "destructive" });
     }
   };
@@ -678,7 +717,7 @@ const RolesPage = () => {
 
   const handleAddUserAction = (roleName: string, roleId: string) => {
     setSelectedRole(roleName);
-    setSelectedRoleId(roleId);
+    setSelectedRoleId(roleId ? getIdString(roleId) : null);
     setNewUser({ name: "", email: "", phone: "", pin: "", memberId: "" });
     setIsEditMode(false);
     setEditingUserId(null);
@@ -759,7 +798,21 @@ const RolesPage = () => {
       fetchUsersList(usersListPage, searchTerm, roleFilter, statusFilter);
     } catch (error: any) {
       console.error("Error saving user:", error);
-      const errorMsg = error.response?.data?.message || "Failed to save user";
+      let errorMsg = "Failed to save user";
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (Array.isArray(data.errors) && data.errors.length > 0) {
+          errorMsg = data.errors
+            .map((e: any) => {
+              if (e.message) return e.message;
+              if (e.constraints) return Object.values(e.constraints).join(", ");
+              return "Validation error";
+            })
+            .join(", ");
+        } else {
+          errorMsg = data.message || "Failed to save user";
+        }
+      }
       toast({ title: "Error", description: Array.isArray(errorMsg) ? errorMsg.join(", ") : errorMsg, variant: "destructive" });
     }
   };
@@ -773,6 +826,8 @@ const RolesPage = () => {
     if (!open) {
       setSelectedRole(null);
       setSelectedRoleId(null);
+      isInitialModalLoad.current = true;
+      setRoleUsers([]); // Clean user records when modal closes
     }
     setUsersDialogOpen(open);
   };
@@ -849,7 +904,9 @@ const RolesPage = () => {
                   setModalRoleFilter("all");
                   setModalStatusFilter("all");
                   setUsersPage(1);
+                  setRoleUsers([]); // Clear previous records
                   setUsersDialogOpen(true);
+                  fetchPaginatedUsers(1, "", "all", "all"); // Fetch all users instantly
                 }}
               >
                 <Users size={14} className="mr-1.5" />
@@ -1085,10 +1142,7 @@ const RolesPage = () => {
 
               {/* Pagination for bottom Users List card */}
               {usersListTotalPages >= 1 && memoizedUsersList.length > 0 && (
-                <div className="px-6 py-4 border-t border-border bg-secondary/10 flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    Page {usersListPage} of {usersListTotalPages}
-                  </span>
+                <div className="px-6 py-4 border-t border-border bg-secondary/10">
                   <PaginationBar
                     currentPage={usersListPage}
                     totalPages={usersListTotalPages}
@@ -1216,8 +1270,8 @@ const RolesPage = () => {
 
           {/* Users Dialog */}
           <Dialog open={usersDialogOpen} onOpenChange={handleUsersDialogClose}>
-            <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
+            <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] flex flex-col p-6 overflow-hidden">
+              <DialogHeader className="flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                     <Users className="text-primary w-5 h-5" />
@@ -1238,7 +1292,7 @@ const RolesPage = () => {
               </DialogHeader>
 
               {/* Modal Filters */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4 p-4 rounded-xl bg-secondary/20 border border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4 p-4 rounded-xl bg-secondary/20 border border-border flex-shrink-0">
                 {/* Search */}
                 <div className="relative flex-1 min-w-[200px]">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
@@ -1287,23 +1341,23 @@ const RolesPage = () => {
                 </div>
               </div>
 
-              <div className="table-responsive mt-4">
+              <div className="table-responsive mt-4 flex-1 overflow-y-auto border border-border rounded-xl min-h-[300px]">
                 {usersLoading && roleUsers.length === 0 ? (
                   <div className="py-24">
                     <PremiumLoader variant="centered" style="tech-circle" text="Establishing member connection..." />
                   </div>
                 ) : (
                   <table className="w-full min-w-[700px] md:min-w-full">
-                    <thead>
-                      <tr className="border-b border-border bg-secondary/50">
-                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-14">S.No</th>
+                    <thead className="sticky top-0 z-20 bg-secondary/95 backdrop-blur-md border-b border-border shadow-xs rounded-t-xl">
+                      <tr className="border-b border-border">
+                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-14 rounded-tl-xl">S.No</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">User ID</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Phone</th>
                         {modalRoleFilter === "all" && <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>}
                         <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                        <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                        <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider rounded-tr-xl">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -1317,18 +1371,14 @@ const RolesPage = () => {
                           </td>
                         </tr>
                       ) : (
-                        memoizedRoleUsers.map((user, index) => (
-                          <tr key={user._id || user.id || index} className={cn("hover:bg-secondary/30 transition-colors", usersLoading && "opacity-50 pointer-events-none")}>
-                            <td className="px-4 py-4 text-sm font-semibold text-foreground text-center">
-                              {(usersPage - 1) * pageSize + index + 1}
-                            </td>
-                            <td className="px-6 py-4 text-sm font-semibold text-foreground">
-                              {user.userId || "N/A"}
-                            </td>
+                        roleUsers.map((user, idx) => (
+                          <tr key={user._id || user.id} className="hover:bg-secondary/30 transition-colors">
+                            <td className="px-4 py-4 text-xs font-semibold text-muted-foreground text-center">{(usersPage - 1) * pageSize + idx + 1}</td>
+                            <td className="px-6 py-4 text-xs font-bold text-foreground">{user.userId || "—"}</td>
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <span className="text-sm font-semibold text-primary">{user.name?.charAt(0)}</span>
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                  <span className="text-xs font-semibold text-primary">{(user.name || "U").charAt(0)}</span>
                                 </div>
                                 <span className="font-semibold text-sm text-foreground">{user.name}</span>
                               </div>
@@ -1357,18 +1407,15 @@ const RolesPage = () => {
               </div>
 
               {/* Pagination and Count */}
-              <div className="mt-4 px-2 flex items-center justify-between border-t border-border pt-4">
-                <span className="text-xs text-muted-foreground">
-                  Showing {roleUsers.length} of {modalTotalCount} users
-                </span>
-                {totalPages >= 1 && roleUsers.length > 0 && (
+              {totalPages >= 1 && roleUsers.length > 0 && (
+                <div className="mt-4 px-2 border-t border-border pt-4 flex-shrink-0">
                   <PaginationBar
                     currentPage={usersPage}
                     totalPages={totalPages}
                     onPageChange={(page) => fetchPaginatedUsers(page, modalSearchTerm, modalRoleFilter, modalStatusFilter)}
                   />
-                )}
-              </div>
+                </div>
+              )}
 
             </DialogContent>
           </Dialog>
@@ -1570,6 +1617,36 @@ const RolesPage = () => {
                   />
                   {formErrors.pin && <span className="text-[10px] text-destructive font-medium">{formErrors.pin}</span>}
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="role">Role</Label>
+                  {!isEditMode ? (
+                    <Input
+                      id="role"
+                      value={selectedRole || ""}
+                      disabled
+                      className="bg-muted text-muted-foreground rounded-xl"
+                    />
+                  ) : (
+                    <Select
+                      value={selectedRoleId ? getIdString(selectedRoleId) : ""}
+                      onValueChange={(val) => {
+                        setSelectedRoleId(val);
+                        setSelectedRole(roles.find(r => getIdString(r._id) === val)?.name || null);
+                      }}
+                    >
+                      <SelectTrigger id="role" className="rounded-xl">
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                      <SelectContent style={{ pointerEvents: "auto" }}>
+                        {roles.map((r) => (
+                          <SelectItem key={getIdString(r._id)} value={getIdString(r._id)}>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setAddUserDialogOpen(false)}>
@@ -1733,55 +1810,23 @@ const RolesPage = () => {
             </div>
           </FormDrawer>
 
-          <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-            <AlertDialogContent className="rounded-2xl border-border shadow-2xl">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
-                    <X className="text-destructive w-4 h-4" />
-                  </div>
-                  Confirm Deletion
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground pt-2">
-                  Are you sure you want to delete this user? This action will mark the user as inactive and they will no longer have access to the portal.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="mt-4">
-                <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={confirmDelete}
-                  className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
-                >
-                  Delete User
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <ConfirmDialog
+            open={deleteConfirmOpen}
+            onOpenChange={setDeleteConfirmOpen}
+            title="Delete User?"
+            description="Are you sure you want to delete this user? This action will mark the user as inactive and they will no longer have access to the portal."
+            onConfirm={confirmDelete}
+            confirmLabel="Delete User"
+          />
 
-          <AlertDialog open={deleteRoleConfirmOpen} onOpenChange={setDeleteRoleConfirmOpen}>
-            <AlertDialogContent className="rounded-2xl border-border shadow-2xl">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center">
-                    <X className="text-destructive w-4 h-4" />
-                  </div>
-                  Confirm Role Deletion
-                </AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground pt-2">
-                  Are you sure you want to delete this role? This action cannot be undone. You can only delete roles that have no users assigned.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter className="mt-4">
-                <AlertDialogCancel className="rounded-xl border-border">Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={confirmDeleteRole}
-                  className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground shadow-lg shadow-destructive/20"
-                >
-                  Delete Role
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <ConfirmDialog
+            open={deleteRoleConfirmOpen}
+            onOpenChange={setDeleteRoleConfirmOpen}
+            title="Delete Role?"
+            description="Are you sure you want to delete this role? This action cannot be undone. You can only delete roles that have no users assigned."
+            onConfirm={confirmDeleteRole}
+            confirmLabel="Delete Role"
+          />
         </>
       )}
     </div>
