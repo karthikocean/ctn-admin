@@ -62,6 +62,8 @@ import {
   ReportQueryParams
 } from "@/api/ReportsApi";
 import { useToast } from "@/components/ui/use-toast";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 const COLORS = ["hsl(210,97%,23%)", "hsl(0,72%,50%)", "hsl(142,71%,45%)", "hsl(38,92%,50%)", "hsl(262,83%,58%)", "hsl(210,60%,50%)"];
 
@@ -669,23 +671,73 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
               {/* Expiry Start Date (From Date) */}
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">From Date</span>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="h-9 text-xs rounded-lg font-medium"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-9 text-xs rounded-lg font-medium justify-start text-left px-3 w-full bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all text-slate-800",
+                        !startDate && "text-slate-400"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      {startDate ? format(new Date(startDate), "yyyy-MM-dd") : <span>Pick from date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate ? new Date(startDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const yyyy = date.getFullYear();
+                          const mm = String(date.getMonth() + 1).padStart(2, "0");
+                          const dd = String(date.getDate()).padStart(2, "0");
+                          handleStartDateChange(`${yyyy}-${mm}-${dd}`);
+                        } else {
+                          handleStartDateChange("");
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Expiry End Date (To Date) */}
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">To Date</span>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => handleEndDateChange(e.target.value)}
-                  className="h-9 text-xs rounded-lg font-medium"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-9 text-xs rounded-lg font-medium justify-start text-left px-3 w-full bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all text-slate-800",
+                        !endDate && "text-slate-400"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      {endDate ? format(new Date(endDate), "yyyy-MM-dd") : <span>Pick to date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={endDate ? new Date(endDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const yyyy = date.getFullYear();
+                          const mm = String(date.getMonth() + 1).padStart(2, "0");
+                          const dd = String(date.getDate()).padStart(2, "0");
+                          handleEndDateChange(`${yyyy}-${mm}-${dd}`);
+                        } else {
+                          handleEndDateChange("");
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>
@@ -1026,23 +1078,73 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
               {/* Expiry Start Date (From Date) */}
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">From Date</span>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                  className="h-9 text-xs rounded-lg font-medium"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-9 text-xs rounded-lg font-medium justify-start text-left px-3 w-full bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all text-slate-800",
+                        !startDate && "text-slate-400"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      {startDate ? format(new Date(startDate), "yyyy-MM-dd") : <span>Pick from date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate ? new Date(startDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const yyyy = date.getFullYear();
+                          const mm = String(date.getMonth() + 1).padStart(2, "0");
+                          const dd = String(date.getDate()).padStart(2, "0");
+                          handleStartDateChange(`${yyyy}-${mm}-${dd}`);
+                        } else {
+                          handleStartDateChange("");
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Expiry End Date (To Date) */}
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">To Date</span>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => handleEndDateChange(e.target.value)}
-                  className="h-9 text-xs rounded-lg font-medium"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-9 text-xs rounded-lg font-medium justify-start text-left px-3 w-full bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all text-slate-800",
+                        !endDate && "text-slate-400"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      {endDate ? format(new Date(endDate), "yyyy-MM-dd") : <span>Pick to date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white border border-slate-200 rounded-xl shadow-xl z-50" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={endDate ? new Date(endDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const yyyy = date.getFullYear();
+                          const mm = String(date.getMonth() + 1).padStart(2, "0");
+                          const dd = String(date.getDate()).padStart(2, "0");
+                          handleEndDateChange(`${yyyy}-${mm}-${dd}`);
+                        } else {
+                          handleEndDateChange("");
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </div>

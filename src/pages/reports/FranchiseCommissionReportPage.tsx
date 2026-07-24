@@ -384,10 +384,7 @@ const FranchiseCommissionReportPage = () => {
           {/* Header gradient */}
           <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-b border-border p-5">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                  <DollarSign className="text-amber-500 w-4 h-4" />
-                </div>
+              <DialogTitle className="text-base font-bold">
                 Settle Franchise Commission
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground pt-1">

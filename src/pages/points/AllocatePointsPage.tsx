@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,48 @@ const AllocatePointsPage = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteName, setDeleteName] = useState("");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target) return;
+
+      if (
+        showForm &&
+        formRef.current &&
+        !formRef.current.contains(target)
+      ) {
+        // Ignore clicks on buttons, inputs, dropdown menus, select options, dialogs, and portals
+        if (
+          target.closest('button') ||
+          target.closest('input') ||
+          target.closest('select') ||
+          target.closest('[role="menu"]') ||
+          target.closest('[role="menuitem"]') ||
+          target.closest('[role="listbox"]') ||
+          target.closest('[role="dialog"]') ||
+          target.closest('[role="alertdialog"]') ||
+          target.closest('[data-radix-portal]') ||
+          target.closest('[data-radix-popper-content-wrapper]')
+        ) {
+          return;
+        }
+
+        setShowForm(false);
+        setEditingId(null);
+        setModuleName("");
+        setType("creation");
+        setPointsValue("");
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showForm]);
 
   // Search, Filter, Pagination States
   const [searchTerm, setSearchTerm] = useState("");
@@ -158,7 +200,9 @@ const AllocatePointsPage = () => {
     setType(config.type || "creation");
     setPointsValue(config.points.toString());
     setShowForm(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
   const handleDeleteClick = (config: any) => {
@@ -229,7 +273,7 @@ const AllocatePointsPage = () => {
 
           <Button
             size="sm"
-            className="rounded-lg bg-primary hover:bg-primary/90 text-xs shadow-md"
+            className="rounded-lg bg-primary hover:bg-primary/90 text-xs shadow-md add-points-btn"
             onClick={() => {
               if (showForm && !editingId) {
                 setShowForm(false);
@@ -250,6 +294,7 @@ const AllocatePointsPage = () => {
       {/* Form Section */}
       {showForm && (
         <motion.div
+          ref={formRef}
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="glass-card p-6 mb-8 border-primary/10 bg-primary/5"

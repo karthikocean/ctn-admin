@@ -488,8 +488,8 @@ const BillingsPage = () => {
                             alt={b.member?.fullName}
                             className="object-cover"
                           />
-                          <AvatarFallback className={cn("text-xs font-bold shadow-inner flex items-center justify-center border", getAvatarGradient(b.member?.fullName || "?"))}>
-                            {b.member?.fullName?.charAt(0).toUpperCase() || "?"}
+                          <AvatarFallback className={cn("text-[10px] font-extrabold flex items-center justify-center border shadow-inner", getAvatarGradient(b.member?.fullName || "?"))}>
+                            {b.member?.fullName ? b.member.fullName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() : "?"}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
