@@ -1,14 +1,16 @@
 import { motion } from "framer-motion";
-import { MessageCircle, Share, MoreHorizontal, MapPin, Clock, AlertTriangle } from "lucide-react";
+import { MessageCircle, Share, MoreHorizontal, MapPin, Clock, AlertTriangle, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Post } from "@/types";
 
 interface PostCardProps {
   post: Post;
   onReport?: (post: Post) => void;
+  onView?: (post: Post) => void;
 }
 
 const getFullUrl = (path: string) => {
@@ -18,7 +20,7 @@ const getFullUrl = (path: string) => {
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
-const PostCard = ({ post, onReport }: PostCardProps) => {
+const PostCard = ({ post, onReport, onView }: PostCardProps) => {
   const getInitials = (name: string) => {
     if (!name) return "";
     return name
@@ -72,7 +74,10 @@ const PostCard = ({ post, onReport }: PostCardProps) => {
       <div className="flex flex-col flex-1">
         {/* Header */}
         <div className="flex items-start justify-between p-5 pb-4">
-          <div className="flex items-start gap-3 min-w-0 pr-2">
+          <div 
+            className="flex items-start gap-3 min-w-0 pr-2 cursor-pointer flex-1" 
+            onClick={() => onView && onView(post)}
+          >
             <Avatar className="h-11 w-11 border-0 bg-slate-200 flex-shrink-0">
               {profilePhotoUrl && <AvatarImage src={profilePhotoUrl} alt={memberName} className="object-cover" />}
               <AvatarFallback className="bg-slate-200 text-slate-600 text-base font-medium">
@@ -99,6 +104,13 @@ const PostCard = ({ post, onReport }: PostCardProps) => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem 
+                onClick={() => onView && onView(post)} 
+                className="cursor-pointer gap-2 text-slate-700 focus:text-slate-800 focus:bg-slate-50"
+              >
+                <Eye size={14} className="text-blue-500" />
+                <span>View Details</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
                 onClick={() => onReport && onReport(post)} 
                 className="cursor-pointer gap-2 text-red-600 focus:text-red-700 focus:bg-red-50"
               >
@@ -110,9 +122,18 @@ const PostCard = ({ post, onReport }: PostCardProps) => {
         </div>
 
         {/* Content */}
-        <div className="px-5 pb-4 space-y-3">
+        <div className="px-5 pb-4 space-y-3 cursor-pointer" onClick={() => onView && onView(post)}>
           {post.title && (
-            <h4 className="font-bold text-[16px] text-slate-900 leading-tight">{post.title}</h4>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <h4 className="font-bold text-[16px] text-slate-900 leading-tight break-words line-clamp-2 cursor-default">
+                  {post.title}
+                </h4>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs sm:max-w-sm md:max-w-md break-words bg-slate-900 text-white border-none p-3 shadow-lg rounded-lg">
+                <p className="text-xs font-semibold leading-normal">{post.title}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
 
           {/* Location & Period Info Row */}
@@ -121,36 +142,43 @@ const PostCard = ({ post, onReport }: PostCardProps) => {
               {post.location && (
                 <div className="flex items-center gap-1.5">
                   <MapPin size={18} className="text-slate-400" />
-                  <span>{post.location}</span>
+                  <span className="break-words">{post.location}</span>
                 </div>
               )}
               {post.period && (
                 <div className="flex items-center gap-1.5">
                   <Clock size={18} className="text-slate-400" />
-                  <span>{post.period}</span>
+                  <span className="break-words">{post.period}</span>
                 </div>
               )}
             </div>
           )}
 
-          <p 
-            className="text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap line-clamp-3"
-            title={post.description}
-          >
-            {parseContent(post.description)}
-          </p>
+          {post.description && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <p className="text-[15px] text-slate-800 leading-relaxed whitespace-pre-wrap line-clamp-3 break-words cursor-default">
+                  {parseContent(post.description)}
+                </p>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs sm:max-w-sm md:max-w-md break-words bg-slate-900 text-white border-none p-3 shadow-lg rounded-lg">
+                <p className="text-xs leading-normal whitespace-pre-wrap">{post.description}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         {/* Image - ALWAYS RENDER */}
-        <div className="px-5 pb-5 mt-auto">
+        <div className="px-5 pb-5 mt-auto cursor-pointer" onClick={() => onView && onView(post)}>
           <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
             <AspectRatio ratio={16 / 9}>
               <img
-                src={postImageUrl || "invalid_url"}
+                src={postImageUrl || "/placeholder.png"}
                 alt="Post content"
-                className="w-full h-full object-cover"
+                className={postImageUrl ? "w-full h-full object-cover" : "w-full h-full object-contain p-10 opacity-60"}
                 onError={(e) => {
-                  e.currentTarget.src = "https://placehold.co/600x400/f8fafc/94a3b8?text=Image+Not+Found";
+                  e.currentTarget.src = "/placeholder.png";
+                  e.currentTarget.className = "w-full h-full object-contain p-10 opacity-60";
                 }}
               />
             </AspectRatio>

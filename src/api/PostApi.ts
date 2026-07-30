@@ -6,6 +6,8 @@ export interface GetPostsParams {
   type?: string;
   search?: string;
   status?: string;
+  fromDate?: string;
+  toDate?: string;
 }
 
 export const getPosts = async (params: GetPostsParams) => {

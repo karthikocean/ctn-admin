@@ -33,8 +33,8 @@ const ReplyItem = ({ reply, isNested = false, onReply }: ReplyItemProps) => {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-sm text-foreground">{authorName}</span>
-            <span className="text-xs text-muted-foreground">{authorHandle}</span>
+            <span className="font-semibold text-sm text-foreground break-words">{authorName}</span>
+            <span className="text-xs text-muted-foreground break-words">{authorHandle}</span>
             <span className="text-xs text-muted-foreground">· {timestamp}</span>
             {isNested && (
               <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto p-0">
@@ -42,7 +42,7 @@ const ReplyItem = ({ reply, isNested = false, onReply }: ReplyItemProps) => {
               </Button>
             )}
           </div>
-          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{content}</p>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed break-words">{content}</p>
         </div>
       </div>
 
