@@ -36,7 +36,7 @@ import {
 const getFullUrl = (path: string | null) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_API_URL.replace("/api/admin", "");
+  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 

@@ -18,7 +18,7 @@ import type { Post } from "@/types";
 const getFullUrl = (path: string) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_API_URL?.replace("/api/admin", "") || "http://localhost:5001";
+  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
@@ -185,7 +185,7 @@ const GenericActivityPage = ({
             pressed={showReportedOnly}
             onPressedChange={setShowReportedOnly}
             variant="outline"
-            className="h-9 gap-2 data-[state=on]:bg-red-50 data-[state=on]:text-red-700 data-[state=on]:border-red-200"
+            className="h-9 gap-2 text-foreground hover:text-foreground hover:bg-slate-100 data-[state=on]:bg-red-50 data-[state=on]:text-red-700 data-[state=on]:border-red-200 data-[state=on]:hover:bg-red-100 data-[state=on]:hover:text-red-700"
           >
             <AlertTriangle size={16} className={showReportedOnly ? "text-red-500" : "text-muted-foreground"} />
             <span className="hidden sm:inline">Reported Posts</span>
@@ -602,7 +602,7 @@ const GenericActivityTablePage = ({
             pressed={showReportedOnly}
             onPressedChange={setShowReportedOnly}
             variant="outline"
-            className="h-9 gap-2 data-[state=on]:bg-red-50 data-[state=on]:text-red-700 data-[state=on]:border-red-200"
+            className="h-9 gap-2 text-foreground hover:text-foreground hover:bg-slate-100 data-[state=on]:bg-red-50 data-[state=on]:text-red-700 data-[state=on]:border-red-200 data-[state=on]:hover:bg-red-100 data-[state=on]:hover:text-red-700"
           >
             <AlertTriangle size={16} className={showReportedOnly ? "text-red-500" : "text-muted-foreground"} />
             <span className="hidden sm:inline">Reported Posts</span>
@@ -683,7 +683,26 @@ const GenericActivityTablePage = ({
               posts.map((post: any, index) => (
                 <tr key={post._id} className="hover:bg-slate-50 transition-colors group">
                   <td className="px-6 py-4 whitespace-nowrap text-slate-500 font-medium">{(page - 1) * pageSize + index + 1}</td>
-                  <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-900">{post.member?.fullName || "Anonymous"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-900">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 border border-slate-200/80 flex-shrink-0 shadow-sm">
+                        {post.member?.profilePhoto && (
+                          <AvatarImage src={getFullUrl(post.member.profilePhoto)} alt={post.member.fullName} className="object-cover" />
+                        )}
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                          {getInitials(post.member?.fullName || "Anonymous")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold leading-tight">{post.member?.fullName || "Anonymous"}</span>
+                        {post.member?.businessName && (
+                          <span className="text-[11px] text-muted-foreground font-medium mt-0.5 max-w-[180px] truncate" title={post.member.businessName}>
+                            {post.member.businessName}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-slate-700 max-w-[200px] truncate" title={post.title}>{post.title || "-"}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${post.status === "active" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-700"}`}>

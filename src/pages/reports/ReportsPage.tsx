@@ -70,7 +70,7 @@ const COLORS = ["hsl(210,97%,23%)", "hsl(0,72%,50%)", "hsl(142,71%,45%)", "hsl(3
 const getFullUrl = (path: string | null | undefined) => {
   if (!path) return undefined;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const baseUrl = import.meta.env.VITE_API_URL?.replace("/api/admin", "").replace("/api", "") || "http://localhost:5001";
+  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
@@ -465,15 +465,13 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
 
         <div className="flex items-center gap-2">
           {canExportReports && (activeTab === "renewals" || activeTab === "free-endings") && (
-            <Button
+            <button
               onClick={handleExportCSV}
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-xl text-xs font-semibold gap-1.5 border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-xs font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
             >
               <Download size={14} />
               Export Report (CSV)
-            </Button>
+            </button>
           )}
         </div>
       </div>
@@ -750,7 +748,7 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
                   <tr>
                     <th className="px-6 py-4 text-center w-16">S.No</th>
                     <th className="px-6 py-4">Member Details</th>
-                    <th className="px-6 py-4">Business Name</th>
+                    <th className="px-6 py-4">Business Name / Email</th>
                     <th className="px-6 py-4">Plan & Amount</th>
                     <th className="px-6 py-4">Location / Region</th>
                     <th className="px-6 py-4">Renewal Date</th>
@@ -1157,7 +1155,7 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
                   <tr>
                     <th className="px-6 py-4 text-center w-16">S.No</th>
                     <th className="px-6 py-4">Member Details</th>
-                    <th className="px-6 py-4">Business Name</th>
+                    <th className="px-6 py-4">Business Name / Email</th>
                     <th className="px-6 py-4">Plan & Trial Days</th>
                     <th className="px-6 py-4">Location / Region</th>
                     <th className="px-6 py-4">Trial Ending Date</th>
@@ -1223,8 +1221,8 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
 
                         {/* Plan & Trial Days */}
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-1 text-sm font-bold text-blue-600">
-                            <Zap size={14} />
+                          <div className="flex items-center gap-1 text-sm font-bold text-primary">
+                            <Crown size={14} className="text-amber-500" />
                             {row.planName}
                           </div>
                           <span className="text-xs text-muted-foreground font-medium block mt-0.5">

@@ -33,7 +33,7 @@ import { useAuth } from "@/context/AuthContext";
 const getFullUrl = (path: string) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_API_URL.replace("/api/admin", "");
+  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
@@ -222,8 +222,8 @@ const DetailDrawer = ({
           {/* Member */}
           <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100">
             <Avatar className="h-10 w-10 border border-slate-200 flex-shrink-0">
-              {item.member?.profilePhoto && (
-                <AvatarImage src={getFullUrl(item.member.profilePhoto)} alt={item.member?.fullName} className="object-cover" />
+              {(item.member?.profilePhoto || item.member?.profile) && (
+                <AvatarImage src={getFullUrl(item.member.profilePhoto || item.member.profile)} alt={item.member?.fullName} className="object-cover" />
               )}
               <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
                 {getInitials(item.member?.fullName || "Unknown Member")}
@@ -545,8 +545,8 @@ const HelpCenterPage = () => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8 border border-slate-200 flex-shrink-0">
-                        {item.member?.profilePhoto && (
-                          <AvatarImage src={getFullUrl(item.member.profilePhoto)} alt={item.member?.fullName} className="object-cover" />
+                        {(item.member?.profilePhoto || item.member?.profile) && (
+                          <AvatarImage src={getFullUrl(item.member.profilePhoto || item.member.profile)} alt={item.member?.fullName} className="object-cover" />
                         )}
                         <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                           {getInitials(item.member?.fullName || "Unknown")}
