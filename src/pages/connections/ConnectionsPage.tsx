@@ -5,7 +5,40 @@ import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/common/StatusBadge";
 import PaginationBar from "@/components/common/PaginationBar";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { getConnections } from "@/api/ConnectionsApi";
+
+const getFullUrl = (path: string | null | undefined) => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
+  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+const getInitials = (name: string) => {
+  if (!name) return "";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+};
+
+const getAvatarGradient = (name: string) => {
+  const gradients = [
+    "bg-amber-100 text-amber-800 border-amber-200",
+    "bg-blue-100 text-blue-800 border-blue-200",
+    "bg-emerald-100 text-emerald-800 border-emerald-200",
+    "bg-purple-100 text-purple-800 border-purple-200",
+    "bg-rose-100 text-rose-800 border-rose-200",
+    "bg-indigo-100 text-indigo-800 border-indigo-200",
+  ];
+  const charCode = name.charCodeAt(0) || 0;
+  return gradients[charCode % gradients.length];
+};
 
 const ConnectionsPage = () => {
   const [connections, setConnections] = useState<any[]>([]);
@@ -134,15 +167,39 @@ const ConnectionsPage = () => {
                   <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
                     <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * 10 + index + 1}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-foreground">
-                      <div>
-                        <p className="font-semibold">{c.sender?.fullName || "Unknown"}</p>
-                        <p className="text-[10px] text-foreground font-semibold">{c.sender?.businessName || ""}</p>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 border border-slate-200 flex-shrink-0 shadow-sm">
+                          {c.sender?.profilePhoto && (
+                            <AvatarImage src={getFullUrl(c.sender.profilePhoto)} alt={c.sender.fullName} className="object-cover" />
+                          )}
+                          <AvatarFallback className={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(c.sender?.fullName || "?"))}>
+                            {getInitials(c.sender?.fullName || "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-slate-900 leading-tight">{c.sender?.fullName || "Unknown"}</span>
+                          <span className="text-[11px] text-muted-foreground font-medium mt-0.5 max-w-[180px] truncate" title={c.sender?.businessName || ""}>
+                            {c.sender?.businessName || ""}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">
-                      <div>
-                        <p className="font-semibold text-foreground">{c.receiver?.fullName || "Unknown"}</p>
-                        <p className="text-[10px] text-foreground font-semibold">{c.receiver?.businessName || ""}</p>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 border border-slate-200 flex-shrink-0 shadow-sm">
+                          {c.receiver?.profilePhoto && (
+                            <AvatarImage src={getFullUrl(c.receiver.profilePhoto)} alt={c.receiver.fullName} className="object-cover" />
+                          )}
+                          <AvatarFallback className={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(c.receiver?.fullName || "?"))}>
+                            {getInitials(c.receiver?.fullName || "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-slate-900 leading-tight">{c.receiver?.fullName || "Unknown"}</span>
+                          <span className="text-[11px] text-muted-foreground font-medium mt-0.5 max-w-[180px] truncate" title={c.receiver?.businessName || ""}>
+                            {c.receiver?.businessName || ""}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">

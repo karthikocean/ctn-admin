@@ -18,6 +18,7 @@ import {
   X,
   Paperclip,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +40,7 @@ import { getCommissionReport, settleCommission, uploadReceipt, getCommissionRepo
 const getFullUrl = (path: string) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_API_URL.replace("/api/admin", "");
+  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
 };
 
@@ -92,12 +93,16 @@ const FranchiseCommissionReportPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [month, setMonth] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   // Settlement dialog states
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<CommissionRecord | null>(null);
   const [settleStatus, setSettleStatus] = useState<"pending" | "settled">("settled");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [existingReceiptRemoved, setExistingReceiptRemoved] = useState(false);
+  const [imageLightboxUrl, setImageLightboxUrl] = useState<string | null>(null);
   const [submittingSettle, setSubmittingSettle] = useState(false);
 
   // View details dialog states
@@ -122,6 +127,7 @@ const FranchiseCommissionReportPage = () => {
         limit: 10,
         month,
         search: searchTerm || undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
       });
       setReportList(data.data || []);
       setTotalPages(data.totalPages || 1);
@@ -143,19 +149,85 @@ const FranchiseCommissionReportPage = () => {
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [page, searchTerm, month]);
+  }, [page, searchTerm, month, statusFilter]);
+
+  const handleReceiptFileChange = (file: File | null) => {
+    if (!file) {
+      if (receiptPreview) {
+        URL.revokeObjectURL(receiptPreview);
+      }
+      setReceiptFile(null);
+      setReceiptPreview(null);
+      return;
+    }
+
+    // 1. File Type Validation
+    const allowedMimeTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/svg+xml",
+      "application/pdf",
+    ];
+    const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".pdf"];
+    const fileExt = "." + file.name.split(".").pop()?.toLowerCase();
+
+    const isValidType =
+      file.type.startsWith("image/") ||
+      allowedMimeTypes.includes(file.type) ||
+      allowedExtensions.includes(fileExt);
+
+    if (!isValidType) {
+      toast({
+        title: "Unsupported File Type",
+        description: "Only image files (JPG, PNG, WEBP, GIF, SVG) and PDF documents are allowed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // 2. File Size Validation (Max 10 MB)
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE_BYTES) {
+      toast({
+        title: "File Too Large",
+        description: "The uploaded file exceeds the 10 MB size limit. Please select a smaller file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (receiptPreview) {
+      URL.revokeObjectURL(receiptPreview);
+    }
+    setReceiptFile(file);
+    if (file.type.startsWith("image/") || [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"].includes(fileExt)) {
+      setReceiptPreview(URL.createObjectURL(file));
+    } else {
+      setReceiptPreview(null);
+    }
+  };
 
   // Open settlement popup on status click
   const handleStatusClick = (record: CommissionRecord) => {
     setSelectedRecord(record);
     setSettleStatus(record.status === "settled" ? "settled" : "settled");
+    if (receiptPreview) {
+      URL.revokeObjectURL(receiptPreview);
+    }
     setReceiptFile(null);
+    setReceiptPreview(null);
+    setExistingReceiptRemoved(false);
     setSettleDialogOpen(true);
   };
 
   const handleSaveSettle = async () => {
     if (!selectedRecord) return;
-    if (settleStatus === "settled" && !receiptFile && !selectedRecord.paymentReceiptUrl) {
+    const hasValidReceipt = receiptFile || (selectedRecord.paymentReceiptUrl && !existingReceiptRemoved);
+
+    if (settleStatus === "settled" && !hasValidReceipt) {
       toast({
         title: "File Required",
         description: "Please select a payment receipt file for settled status",
@@ -166,7 +238,7 @@ const FranchiseCommissionReportPage = () => {
 
     try {
       setSubmittingSettle(true);
-      let receiptUrl = selectedRecord.paymentReceiptUrl || undefined;
+      let receiptUrl = existingReceiptRemoved ? undefined : (selectedRecord.paymentReceiptUrl || undefined);
 
       if (receiptFile) {
         const uploadRes = await uploadReceipt(receiptFile);
@@ -267,6 +339,24 @@ const FranchiseCommissionReportPage = () => {
             />
           </div>
 
+          {/* Status Filter */}
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => {
+              setStatusFilter(val);
+              setPage(0);
+            }}
+          >
+            <SelectTrigger className="h-9 w-36 rounded-lg border border-border bg-secondary/50 text-xs font-semibold text-foreground">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent side="bottom" className="z-50">
+              <SelectItem value="ALL" className="text-xs">All Statuses</SelectItem>
+              <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+              <SelectItem value="settled" className="text-xs">Settled</SelectItem>
+            </SelectContent>
+          </Select>
+
           <div className="relative">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
             <input
@@ -292,12 +382,12 @@ const FranchiseCommissionReportPage = () => {
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">S.No</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Franchise Name</th>
                 <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Franchise Owner</th>
-                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Members Joined</th>
-                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Month</th>
-                <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Amount</th>
-                <th className="text-right px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Commission Amount</th>
-                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="text-center px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">View</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Members Joined</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Month</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Amount</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Commission Amount</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">View</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -319,11 +409,11 @@ const FranchiseCommissionReportPage = () => {
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">{page * 10 + index + 1}</td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">{r.franchiseName}</td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">{r.franchiseOwner}</td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold text-center">{r.memberJoinedCount}</td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold text-center">{getReadableMonth(r.month)}</td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold text-right">₹{r.totalAmount.toLocaleString()}</td>
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold text-right">
-                      <div className="flex flex-col items-end">
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{r.memberJoinedCount}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">{getReadableMonth(r.month)}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">₹{r.totalAmount.toLocaleString()}</td>
+                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
+                      <div className="flex flex-col items-start">
                         <span>₹{r.commissionAmount.toLocaleString()}</span>
                         <span className="text-[10px] text-muted-foreground font-normal">({r.commissionPercent}%)</span>
                       </div>
@@ -380,19 +470,28 @@ const FranchiseCommissionReportPage = () => {
 
       {/* ── Settlement Status Dialog ── */}
       <Dialog open={settleDialogOpen} onOpenChange={setSettleDialogOpen}>
-        <DialogContent className="sm:max-w-[440px] border-border rounded-2xl shadow-2xl p-0 overflow-hidden">
+        <DialogContent className="sm:max-w-[440px] border-border rounded-2xl shadow-2xl p-0 overflow-hidden [&>button]:hidden">
           {/* Header gradient */}
           <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-b border-border p-5">
-            <DialogHeader>
-              <DialogTitle className="text-base font-bold">
-                Settle Franchise Commission
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground pt-1">
-                Update settlement status for{" "}
-                <strong className="text-foreground">{selectedRecord?.franchiseName}</strong>{" "}
-                — {selectedRecord && getReadableMonth(selectedRecord.month)}.
-              </DialogDescription>
-            </DialogHeader>
+            <div className="flex items-start justify-between">
+              <DialogHeader className="flex-1">
+                <DialogTitle className="text-base font-bold">
+                  Settle Franchise Commission
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground pt-1">
+                  Update settlement status for{" "}
+                  <strong className="text-foreground">{selectedRecord?.franchiseName}</strong>{" "}
+                  — {selectedRecord && getReadableMonth(selectedRecord.month)}.
+                </DialogDescription>
+              </DialogHeader>
+              <button
+                onClick={() => setSettleDialogOpen(false)}
+                className="ml-3 flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all"
+                aria-label="Close"
+              >
+                <X size={15} />
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4 p-5">
@@ -435,31 +534,110 @@ const FranchiseCommissionReportPage = () => {
 
             {/* Receipt upload (only when settling) */}
             {settleStatus === "settled" && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block">
                   Upload Receipt / Proof
                 </label>
-                <div className="border-2 border-dashed border-border hover:border-primary/40 transition-all rounded-xl p-4 flex flex-col items-center justify-center bg-secondary/20 cursor-pointer relative">
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setReceiptFile(e.target.files[0]);
-                      }
-                    }}
-                  />
-                  <Upload size={18} className="text-muted-foreground mb-1.5" />
-                  <span className="text-xs font-semibold text-foreground">
-                    {receiptFile ? receiptFile.name : "Choose receipt image or PDF"}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground mt-0.5">Maximum size: 10 MB</span>
-                </div>
+
+                {!receiptFile ? (
+                  <div className="border-2 border-dashed border-border hover:border-primary/40 transition-all rounded-xl p-4 flex flex-col items-center justify-center bg-secondary/20 cursor-pointer relative">
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          handleReceiptFileChange(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <Upload size={18} className="text-muted-foreground mb-1.5" />
+                    <span className="text-xs font-semibold text-foreground">
+                      Choose receipt image or PDF
+                    </span>
+                    <span className="text-[10px] text-muted-foreground mt-0.5">Maximum size: 10 MB</span>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-border bg-secondary/20 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 truncate">
+                        <Paperclip size={14} className="text-primary flex-shrink-0" />
+                        <span className="text-xs font-semibold text-foreground truncate max-w-[180px]">
+                          {receiptFile.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          ({(receiptFile.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleReceiptFileChange(null)}
+                        className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                      >
+                        Remove
+                      </Button>
+                    </div>
+
+                    {receiptPreview && (
+                      <div className="relative rounded-lg overflow-hidden border border-border group bg-black/5">
+                        <img
+                          src={receiptPreview}
+                          alt="Receipt Preview"
+                          className="w-full h-36 object-contain rounded-lg"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setImageLightboxUrl(receiptPreview)}
+                            className="px-3 py-1.5 rounded-lg bg-white/90 text-foreground text-xs font-bold shadow-md hover:bg-white flex items-center gap-1.5"
+                          >
+                            <Eye size={14} /> Full Preview
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {selectedRecord?.paymentReceiptUrl && !receiptFile && (
-                  <p className="text-[11px] text-emerald-600 font-medium">
-                    ✓ Existing receipt on file. Upload a new one to replace.
-                  </p>
+                  !existingReceiptRemoved ? (
+                    <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-xs">
+                      <span className="text-emerald-700 font-medium truncate flex items-center gap-1.5">
+                        ✓ Existing receipt on file
+                      </span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setImageLightboxUrl(getFullUrl(selectedRecord.paymentReceiptUrl!))}
+                          className="text-xs font-bold text-emerald-800 hover:underline flex items-center gap-1"
+                        >
+                          <Eye size={13} /> Preview
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExistingReceiptRemoved(true)}
+                          className="text-xs font-bold text-red-600 hover:underline flex items-center gap-1 ml-1"
+                        >
+                          <Trash2 size={13} /> Remove Old Image
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs">
+                      <span className="text-amber-800 font-medium truncate">
+                        Existing receipt removed. Please upload a new one.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setExistingReceiptRemoved(false)}
+                        className="text-xs font-bold text-slate-700 hover:underline flex-shrink-0 ml-2"
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  )
                 )}
               </div>
             )}
@@ -493,16 +671,16 @@ const FranchiseCommissionReportPage = () => {
 
       {/* ── View Details Dialog ── */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="sm:max-w-[620px] border-border rounded-2xl shadow-2xl p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-[620px] border-border rounded-2xl shadow-2xl p-0 overflow-hidden max-h-[90vh] flex flex-col [&>button]:hidden">
           {/* Header */}
           <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-b border-border p-5 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
                   <Building2 size={18} className="text-primary" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-foreground">
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-foreground truncate">
                     {viewDetails?.franchiseName || "Franchise Details"}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -510,24 +688,33 @@ const FranchiseCommissionReportPage = () => {
                   </p>
                 </div>
               </div>
-              {viewDetails && (
-                <Badge
-                  className={
-                    viewDetails.status === "settled"
-                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
-                      : "bg-amber-500/10 text-amber-600 border border-amber-500/30"
-                  }
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {viewDetails && (
+                  <Badge
+                    className={
+                      viewDetails.status === "settled"
+                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
+                        : "bg-amber-500/10 text-amber-600 border border-amber-500/30"
+                    }
+                  >
+                    {viewDetails.status === "settled" ? (
+                      <CheckCircle2 size={10} className="mr-1" />
+                    ) : (
+                      <Clock4 size={10} className="mr-1" />
+                    )}
+                    {viewDetails.status
+                      ? viewDetails.status.charAt(0).toUpperCase() + viewDetails.status.slice(1)
+                      : ""}
+                  </Badge>
+                )}
+                <button
+                  onClick={() => setViewDialogOpen(false)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-all"
+                  aria-label="Close"
                 >
-                  {viewDetails.status === "settled" ? (
-                    <CheckCircle2 size={10} className="mr-1" />
-                  ) : (
-                    <Clock4 size={10} className="mr-1" />
-                  )}
-                  {viewDetails.status
-                    ? viewDetails.status.charAt(0).toUpperCase() + viewDetails.status.slice(1)
-                    : ""}
-                </Badge>
-              )}
+                  <X size={15} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -710,6 +897,32 @@ const FranchiseCommissionReportPage = () => {
             >
               Close
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Image Lightbox Preview Dialog ── */}
+      <Dialog open={!!imageLightboxUrl} onOpenChange={(open) => !open && setImageLightboxUrl(null)}>
+        <DialogContent className="sm:max-w-[700px] border-border rounded-2xl p-0 overflow-hidden bg-black/95 text-white flex flex-col [&>button]:hidden">
+          <div className="flex items-center justify-between p-4 border-b border-white/10 bg-white/5">
+            <span className="text-sm font-semibold flex items-center gap-2 text-white/90">
+              <Eye size={16} /> Receipt Image Preview
+            </span>
+            <button
+              onClick={() => setImageLightboxUrl(null)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-all"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="p-4 flex items-center justify-center max-h-[75vh] overflow-auto">
+            {imageLightboxUrl && (
+              <img
+                src={imageLightboxUrl}
+                alt="Receipt Preview"
+                className="max-h-[70vh] w-auto object-contain rounded-lg shadow-2xl"
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>
