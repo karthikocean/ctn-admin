@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import {
   getHelpCenterItems,
@@ -34,6 +35,17 @@ const getFullUrl = (path: string) => {
   if (path.startsWith("http")) return path;
   const baseUrl = import.meta.env.VITE_API_URL.replace("/api/admin", "");
   return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
+const getInitials = (name: string) => {
+  if (!name) return "";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 };
 
 const STATUS_OPTIONS = [
@@ -209,9 +221,14 @@ const DetailDrawer = ({
         <div className="flex-1 p-6 space-y-5">
           {/* Member */}
           <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <User size={18} className="text-primary" />
-            </div>
+            <Avatar className="h-10 w-10 border border-slate-200 flex-shrink-0">
+              {item.member?.profilePhoto && (
+                <AvatarImage src={getFullUrl(item.member.profilePhoto)} alt={item.member?.fullName} className="object-cover" />
+              )}
+              <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
+                {getInitials(item.member?.fullName || "Unknown Member")}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex-1">
               <p className="text-sm font-bold text-slate-800">{item.member?.fullName || "Unknown Member"}</p>
               <p className="text-xs text-slate-500">{item.member?.email || item.member?.mobileNumber || "—"}</p>
@@ -527,9 +544,14 @@ const HelpCenterPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <User size={12} className="text-primary" />
-                      </div>
+                      <Avatar className="h-8 w-8 border border-slate-200 flex-shrink-0">
+                        {item.member?.profilePhoto && (
+                          <AvatarImage src={getFullUrl(item.member.profilePhoto)} alt={item.member?.fullName} className="object-cover" />
+                        )}
+                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                          {getInitials(item.member?.fullName || "Unknown")}
+                        </AvatarFallback>
+                      </Avatar>
                       <div>
                         <p className="text-xs font-semibold text-foreground leading-tight">{item.member?.fullName || "Unknown"}</p>
                         <p className="text-[10px] text-muted-foreground">{item.member?.mobileNumber || "—"}</p>
