@@ -212,7 +212,7 @@ const ContributionDetailPage = () => {
               <h3 className="text-xs font-bold text-primary uppercase tracking-widest flex items-center gap-1.5">
                 <MessageSquare size={14} /> Comments & Memo
               </h3>
-              <div className="p-4 rounded-2xl bg-primary/[0.01] border border-border text-sm text-foreground/80 font-medium whitespace-pre-line leading-relaxed">
+              <div className="p-4 rounded-2xl bg-primary/[0.01] border border-border text-sm text-foreground/80 font-medium whitespace-pre-line leading-relaxed break-words">
                 {isThankYouSlip ? contribution.businessDetails : contribution.referralDetails?.comments}
               </div>
             </motion.div>

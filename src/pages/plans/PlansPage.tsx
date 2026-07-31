@@ -170,6 +170,8 @@ const PlansPage = () => {
     }
     if (formData.amount <= 0) {
       newErrors.amount = "Amount must be greater than zero";
+    } else if (!Number.isInteger(formData.amount)) {
+      newErrors.amount = "Amount must be a whole number without decimal values";
     }
     const hasEmptyModule = formData.modules.some(m => !m.moduleName);
     if (hasEmptyModule) {
@@ -520,11 +522,16 @@ const PlansPage = () => {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">₹</span>
                   <Input
                     type="number"
-                    min={0.01}
-                    step="any"
+                    min={1}
+                    step={1}
                     value={formData.amount}
+                    onKeyDown={(e) => {
+                      if (e.key === "." || e.key === "," || e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
+                        e.preventDefault();
+                      }
+                    }}
                     onChange={(e) => {
-                      const val = parseFloat(e.target.value);
+                      const val = parseInt(e.target.value, 10);
                       setFormData({ ...formData, amount: val < 0 ? 0 : (isNaN(val) ? 0 : val) });
                       if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }));
                     }}

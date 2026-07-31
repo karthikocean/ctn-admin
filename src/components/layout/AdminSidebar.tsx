@@ -34,23 +34,23 @@ const AdminSidebar = ({ mobileOpen, isCollapsed, onMobileClose, onToggleCollapse
     item.children?.some(c => location.pathname === c.path) || (item.path && location.pathname === item.path);
 
   const filteredNavItems = sidebarNavItems.filter(item => {
-    if (!item.moduleId) return true;
-    const hasPermittedChild = item.children && item.children.some(child =>
-      !child.moduleId || hasPermission(child.moduleId, "view")
-    );
-    const canViewParent = hasPermission(item.moduleId, "view") || hasPermittedChild;
+    if (!item.moduleId) return false;
+
+    const canViewParent = hasPermission(item.moduleId, "view");
+
     if (item.children) {
       const accessibleChildren = item.children.filter(child =>
-        !child.moduleId || hasPermission(child.moduleId, "view")
+        child.moduleId ? hasPermission(child.moduleId, "view") : false
       );
-      return canViewParent && (accessibleChildren.length > 0 || !!item.path);
+      return canViewParent || accessibleChildren.length > 0;
     }
+
     return canViewParent;
   }).map(item => {
     if (item.children) {
       return {
         ...item,
-        children: item.children.filter(child => !child.moduleId || hasPermission(child.moduleId, "view"))
+        children: item.children.filter(child => child.moduleId ? hasPermission(child.moduleId, "view") : false)
       };
     }
     return item;

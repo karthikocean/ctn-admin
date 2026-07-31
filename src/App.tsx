@@ -133,10 +133,26 @@ const App = () => (
                   <SpotlightRequestsPage />
                 </PermissionRoute>
               } />
-              <Route path="/activities/ask" element={<AskPage />} />
-              <Route path="/activities/give" element={<GivePage />} />
-              <Route path="/activities/post" element={<PostPage />} />
-              <Route path="/activities/requirement" element={<RequirementPage />} />
+              <Route path="/activities/ask" element={
+                <PermissionRoute module="asks" action="view">
+                  <AskPage />
+                </PermissionRoute>
+              } />
+              <Route path="/activities/give" element={
+                <PermissionRoute module="gives" action="view">
+                  <GivePage />
+                </PermissionRoute>
+              } />
+              <Route path="/activities/post" element={
+                <PermissionRoute module="posts" action="view">
+                  <PostPage />
+                </PermissionRoute>
+              } />
+              <Route path="/activities/requirement" element={
+                <PermissionRoute module="requirements" action="view">
+                  <RequirementPage />
+                </PermissionRoute>
+              } />
               <Route path="/regions" element={<RegionsPage />} />
               <Route path="/franchises" element={<FranchisesPage />} />
               <Route path="/categories" element={

@@ -89,31 +89,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.roleId, fetchPermissions]);
 
   const hasPermission = useCallback((moduleId: string, action: string) => {
+    if (!moduleId) return false;
     // If no permissions loaded, deny by default
-    if (!permissions.length) return false;
+    if (!permissions || permissions.length === 0) return false;
 
-    // Find the module in modulesList to get its identifier mapping
-    const targetModule = modulesList.find(
-      m => String(m.slugName).toLowerCase() === moduleId.toLowerCase() ||
-           String(m.name).toLowerCase() === moduleId.toLowerCase()
-    );
+    const normalizedReq = moduleId.toLowerCase().replace(/[\s_]+/g, "");
+
+    // Find the target module in modulesList
+    const targetModule = modulesList.find(m => {
+      const slugNorm = String(m.slugName || "").toLowerCase().replace(/[\s_]+/g, "");
+      const nameNorm = String(m.name || "").toLowerCase().replace(/[\s_]+/g, "");
+      return slugNorm === normalizedReq ||
+             nameNorm === normalizedReq ||
+             slugNorm === normalizedReq.replace(/s$/, "") ||
+             normalizedReq === slugNorm.replace(/s$/, "");
+    });
+
+    // If modulesList is populated, and targetModule is NOT found in modulesList, module does NOT exist -> deny!
+    if (modulesList.length > 0 && !targetModule) {
+      return false;
+    }
 
     const modulePerm = permissions.find(p => {
       // 1. Match by module's ObjectId (preferred format)
       if (targetModule && String(p.moduleId) === String(targetModule._id)) {
         return true;
       }
-      // 2. Backward compatibility fallback matching using raw string comparisons
-      const pModStr = String(p.moduleId).toLowerCase();
-      const reqModStr = moduleId.toLowerCase();
-      return pModStr === reqModStr ||
-             pModStr === reqModStr.replace(/_/g, " ") ||
-             pModStr.replace(/ /g, "_") === reqModStr;
+      // 2. Match by targetModule's slugName or name
+      if (targetModule) {
+        const pStr = String(p.moduleId).toLowerCase().replace(/[\s_]+/g, "");
+        const slugNorm = String(targetModule.slugName || "").toLowerCase().replace(/[\s_]+/g, "");
+        const nameNorm = String(targetModule.name || "").toLowerCase().replace(/[\s_]+/g, "");
+        if (pStr === slugNorm || pStr === nameNorm) return true;
+      }
+      // 3. Fallback raw string matching against requested moduleId
+      const pModStr = String(p.moduleId).toLowerCase().replace(/[\s_]+/g, "");
+      return pModStr === normalizedReq ||
+             pModStr === normalizedReq.replace(/s$/, "") ||
+             normalizedReq === pModStr.replace(/s$/, "");
     });
 
     if (!modulePerm) return false;
 
-    return modulePerm.actions.includes(action);
+    return Array.isArray(modulePerm.actions) && modulePerm.actions.includes(action.toLowerCase());
   }, [permissions, modulesList]);
 
   // Check for existing session on mount

@@ -48,10 +48,10 @@ export const sidebarNavItems: SidebarNavItem[] = [
   {
     title: "Activities", icon: Activity, moduleId: "activities",
     children: [
-      { title: "Asks", path: "/activities/ask", moduleId: "activities" },
-      { title: "Gives", path: "/activities/give", moduleId: "activities" },
-      { title: "Posts", path: "/activities/post", moduleId: "activities" },
-      { title: "Requirements", path: "/activities/requirement", moduleId: "activities" },
+      { title: "Asks", path: "/activities/ask", moduleId: "asks" },
+      { title: "Gives", path: "/activities/give", moduleId: "gives" },
+      { title: "Posts", path: "/activities/post", moduleId: "posts" },
+      { title: "Requirements", path: "/activities/requirement", moduleId: "requirements" },
     ],
   },
   {
@@ -75,9 +75,9 @@ export const sidebarNavItems: SidebarNavItem[] = [
     ],
   },
 
-  { title: "Plan & Subscription", path: "/subscription", icon: CreditCard, moduleId: "subscription" },
+  { title: "Plan & Subscription", path: "/subscription", icon: CreditCard, moduleId: "plans" },
   { title: "Plans", path: "/plans", icon: Layers, moduleId: "plans" },
-  { title: "Referrals", path: "/referrals", icon: Users, moduleId: "members" },
+  { title: "Referrals", path: "/referrals", icon: Users, moduleId: "referral" },
   { title: "Billings", path: "/billings", icon: CreditCard, moduleId: "billings" },
   { title: "Coupons", path: "/coupons", icon: Ticket, moduleId: "coupons" },
   { title: "Marketplace Category", path: "/marketplace-category", icon: ShoppingBag, moduleId: "marketplace_category" },

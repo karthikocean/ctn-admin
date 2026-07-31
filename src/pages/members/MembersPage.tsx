@@ -1023,8 +1023,8 @@ const MembersPage = () => {
                       )}
                     </TableCell>
                     <TableCell className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-sm text-foreground font-semibold">
-                        <MapPin size={14} className="text-muted-foreground" />
+                      <div className="flex items-start gap-1.5 text-sm text-foreground font-semibold">
+                        <MapPin size={14} className="text-muted-foreground shrink-0 mt-0.5" />
                         <span>{member.city}{member.state ? `, ${member.state}` : ""}</span>
                       </div>
                     </TableCell>
