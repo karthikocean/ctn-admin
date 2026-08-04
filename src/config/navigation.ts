@@ -75,7 +75,6 @@ export const sidebarNavItems: SidebarNavItem[] = [
     ],
   },
 
-  { title: "Plan & Subscription", path: "/subscription", icon: CreditCard, moduleId: "plans" },
   { title: "Plans", path: "/plans", icon: Layers, moduleId: "plans" },
   { title: "Referrals", path: "/referrals", icon: Users, moduleId: "referral" },
   { title: "Billings", path: "/billings", icon: CreditCard, moduleId: "billings" },
