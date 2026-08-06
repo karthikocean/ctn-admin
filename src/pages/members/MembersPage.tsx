@@ -179,6 +179,8 @@ const MembersPage = () => {
   const { hasPermission } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const regionIdFilter = searchParams.get("regionId") || "";
+  const statusFilter = searchParams.get("status") || "";
+  const activityFilter = searchParams.get("activityFilter") || "";
   const canCreate = hasPermission("members", "create");
   const canEdit = hasPermission("members", "edit");
   const canDelete = hasPermission("members", "delete");
@@ -308,6 +310,8 @@ const MembersPage = () => {
       };
       if (search) params.search = search;
       if (regionIdFilter) params.regionId = regionIdFilter;
+      if (statusFilter) params.status = statusFilter;
+      if (activityFilter) params.activityFilter = activityFilter;
 
       const result = await getMembers(params);
       setMembers(result.data || []);
@@ -355,7 +359,7 @@ const MembersPage = () => {
   useEffect(() => {
     if (page !== 1) setPage(1);
     else fetchMembers();
-  }, [regionIdFilter]);
+  }, [regionIdFilter, statusFilter, activityFilter]);
 
   useEffect(() => {
     if (formData.state && formData.city) {

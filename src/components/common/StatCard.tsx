@@ -18,9 +18,11 @@ import {
   Handshake,
   UserPlus,
   Receipt,
-  IndianRupee
+  IndianRupee,
+  ChevronRight
 } from "lucide-react";
 import { ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
 const iconMap: Record<string, ReactNode> = {
   Users: <Users size={22} />,
@@ -50,21 +52,42 @@ interface StatCardProps {
   icon: string;
   iconColor?: string;
   delay?: number;
+  path?: string;
+  onClick?: () => void;
 }
 
-const StatCard = ({ title, value, change, changeType = "neutral", icon, iconColor, delay = 0 }: StatCardProps) => {
+const StatCard = ({ title, value, change, changeType = "neutral", icon, iconColor, delay = 0, path, onClick }: StatCardProps) => {
+  const navigate = useNavigate();
   const iconElement = iconMap[icon] || <Activity size={22} />;
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else if (path) {
+      navigate(path);
+    }
+  };
+
+  const isClickable = Boolean(path || onClick);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
-      className="stat-card"
+      onClick={isClickable ? handleClick : undefined}
+      className={`stat-card relative group ${
+        isClickable ? "cursor-pointer hover:shadow-lg hover:border-primary/40 hover:-translate-y-0.5 transition-all duration-200 active:scale-[0.99]" : ""
+      }`}
     >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+          <div className="flex items-center gap-1">
+            <p className="text-sm text-muted-foreground font-medium">{title}</p>
+            {isClickable && (
+              <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+            )}
+          </div>
           <p className="text-2xl font-bold text-foreground">{typeof value === "number" ? value.toLocaleString() : value}</p>
           {change && (
             <div className="flex items-center gap-1 text-xs">
@@ -79,7 +102,7 @@ const StatCard = ({ title, value, change, changeType = "neutral", icon, iconColo
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl ${iconColor || "bg-primary/10 text-primary"}`}>
+        <div className={`p-3 rounded-xl transition-transform group-hover:scale-105 ${iconColor || "bg-primary/10 text-primary"}`}>
           {iconElement}
         </div>
       </div>
