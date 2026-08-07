@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Search, Heart, Filter, RefreshCw, Calendar as CalendarIcon, Eye } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -30,10 +30,11 @@ const getFullUrl = (path: string) => {
 
 const ContributionsPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "all");
   const [loading, setLoading] = useState(true);
   const [contributions, setContributions] = useState<any[]>([]);
   const [totalPages, setTotalPages] = useState(1);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList } from "recharts";
 import { LayoutDashboard, Search, Filter, RefreshCw, X, Calendar, MapPin, Layers, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatCard from "@/components/common/StatCard";
@@ -40,6 +41,7 @@ const PRESETS = [
 ];
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [fetchingStats, setFetchingStats] = useState(false);
   const [filterModalOpen, setFilterModalOpen] = useState(false);
@@ -291,89 +293,186 @@ const DashboardPage = () => {
 
       {/* Activity Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <StatCard title="Today's Posts" value={stats.todayPost.toLocaleString('en-IN')} icon="FileText" delay={0.2} path="/activities/post" />
-        <StatCard title="Today's Asks" value={stats.todayAsk.toLocaleString('en-IN')} icon="MessageSquare" delay={0.25} path="/activities/ask" />
-        <StatCard title="Today's Gives" value={stats.todayGive.toLocaleString('en-IN')} icon="Gift" delay={0.3} path="/activities/give" />
-        <StatCard title="Today's Requirements" value={stats.todayRequirement.toLocaleString('en-IN')} icon="ClipboardList" delay={0.35} path="/activities/requirement" />
+        <StatCard title="Today's Posts" value={stats.todayPost.toLocaleString('en-IN')} icon="FileText" delay={0.2} path={`/activities/post?fromDate=${new Date().toISOString().split('T')[0]}&toDate=${new Date().toISOString().split('T')[0]}`} />
+        <StatCard title="Today's Asks" value={stats.todayAsk.toLocaleString('en-IN')} icon="MessageSquare" delay={0.25} path={`/activities/ask?fromDate=${new Date().toISOString().split('T')[0]}&toDate=${new Date().toISOString().split('T')[0]}`} />
+        <StatCard title="Today's Gives" value={stats.todayGive.toLocaleString('en-IN')} icon="Gift" delay={0.3} path={`/activities/give?fromDate=${new Date().toISOString().split('T')[0]}&toDate=${new Date().toISOString().split('T')[0]}`} />
+        <StatCard title="Today's Requirements" value={stats.todayRequirement.toLocaleString('en-IN')} icon="ClipboardList" delay={0.35} path={`/activities/requirement?fromDate=${new Date().toISOString().split('T')[0]}&toDate=${new Date().toISOString().split('T')[0]}`} />
       </div>
 
       {/* Gap Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <StatCard title="Not Posted" value={stats.notPosted.toLocaleString('en-IN')} icon="FileX" iconColor="bg-muted text-muted-foreground" delay={0.4} path="/members?activityFilter=notPosted" />
-        <StatCard title="Not Asked" value={stats.notAsked.toLocaleString('en-IN')} icon="MessageSquareOff" iconColor="bg-muted text-muted-foreground" delay={0.45} path="/members?activityFilter=notAsked" />
-        <StatCard title="Not Given" value={stats.notGiven.toLocaleString('en-IN')} icon="HeartOff" iconColor="bg-muted text-muted-foreground" delay={0.5} path="/members?activityFilter=notGiven" />
-        <StatCard title="No Requirements" value={stats.notRequirements.toLocaleString('en-IN')} icon="ClipboardX" iconColor="bg-muted text-muted-foreground" delay={0.55} path="/members?activityFilter=notRequirements" />
+        <StatCard title="Not Posted" value={stats.notPosted.toLocaleString('en-IN')} icon="FileX" iconColor="bg-muted text-muted-foreground" delay={0.4} path="/members?activityFilter=notPosted&status=active" />
+        <StatCard title="Not Asked" value={stats.notAsked.toLocaleString('en-IN')} icon="MessageSquareOff" iconColor="bg-muted text-muted-foreground" delay={0.45} path="/members?activityFilter=notAsked&status=active" />
+        <StatCard title="Not Given" value={stats.notGiven.toLocaleString('en-IN')} icon="HeartOff" iconColor="bg-muted text-muted-foreground" delay={0.5} path="/members?activityFilter=notGiven&status=active" />
+        <StatCard title="No Requirements" value={stats.notRequirements.toLocaleString('en-IN')} icon="ClipboardX" iconColor="bg-muted text-muted-foreground" delay={0.55} path="/members?activityFilter=notRequirements&status=active" />
       </div>
 
       {/* Network Interactions Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="One to One Count" value={stats.oneToOneCount.toLocaleString('en-IN')} icon="Handshake" delay={0.6} path="/connections" />
-        <StatCard title="Referral Count" value={stats.referralCount.toLocaleString('en-IN')} icon="UserPlus" delay={0.65} path="/referrals" />
-        <StatCard title="Thank You Slip Count" value={stats.thankYouSlipCount.toLocaleString('en-IN')} icon="Receipt" delay={0.7} path="/contributions" />
-        <StatCard title="Thank You Slip Amount" value={`₹${stats.thankYouSlipAmount.toLocaleString('en-IN')}`} icon="IndianRupee" delay={0.75} path="/contributions" />
+        <StatCard title="One to One Count" value={stats.oneToOneCount.toLocaleString('en-IN')} icon="Handshake" delay={0.6} path="/contributions?type=one_to_one" />
+        <StatCard title="Referral Count" value={stats.referralCount.toLocaleString('en-IN')} icon="UserPlus" delay={0.65} path="/contributions?type=referral" />
+        <StatCard title="Thank You Slip Count" value={stats.thankYouSlipCount.toLocaleString('en-IN')} icon="Receipt" delay={0.7} path="/contributions?type=thank_you_slip" />
+        <StatCard title="Thank You Slip Amount" value={`₹${stats.thankYouSlipAmount.toLocaleString('en-IN')}`} icon="IndianRupee" delay={0.75} path="/contributions?type=thank_you_slip" />
       </div>
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <ChartCard title="Training Trend" subtitle="Monthly trainings and views" delay={0.3}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={stats.charts.trainingTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke={TRAINING_GRID_STROKE} />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke={TRAINING_AXIS_STROKE} />
-              <YAxis tick={{ fontSize: 12 }} stroke={TRAINING_AXIS_STROKE} />
-              <Tooltip content={<TrainingTooltip />} />
-              <Bar dataKey="trainings" name="Trainings" fill={TRAINING_BAR_COLOR} radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <ChartCard title="Training Trend" subtitle="Monthly trainings and views" delay={0.3} path="/trainings">
+          <div className="h-64 w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.charts.trainingTrend} margin={{ top: 5, right: 30, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                <Tooltip content={<TrainingTooltip />} />
+                <Bar dataKey="trainings" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={28} />
+                <Bar dataKey="views" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={28} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </ChartCard>
 
-        <ChartCard title="Members Trend" subtitle="Monthly joined vs expired members" delay={0.35}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={stats.charts.membersTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,32%,91%)" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(215,16%,47%)" />
-              <YAxis tick={{ fontSize: 12 }} stroke="hsl(215,16%,47%)" />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="joined" name="Joined" fill="hsl(210,97%,23%)" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="expired" name="Expired" fill="hsl(0,72%,50%)" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <ChartCard title="Members Trend" subtitle="Monthly joined vs expired members" delay={0.35} path="/members">
+          <div className="h-64 w-full mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.charts.membersTrend} margin={{ top: 5, right: 30, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                <Tooltip />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
+                <Bar dataKey="joined" name="Joined" fill="hsl(210,97%,23%)" radius={[4, 4, 0, 0]} barSize={24}>
+                  {stats.charts.membersTrend.map((m: any, i: number) => (
+                    <Cell
+                      key={i}
+                      fill="hsl(210,97%,23%)"
+                      className="cursor-pointer hover:opacity-80"
+                      onClick={(e: any) => {
+                        if (e && e.stopPropagation) e.stopPropagation();
+                        if (m.start && m.end) {
+                          navigate(`/members?joinedStart=${encodeURIComponent(m.start)}&joinedEnd=${encodeURIComponent(m.end)}`);
+                        }
+                      }}
+                    />
+                  ))}
+                </Bar>
+                <Bar dataKey="expired" name="Expired" fill="#dc2626" radius={[4, 4, 0, 0]} barSize={24}>
+                  {stats.charts.membersTrend.map((m: any, i: number) => (
+                    <Cell
+                      key={i}
+                      fill="#dc2626"
+                      className="cursor-pointer hover:opacity-80"
+                      onClick={(e: any) => {
+                        if (e && e.stopPropagation) e.stopPropagation();
+                        if (m.start && m.end) {
+                          navigate(`/members?expiredStart=${encodeURIComponent(m.start)}&expiredEnd=${encodeURIComponent(m.end)}`);
+                        }
+                      }}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </ChartCard>
       </div>
 
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="Region Overview" subtitle="Members by region" delay={0.4}>
+        <ChartCard title="Region Overview" subtitle="Members by region" delay={0.4} path="/regions">
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={stats.charts.regionOverview} cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" paddingAngle={4}>
-                {stats.charts.regionOverview.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              <Pie 
+                data={stats.charts.regionOverview} 
+                cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" paddingAngle={4}
+                className="cursor-pointer"
+              >
+                {stats.charts.regionOverview.map((r, i) => (
+                  <Cell 
+                    key={i} 
+                    fill={COLORS[i % COLORS.length]} 
+                    className="cursor-pointer"
+                    onClick={(e: any) => {
+                      if (e && e.stopPropagation) e.stopPropagation();
+                      if (r && r.id) {
+                        navigate(`/members?regionId=${r.id}&status=active`);
+                      }
+                    }}
+                  />
+                ))}
               </Pie>
-              <Tooltip />
+              <Tooltip cursor={{fill: 'transparent'}} />
             </PieChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-2 gap-2 mt-2">
             {stats.charts.regionOverview.map((r, i) => (
-              <div key={r.name || i} className="flex items-center gap-2 text-xs">
+              <div 
+                key={r.name || i} 
+                className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 p-1 rounded transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (r.id) {
+                    navigate(`/members?regionId=${r.id}&status=active`);
+                  }
+                }}
+              >
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                 <span className="text-muted-foreground truncate" title={r.name}>{r.name}</span>
-                <span className="font-medium text-foreground ml-auto">{r.members}</span>
+                <span className="font-medium text-foreground ml-auto">{r.members || r.value}</span>
               </div>
             ))}
           </div>
         </ChartCard>
 
-        <ChartCard title="Category Overview" subtitle="Members by business category" delay={0.5}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={stats.charts.categoryOverview} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,32%,91%)" />
-              <XAxis type="number" tick={{ fontSize: 12 }} stroke="hsl(215,16%,47%)" />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} stroke="hsl(215,16%,47%)" width={100} />
-              <Tooltip />
-              <Bar dataKey="count" fill="hsl(210,97%,23%)" radius={[0, 6, 6, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <ChartCard title="Category Overview" subtitle="Members by business category" delay={0.5} path="/categories">
+          <div className="h-[360px] w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={stats.charts.categoryOverview} 
+                layout="vertical"
+                margin={{ top: 10, right: 35, left: 10, bottom: 10 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(214,32%,91%)" opacity={0.6} />
+                <XAxis type="number" hide />
+                <YAxis 
+                  dataKey="name" 
+                  type="category" 
+                  tick={{ fontSize: 13, fill: "hsl(215,25%,30%)", fontWeight: 500 }} 
+                  axisLine={false}
+                  tickLine={false}
+                  width={180} 
+                />
+                <Tooltip cursor={{ fill: 'hsl(214,32%,91%, 0.4)' }} />
+                <Bar 
+                  dataKey="count" 
+                  barSize={28}
+                  radius={[0, 6, 6, 0]}
+                >
+                  <LabelList 
+                    dataKey="count" 
+                    position="right" 
+                    fill="hsl(215,25%,35%)" 
+                    fontSize={13} 
+                    fontWeight={600} 
+                    offset={10} 
+                  />
+                  {stats.charts.categoryOverview.map((c, i) => (
+                    <Cell
+                      key={i}
+                      fill="hsl(210,97%,23%)"
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={(e: any) => {
+                        if (e && e.stopPropagation) e.stopPropagation();
+                        if (c && c.id) {
+                          navigate(`/members?category=${c.id}&status=active`);
+                        }
+                      }}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </ChartCard>
       </div>
 
