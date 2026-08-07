@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye, Check, ChevronsUpDown } from "lucide-react";
+import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye, Check, ChevronsUpDown, Link as LinkIcon, GraduationCap } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { getAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, getAnnouncementDetails, getAnnouncementBookings } from "@/api/AnnouncementsApi";
 import { getRegions } from "@/api/RegionApi";
+import { getTrainings } from "@/api/TrainingApi";
 import { uploadFiles } from "@/api/MediaApi";
 import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
@@ -104,6 +105,7 @@ const AnnouncementsPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [regionsList, setRegionsList] = useState<any[]>([]);
+  const [trainingsList, setTrainingsList] = useState<any[]>([]);
 
   const allAreas = useMemo(() => {
     return regionsList.flatMap((r) => {
@@ -137,7 +139,18 @@ const AnnouncementsPage = () => {
         console.error("Error fetching regions:", error);
       }
     };
+    const fetchTrainings = async () => {
+      try {
+        const res = await getTrainings({ limit: 1000 });
+        if (res && res.data) {
+          setTrainingsList(res.data);
+        }
+      } catch (error) {
+        console.error("Error fetching trainings:", error);
+      }
+    };
     fetchRegions();
+    fetchTrainings();
   }, []);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -193,6 +206,8 @@ const AnnouncementsPage = () => {
     image: "",
     video: "",
     announcementType: "Event",
+    link: "",
+    trainingId: "",
     date: "",
     time: "",
     fromDate: "",
@@ -408,6 +423,18 @@ const AnnouncementsPage = () => {
     if (formData.membersLimit !== undefined && formData.membersLimit !== null && formData.membersLimit !== "" && formData.membersLimit < 0) {
       newErrors.membersLimit = "Members Limit must be a positive value";
     }
+    if (formData.announcementType === "Others") {
+      if (!formData.link || !formData.link.trim()) {
+        newErrors.link = "Link is required";
+      }
+    }
+
+    if (formData.announcementType === "Training") {
+      if (!formData.trainingId) {
+        newErrors.trainingId = "Training is required";
+      }
+    }
+
     if (formData.announcementType === "Event" && formData.isOfflineStallExist) {
       if (!formData.stallConfig?.totalStallCount || formData.stallConfig.totalStallCount <= 0) {
         newErrors.totalStallCount = "Total stall count must be greater than 0";
@@ -446,6 +473,8 @@ const AnnouncementsPage = () => {
       image: "",
       video: "",
       announcementType: "Event",
+      link: "",
+      trainingId: "",
       date: "",
       time: "",
       fromDate: "",
@@ -504,6 +533,8 @@ const AnnouncementsPage = () => {
 
       const payload = {
         ...dataToSave,
+        link: formData.announcementType === "Others" ? formData.link : undefined,
+        trainingId: formData.announcementType === "Training" ? formData.trainingId : undefined,
         points: formData.points === "" ? 0 : Number(formData.points),
         membersLimit: formData.membersLimit === "" ? 0 : Number(formData.membersLimit),
         date: finalFromDate,
@@ -647,6 +678,8 @@ const AnnouncementsPage = () => {
           image: data.image || "",
           video: data.video || "",
           announcementType: data.announcementType || "Event",
+          link: data.link || "",
+          trainingId: data.trainingId ? (typeof data.trainingId === "object" ? data.trainingId._id : data.trainingId) : "",
           date: formatLocalDateString(data.date),
           time: data.time || "",
           fromDate: formatLocalDateString(data.fromDate || data.date),
@@ -825,6 +858,28 @@ const AnnouncementsPage = () => {
                       </div>
                     )}
 
+                    {a.announcementType === "Others" && a.link && (
+                      <div className="col-span-2 flex flex-col gap-1 pt-0.5">
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Link</span>
+                        <a href={a.link} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[11px] font-semibold text-primary underline truncate">
+                          <LinkIcon size={12} className="flex-shrink-0" />
+                          <span className="truncate">{a.link}</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {a.announcementType === "Training" && a.trainingId && (
+                      <div className="col-span-2 flex flex-col gap-1 pt-0.5">
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Training</span>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+                          <GraduationCap size={12} className="text-primary flex-shrink-0" />
+                          <span className="line-clamp-1">
+                            {trainingsList.find(t => t._id === (typeof a.trainingId === "object" ? a.trainingId._id : a.trainingId))?.title || "Training"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {((a.regionIds && a.regionIds.length > 0) || a.regionId) && (
                       <div className="col-span-2 flex flex-col gap-1 pt-0.5">
                         <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Region</span>
@@ -930,9 +985,51 @@ const AnnouncementsPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Event">Event</SelectItem>
+                <SelectItem value="Others">Others</SelectItem>
+                <SelectItem value="Training">Training</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {formData.announcementType === "Others" && (
+            <div className="space-y-2">
+              <Label htmlFor="link" className="text-xs font-bold uppercase tracking-wider text-slate-600">Link <span className="text-red-500">*</span></Label>
+              <div className="relative">
+                <Input 
+                  id="link" 
+                  value={formData.link} 
+                  onChange={handleInputChange} 
+                  placeholder="https://example.com" 
+                  className={`h-11 pl-10 ${errors.link ? "border-red-500" : ""}`} 
+                />
+                <LinkIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              </div>
+              {errors.link && <p className="text-[10px] text-red-500 font-bold">{errors.link}</p>}
+            </div>
+          )}
+
+          {formData.announcementType === "Training" && (
+            <div className="space-y-2">
+              <Label htmlFor="trainingId" className="text-xs font-bold uppercase tracking-wider text-slate-600">Training <span className="text-red-500">*</span></Label>
+              <Select
+                value={formData.trainingId}
+                onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, trainingId: value }));
+                  if (errors.trainingId) setErrors(prev => ({ ...prev, trainingId: "" }));
+                }}
+              >
+                <SelectTrigger id="trainingId" className={`w-full h-11 px-3 rounded-md border border-input bg-background text-sm ${errors.trainingId ? "border-red-500" : ""}`}>
+                  <SelectValue placeholder="Select training" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[200px]">
+                  {trainingsList.map(t => (
+                    <SelectItem key={t._id} value={t._id}>{t.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.trainingId && <p className="text-[10px] text-red-500 font-bold">{errors.trainingId}</p>}
+            </div>
+          )}
 
           {formData.announcementType === "Event" && (
             <div className="space-y-4 pt-2">

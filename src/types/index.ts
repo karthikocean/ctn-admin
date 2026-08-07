@@ -55,7 +55,7 @@ export interface Announcement {
   status: "draft" | "published" | "scheduled";
   createdAt: string;
   author: string;
-  announcementType?: "Event" | "Online Stall";
+  announcementType?: "Event" | "Online Stall" | "Others" | "Training";
   date?: string;
   time?: string;
   location?: string;
@@ -63,6 +63,8 @@ export interface Announcement {
   membersLimit?: number;
   scheduleDate?: string;
   isOfflineStallExist?: boolean;
+  link?: string;
+  trainingId?: string;
 }
 
 export interface Event {
