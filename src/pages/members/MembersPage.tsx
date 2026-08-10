@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -22,7 +22,9 @@ import {
   Shield,
   Trash2,
   ChevronsUpDown,
-  Check
+  Check,
+  Activity
+
 } from "lucide-react";
 import { State, City } from "country-state-city";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -181,6 +183,11 @@ const MembersPage = () => {
   const regionIdFilter = searchParams.get("regionId") || "";
   const statusFilter = searchParams.get("status") || "";
   const activityFilter = searchParams.get("activityFilter") || "";
+  const categoryFilter = searchParams.get("category") || "";
+  const joinedStart = searchParams.get("joinedStart") || "";
+  const joinedEnd = searchParams.get("joinedEnd") || "";
+  const expiredStart = searchParams.get("expiredStart") || "";
+  const expiredEnd = searchParams.get("expiredEnd") || "";
   const canCreate = hasPermission("members", "create");
   const canEdit = hasPermission("members", "edit");
   const canDelete = hasPermission("members", "delete");
@@ -312,6 +319,11 @@ const MembersPage = () => {
       if (regionIdFilter) params.regionId = regionIdFilter;
       if (statusFilter) params.status = statusFilter;
       if (activityFilter) params.activityFilter = activityFilter;
+      if (categoryFilter) params.category = categoryFilter;
+      if (joinedStart) params.joinedStart = joinedStart;
+      if (joinedEnd) params.joinedEnd = joinedEnd;
+      if (expiredStart) params.expiredStart = expiredStart;
+      if (expiredEnd) params.expiredEnd = expiredEnd;
 
       const result = await getMembers(params);
       setMembers(result.data || []);
@@ -344,11 +356,14 @@ const MembersPage = () => {
     }
   };
 
+  const isMounted = useRef(false);
+
   useEffect(() => {
     fetchMembers();
   }, [page]);
 
   useEffect(() => {
+    if (!isMounted.current) return;
     const timer = setTimeout(() => {
       if (page !== 1) setPage(1);
       else fetchMembers();
@@ -357,9 +372,14 @@ const MembersPage = () => {
   }, [search]);
 
   useEffect(() => {
+    if (!isMounted.current) return;
     if (page !== 1) setPage(1);
     else fetchMembers();
   }, [regionIdFilter, statusFilter, activityFilter]);
+
+  useEffect(() => {
+    isMounted.current = true;
+  }, []);
 
   useEffect(() => {
     if (formData.state && formData.city) {
@@ -949,7 +969,58 @@ const MembersPage = () => {
           </span>
           <button
             type="button"
-            onClick={() => setSearchParams({})}
+            onClick={() => {
+              const params = new URLSearchParams(searchParams);
+              params.delete("regionId");
+              setSearchParams(params);
+            }}
+            className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors"
+          >
+            <X size={13} />
+            Clear filter
+          </button>
+        </div>
+      )}
+
+      {activityFilter && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20 text-sm mt-2">
+          <Activity size={15} className="text-primary flex-shrink-0" />
+          <span className="text-foreground font-medium flex-1">
+            Showing members filtered by Activity: <span className="font-bold text-primary">
+              {activityFilter === "notPosted" ? "Not Posted Today" :
+               activityFilter === "notAsked" ? "Not Asked Today" :
+               activityFilter === "notGiven" ? "Not Given Today" :
+               activityFilter === "notRequirements" ? "No Requirements Today" : activityFilter}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams);
+              params.delete("activityFilter");
+              setSearchParams(params);
+            }}
+            className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors"
+          >
+            <X size={13} />
+            Clear filter
+          </button>
+        </div>
+      )}
+
+      {statusFilter && (
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20 text-sm mt-2">
+          <CheckCircle2 size={15} className="text-primary flex-shrink-0" />
+          <span className="text-foreground font-medium flex-1">
+            Showing members filtered by Status: <span className="font-bold text-primary uppercase">{statusFilter}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams);
+              params.delete("status");
+              setSearchParams(params);
+            }}
             className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors"
           >
             <X size={13} />
@@ -978,7 +1049,15 @@ const MembersPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.length === 0 && !isLoading ? (
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell colSpan={7} className="px-6 py-6">
+                      <div className="w-full h-12 bg-muted/60 animate-pulse rounded-lg"></div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : members.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                     No members found

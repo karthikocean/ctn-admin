@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, Filter, MessageSquare, Handshake, Layout, ClipboardList, Loader2, Eye, AlertTriangle, MoreVertical, MapPin, Clock, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PostCard from "@/components/social/PostCard";
@@ -73,8 +74,9 @@ const GenericActivityPage = ({
   const [newStatus, setNewStatus] = useState("reported");
   const [statusReason, setStatusReason] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [searchParams] = useSearchParams();
+  const [fromDate, setFromDate] = useState(searchParams.get("fromDate") || "");
+  const [toDate, setToDate] = useState(searchParams.get("toDate") || "");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const isMounted = useRef(false);
 
@@ -490,8 +492,9 @@ const GenericActivityTablePage = ({
   const [newStatus, setNewStatus] = useState("reported");
   const [statusReason, setStatusReason] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [searchParams] = useSearchParams();
+  const [fromDate, setFromDate] = useState(searchParams.get("fromDate") || "");
+  const [toDate, setToDate] = useState(searchParams.get("toDate") || "");
   const pageSize = 10; // default page size for table
   const isMounted = useRef(false);
 
