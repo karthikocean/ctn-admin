@@ -168,10 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         } catch (error: any) {
           console.error("Failed to restore session or sync data:", error);
-          // Only logout if it's a 401 unauthorized error
-          if (error.response?.status === 401) {
-            logout();
-          }
+          logout();
         }
       }
       setIsLoading(false);

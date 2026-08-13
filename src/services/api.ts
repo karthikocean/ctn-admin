@@ -23,14 +23,21 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle token expiry
+// Add a response interceptor to handle token expiry & authentication failure
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isJwtExpired = error.response?.data?.message === "jwt expired";
-    const isUnauthorized = error.response?.status === 401;
+    const message = typeof error.response?.data?.message === "string" ? error.response.data.message.toLowerCase() : "";
+    const isJwtError =
+      message.includes("jwt") ||
+      message.includes("invalid signature") ||
+      message.includes("invalid token") ||
+      message.includes("session expired") ||
+      message.includes("token missing") ||
+      message.includes("unauthorized");
+    const isUnauthorized = error.response?.status === 401 || error.response?.status === 403;
 
-    if ((isUnauthorized || isJwtExpired) && window.location.pathname !== "/login") {
+    if ((isUnauthorized || isJwtError) && window.location.pathname !== "/login") {
       // Clear storage and redirect to login if unauthorized or token expired
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
