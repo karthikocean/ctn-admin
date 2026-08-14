@@ -143,6 +143,40 @@ const getPaymentMethodBadge = (method: string = "") => {
   );
 };
 
+const getPaymentStatusBadge = (status: string = "PAID") => {
+  const upper = (status || "PAID").toUpperCase();
+  if (upper === "PAID" || upper === "SUCCESS" || upper === "COMPLETED") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+        Paid
+      </span>
+    );
+  }
+  if (upper === "FAILED" || upper === "REJECTED") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 shadow-sm select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+        Failed
+      </span>
+    );
+  }
+  if (upper === "CANCELLED" || upper === "CANCELED") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300 shadow-sm select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+        Cancelled
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm select-none">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+      Pending
+    </span>
+  );
+};
+
 const TransactionIdBadge = ({ id }: { id: string }) => {
   const [copied, setCopied] = useState(false);
 
@@ -183,6 +217,7 @@ const BillingsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalBillings, setTotalBillings] = useState(0);
   const pageSize = 10;
 
   const [selectedBilling, setSelectedBilling] = useState<any>(null);
@@ -203,6 +238,7 @@ const BillingsPage = () => {
     amount: number;
     transactionId: string;
     remarks: string;
+    status: string;
   }>({
     memberId: "",
     planId: "",
@@ -210,6 +246,7 @@ const BillingsPage = () => {
     amount: 0,
     transactionId: "",
     remarks: "",
+    status: "PAID",
   });
 
   const fetchMembersAndPlans = async () => {
@@ -238,6 +275,7 @@ const BillingsPage = () => {
       if (response.data) {
         setBillings(response.data);
         setTotalPages(response.totalPages || Math.ceil((response.total || 0) / pageSize));
+        setTotalBillings(response.total || response.totalItems || 0);
       }
     } catch (error: any) {
       console.error("Error fetching billings:", error);
@@ -284,6 +322,7 @@ const BillingsPage = () => {
       amount: 0,
       transactionId: "",
       remarks: "",
+      status: "PAID",
     });
   };
 
@@ -296,6 +335,7 @@ const BillingsPage = () => {
       amount: billing.amount || 0,
       transactionId: billing.transactionId || "",
       remarks: billing.remarks || "",
+      status: billing.status || billing.paymentStatus || "PAID",
     });
     setDrawerOpen(true);
   };
@@ -353,9 +393,25 @@ const BillingsPage = () => {
       resetForm();
     } catch (error: any) {
       console.error("Error saving billing record:", error);
+      const rawMsg =
+        error?.response?.data?.message ||
+        error?.message ||
+        (typeof error === "string" ? error : null) ||
+        "Payment was cancelled or failed";
+
+      let cleanMsg = String(rawMsg)
+        .replace(/Payment\s*Failed\s*:\s*undefined/gi, "Payment Failed")
+        .replace(/:\s*undefined/gi, "")
+        .replace(/undefined/gi, "")
+        .trim();
+
+      if (!cleanMsg || cleanMsg.toLowerCase() === "payment failed") {
+        cleanMsg = "Payment was cancelled or failed";
+      }
+
       toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to save billing record",
+        title: "Payment Error",
+        description: cleanMsg,
         variant: "destructive",
       });
     } finally {
@@ -457,6 +513,7 @@ const BillingsPage = () => {
                 <TableHead className="px-6 py-4">Plan</TableHead>
                 <TableHead className="px-6 py-4 text-center">Amount</TableHead>
                 <TableHead className="px-6 py-4">Payment Type</TableHead>
+                <TableHead className="px-6 py-4 text-center">Status</TableHead>
                 <TableHead className="px-6 py-4">Date</TableHead>
                 <TableHead className="px-6 py-4 text-right">Actions</TableHead>
               </TableRow>
@@ -464,13 +521,13 @@ const BillingsPage = () => {
             <TableBody>
               {loading && billings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="p-0">
-                    <TableSkeleton rows={5} columns={7} />
+                  <TableCell colSpan={8} className="p-0">
+                    <TableSkeleton rows={5} columns={8} />
                   </TableCell>
                 </TableRow>
               ) : billings.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                     No billing records found.
                   </TableCell>
                 </TableRow>
@@ -507,7 +564,7 @@ const BillingsPage = () => {
                     <TableCell className="px-6 py-4">
                       <div className="flex flex-col gap-1 items-start">
                         {getPaymentMethodBadge(b.paymentMethod || b.paymentType)}
-                        {b.transactionId && b.transactionId !== "CASH" && (
+                        {b.paymentMethod?.toLowerCase() !== "cash" && b.paymentType?.toLowerCase() !== "cash" && b.transactionId && b.transactionId !== "CASH" && (
                           <TransactionIdBadge id={b.transactionId} />
                         )}
                         {b.source && (
@@ -516,6 +573,9 @@ const BillingsPage = () => {
                           </span>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-center">
+                      {getPaymentStatusBadge(b.status || b.paymentStatus || "PAID")}
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <div className="flex flex-col gap-0.5">
@@ -554,6 +614,7 @@ const BillingsPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={totalBillings}
               onPageChange={handlePageChange}
             />
           </div>
@@ -792,6 +853,26 @@ const BillingsPage = () => {
             )}
 
             <div>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Payment Status <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                value={formData.status}
+                onValueChange={(val) => setFormData(prev => ({ ...prev, status: val }))}
+              >
+                <SelectTrigger className="w-full mt-1.5 h-11 px-3 rounded-xl bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border border-border">
+                  <SelectValue placeholder="Select Status..." />
+                </SelectTrigger>
+                <SelectContent className="w-[var(--radix-select-trigger-width)]">
+                  <SelectItem value="PAID">Paid</SelectItem>
+                  <SelectItem value="PENDING">Pending</SelectItem>
+                  <SelectItem value="FAILED">Failed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Remarks</Label>
               <Textarea
                 placeholder="Enter receipt/transaction remarks..."
@@ -890,11 +971,18 @@ const BillingsPage = () => {
                   </div>
 
                   <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
-                    <span className="font-bold text-muted-foreground">Transaction ID</span>
-                    <span className="font-medium text-foreground">
-                      {selectedBilling.transactionId || "None"}
-                    </span>
+                    <span className="font-bold text-muted-foreground">Status</span>
+                    {getPaymentStatusBadge(selectedBilling.status || selectedBilling.paymentStatus || "PAID")}
                   </div>
+
+                  {(selectedBilling.paymentMethod?.toLowerCase() !== "cash" && selectedBilling.paymentType?.toLowerCase() !== "cash") && (
+                    <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
+                      <span className="font-bold text-muted-foreground">Transaction ID</span>
+                      <span className="font-medium text-foreground">
+                        {selectedBilling.transactionId || "None"}
+                      </span>
+                    </div>
+                  )}
 
                   {selectedBilling.source && (
                     <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
@@ -906,7 +994,7 @@ const BillingsPage = () => {
                   )}
 
                   <div className="flex justify-between items-center text-xs pb-2 border-b border-border/40">
-                    <span className="font-bold text-muted-foreground">Transaction Date</span>
+                    <span className="font-bold text-muted-foreground">Payment Date</span>
                     <span className="font-medium text-foreground">
                       {new Date(selectedBilling.createdAt).toLocaleDateString()} &nbsp;
                       <span className="text-muted-foreground/85 text-[11px]">{new Date(selectedBilling.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>

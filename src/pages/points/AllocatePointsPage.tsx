@@ -479,6 +479,7 @@ const AllocatePointsPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={filteredConfigs.length}
               onPageChange={setPage}
             />
           </div>

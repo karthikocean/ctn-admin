@@ -46,6 +46,7 @@ const ModulesPage = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalModulesCount, setTotalModulesCount] = useState(0);
   const pageSize = 10;
   const [allModules, setAllModules] = useState<any[]>([]);
 
@@ -65,6 +66,7 @@ const ModulesPage = () => {
       if (response.data) {
         setModules(response.data);
         setTotalPages(response.totalPages || Math.ceil((response.total || 0) / pageSize));
+        setTotalModulesCount(response.total || response.totalItems || 0);
       }
     } catch (error: any) {
       console.error("Error fetching modules:", error);
@@ -356,6 +358,7 @@ const ModulesPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={totalModulesCount}
               onPageChange={handlePageChange}
             />
           </div>

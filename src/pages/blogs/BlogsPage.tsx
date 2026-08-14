@@ -65,6 +65,7 @@ const BlogsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalBlogsCount, setTotalBlogsCount] = useState(0);
   const isMounted = useRef(false);
 
   const [formData, setFormData] = useState({
@@ -90,6 +91,7 @@ const BlogsPage = () => {
       const result = await getBlogs({ page: page - 1, limit: 9, search: searchQuery });
       setBlogs(result.data || []);
       setTotalPages(result.totalPages || 1);
+      setTotalBlogsCount(result.total || result.totalItems || 0);
     } catch (error) {
       console.error("Error fetching blogs:", error);
     } finally {
@@ -416,6 +418,7 @@ const BlogsPage = () => {
           <PaginationBar
             currentPage={page}
             totalPages={totalPages}
+            totalItems={totalBlogsCount}
             onPageChange={setPage}
           />
         </div>

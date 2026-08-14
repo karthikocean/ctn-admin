@@ -174,6 +174,7 @@ const AnnouncementsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalAnnouncementsCount, setTotalAnnouncementsCount] = useState(0);
   const isMounted = useRef(false);
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -287,6 +288,7 @@ const AnnouncementsPage = () => {
       const result = await getAnnouncements({ page: page - 1, limit: 9, search: searchTerm });
       setAnnouncements(result.data || []);
       setTotalPages(result.totalPages || 1);
+      setTotalAnnouncementsCount(result.total || result.totalItems || 0);
     } catch (error) {
       console.error("Error fetching announcements:", error);
     } finally {
@@ -948,6 +950,7 @@ const AnnouncementsPage = () => {
           <PaginationBar
             currentPage={page}
             totalPages={totalPages}
+            totalItems={totalAnnouncementsCount}
             onPageChange={setPage}
           />
         </div>

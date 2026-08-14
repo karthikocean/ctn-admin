@@ -27,6 +27,7 @@ export interface Member {
   joinedAt: string;
   referredBy?: string;
   avatar?: string;
+  dob?: string;
 }
 
 export interface Role {

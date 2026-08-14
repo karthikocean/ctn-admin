@@ -52,6 +52,7 @@ const PlansPage = () => {
   const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalPlans, setTotalPlans] = useState(0);
   const pageSize = 10;
 
   const [viewingPlan, setViewingPlan] = useState<any | null>(null);
@@ -119,6 +120,7 @@ const PlansPage = () => {
       if (response.data) {
         setPlans(response.data);
         setTotalPages(response.totalPages || Math.ceil((response.total || 0) / pageSize));
+        setTotalPlans(response.total || response.totalItems || 0);
       }
     } catch (error: any) {
       console.error("Error fetching plans:", error);
@@ -276,6 +278,27 @@ const PlansPage = () => {
       }
     });
     setDrawerOpen(true);
+  };
+
+  const handleToggleStatus = async (plan: any) => {
+    if (!canEdit) return;
+    const newStatus = plan.status === "active" ? "inactive" : "active";
+    try {
+      await PlansApi.updatePlan(plan._id, { status: newStatus });
+      toast({
+        title: "Status Updated",
+        description: `Plan "${plan.title}" marked as ${newStatus}`,
+        variant: "success"
+      });
+      fetchPlans(searchTerm, page);
+    } catch (error: any) {
+      console.error("Error updating plan status:", error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update plan status",
+        variant: "destructive"
+      });
+    }
   };
 
   const confirmDelete = (id: string) => {
@@ -440,13 +463,25 @@ const PlansPage = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={plan.status} />
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => handleToggleStatus(plan)}
+                        disabled={!canEdit}
+                        className={cn(
+                          "transition-transform active:scale-95 cursor-pointer focus:outline-none",
+                          !canEdit && "cursor-not-allowed opacity-80"
+                        )}
+                        title={canEdit ? `Click to mark as ${plan.status === "active" ? "inactive" : "active"}` : undefined}
+                      >
+                        <StatusBadge status={plan.status} />
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ActionMenu
                         onView={() => handleView(plan)}
                         onEdit={canEdit ? () => handleEdit(plan) : undefined}
+                        onToggleStatus={canEdit ? () => handleToggleStatus(plan) : undefined}
+                        statusLabel={plan.status}
                         onDelete={canDelete ? () => confirmDelete(plan._id) : undefined}
                       />
                     </td>
@@ -462,6 +497,7 @@ const PlansPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={totalPlans}
               onPageChange={handlePageChange}
             />
           </div>

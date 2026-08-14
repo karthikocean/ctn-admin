@@ -78,6 +78,7 @@ const TrainingsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalTrainings, setTotalTrainings] = useState(0);
   const isMounted = useRef(false);
   const [trainings, setTrainings] = useState<any[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -134,6 +135,7 @@ const TrainingsPage = () => {
       });
       setTrainings(result.data || []);
       setTotalPages(result.totalPages || 1);
+      setTotalTrainings(result.total || result.totalItems || 0);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -526,6 +528,7 @@ const TrainingsPage = () => {
           <PaginationBar
             currentPage={page}
             totalPages={totalPages}
+            totalItems={totalTrainings}
             onPageChange={setPage}
           />
         </div>

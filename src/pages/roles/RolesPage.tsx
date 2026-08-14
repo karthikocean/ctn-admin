@@ -160,6 +160,7 @@ const RolesPage = () => {
   // Pagination and filter states for the bottom Users List card
   const [usersListPage, setUsersListPage] = useState(1);
   const [usersListTotalPages, setUsersListTotalPages] = useState(1);
+  const [usersListTotalCount, setUsersListTotalCount] = useState(0);
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -284,6 +285,7 @@ const RolesPage = () => {
         setUsersList(response.data.data);
         const totalPagesVal = response.data.totalPages ?? 1;
         setUsersListTotalPages(totalPagesVal);
+        setUsersListTotalCount(response.data.total ?? 0);
       }
     } catch (error) {
       console.error("Error fetching users list:", error);
@@ -1146,6 +1148,7 @@ const RolesPage = () => {
                   <PaginationBar
                     currentPage={usersListPage}
                     totalPages={usersListTotalPages}
+                    totalItems={usersListTotalCount}
                     onPageChange={(page) => fetchUsersList(page, searchTerm, roleFilter, statusFilter)}
                   />
                 </div>
@@ -1412,6 +1415,7 @@ const RolesPage = () => {
                   <PaginationBar
                     currentPage={usersPage}
                     totalPages={totalPages}
+                    totalItems={modalTotalCount}
                     onPageChange={(page) => fetchPaginatedUsers(page, modalSearchTerm, modalRoleFilter, modalStatusFilter)}
                   />
                 </div>

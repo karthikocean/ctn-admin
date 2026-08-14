@@ -471,6 +471,7 @@ export const ReferralCategoriesPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={groupedCategories.length}
               onPageChange={handlePageChange}
             />
           </div>

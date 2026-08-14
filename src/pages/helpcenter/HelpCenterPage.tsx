@@ -335,10 +335,18 @@ const HelpCenterPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalHelpItems, setTotalHelpItems] = useState(0);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+
+  const [statusCounts, setStatusCounts] = useState<{ [key: string]: number }>({
+    PENDING: 0,
+    REVIEWED: 0,
+    RESOLVED: 0,
+    REJECTED: 0
+  });
 
   const [viewItem, setViewItem] = useState<any>(null);
   const [statusPopupItem, setStatusPopupItem] = useState<any>(null);
@@ -366,6 +374,7 @@ const HelpCenterPage = () => {
       });
       setItems(result.data || []);
       setTotalPages(result.totalPages || 1);
+      setTotalHelpItems(result.total || result.totalItems || 0);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -377,7 +386,40 @@ const HelpCenterPage = () => {
     }
   };
 
+  const fetchStatusCounts = async () => {
+    try {
+      const statuses = ["PENDING", "REVIEWED", "RESOLVED", "REJECTED"];
+      const search = debouncedSearch.trim() || undefined;
+      const results = await Promise.all(
+        statuses.map(st => getHelpCenterItems({ page: 0, limit: 1, status: st, search }))
+      );
+      const counts: { [key: string]: number } = {
+        PENDING: 0,
+        REVIEWED: 0,
+        RESOLVED: 0,
+        REJECTED: 0
+      };
+      statuses.forEach((st, idx) => {
+        counts[st] = results[idx]?.total || 0;
+      });
+      setStatusCounts(counts);
+    } catch (err) {
+      console.error("Failed to fetch status counts:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatusCounts();
+  }, [debouncedSearch]);
+
   useEffect(() => { fetchItems(); }, [page, statusFilter, debouncedSearch]);
+
+  const handleReset = () => {
+    setSearchQuery("");
+    setDebouncedSearch("");
+    setStatusFilter("all");
+    setPage(0);
+  };
 
   /* Status Update */
   const handleStatusUpdate = async (id: string, status: string, adminNote: string) => {
@@ -388,6 +430,7 @@ const HelpCenterPage = () => {
       setViewItem(null);
       setStatusPopupItem(null);
       fetchItems();
+      fetchStatusCounts();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -409,6 +452,7 @@ const HelpCenterPage = () => {
       setDeleteOpen(false);
       setDeleteTarget(null);
       fetchItems();
+      fetchStatusCounts();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -447,10 +491,10 @@ const HelpCenterPage = () => {
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
             <input
               type="text"
-              placeholder="Search suggestions..."
+              placeholder="Search title, description or member..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+              className="h-9 pl-8 pr-3 w-64 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
             />
           </div>
 
@@ -471,8 +515,9 @@ const HelpCenterPage = () => {
             variant="outline"
             size="sm"
             className="h-9 rounded-lg"
-            onClick={fetchItems}
+            onClick={handleReset}
             disabled={isLoading}
+            title="Reset filters & search"
           >
             <RefreshCw size={14} className={cn(isLoading && "animate-spin")} />
           </Button>
@@ -483,7 +528,7 @@ const HelpCenterPage = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         {STATUS_OPTIONS.map(opt => {
           const Icon = opt.icon;
-          const count = items.filter(i => i.status === opt.value).length;
+          const count = statusCounts[opt.value] || 0;
           return (
             <button
               key={opt.value}
@@ -591,6 +636,7 @@ const HelpCenterPage = () => {
             <PaginationBar
               currentPage={page + 1}
               totalPages={totalPages}
+              totalItems={totalHelpItems}
               onPageChange={p => setPage(p - 1)}
             />
           </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { History, Search, Filter, Download } from "lucide-react";
+import { History, Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Select,
@@ -13,20 +13,21 @@ import { getReportedHistory } from "@/api/ReportedHistoryApi";
 import { format } from "date-fns";
 import PaginationBar from "@/components/common/PaginationBar";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
-
 const ReportHistoryPage = () => {
     const [reports, setReports] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
     const [limit] = useState(10);
+    const [totalReports, setTotalReports] = useState(0);
 
     const fetchReports = async () => {
         try {
             setLoading(true);
             const response = await getReportedHistory({ page, limit });
-            setReports(response.data);
-            setTotalPages(response.totalPages);
+            setReports(response.data || []);
+            setTotalPages(response.totalPages || 1);
+            setTotalReports(response.total || response.totalItems || 0);
         } catch (error) {
             console.error("Failed to fetch reports:", error);
         } finally {
@@ -85,12 +86,6 @@ const ReportHistoryPage = () => {
                             <SelectItem value="posts">Posts</SelectItem>
                         </SelectContent>
                     </Select>
-
-                    {/* Export */}
-                    <Button variant="outline" size="sm" className="h-9 rounded-lg text-xs">
-                        <Download size={14} className="mr-1.5" />
-                        Export
-                    </Button>
                 </div>
             </div>
 
@@ -145,11 +140,12 @@ const ReportHistoryPage = () => {
                         </tbody>
                     </table>
                 </div>
-                {totalPages > 1 && (
+                {!loading && reports.length > 0 && (
                     <div className="px-6 pb-4">
                         <PaginationBar
                             currentPage={page + 1}
                             totalPages={totalPages}
+                            totalItems={totalReports}
                             onPageChange={(p) => setPage(p - 1)}
                         />
                     </div>

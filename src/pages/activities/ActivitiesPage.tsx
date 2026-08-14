@@ -69,6 +69,7 @@ const GenericActivityPage = ({
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalPostsCount, setTotalPostsCount] = useState(0);
   const [showReportedOnly, setShowReportedOnly] = useState(false);
   const [statusUpdatePost, setStatusUpdatePost] = useState<Post | null>(null);
   const [newStatus, setNewStatus] = useState("reported");
@@ -94,6 +95,7 @@ const GenericActivityPage = ({
       });
       setPosts(result.data || []);
       setTotalPages(result.totalPages || 1);
+      setTotalPostsCount(result.total || result.totalItems || 0);
     } catch (error) {
       console.error(`Error fetching ${type} posts:`, error);
     } finally {
@@ -465,6 +467,7 @@ const GenericActivityPage = ({
           <PaginationBar
             currentPage={page}
             totalPages={totalPages}
+            totalItems={totalPostsCount}
             onPageChange={setPage}
           />
         </div>
@@ -486,6 +489,7 @@ const GenericActivityTablePage = ({
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalPostsCount, setTotalPostsCount] = useState(0);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [statusUpdatePost, setStatusUpdatePost] = useState<Post | null>(null);
   const [showReportedOnly, setShowReportedOnly] = useState(false);
@@ -537,6 +541,7 @@ const GenericActivityTablePage = ({
       });
       setPosts(result.data || []);
       setTotalPages(result.totalPages || 1);
+      setTotalPostsCount(result.total || result.totalItems || 0);
     } catch (error) {
       console.error(`Error fetching ${type} posts:`, error);
     } finally {
@@ -945,6 +950,7 @@ const GenericActivityTablePage = ({
           <PaginationBar
             currentPage={page}
             totalPages={totalPages}
+            totalItems={totalPostsCount}
             onPageChange={setPage}
           />
         </div>

@@ -47,6 +47,7 @@ const RegionsPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRegions, setTotalRegions] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -100,6 +101,7 @@ const RegionsPage = () => {
       });
       setRegions(data.data);
       setTotalPages(data.totalPages);
+      setTotalRegions(data.total || data.totalItems || 0);
     } catch (error: any) {
       const message = error.response?.data?.message || "Failed to fetch regions";
       toast({
@@ -467,6 +469,7 @@ const RegionsPage = () => {
           <PaginationBar
             currentPage={page + 1}
             totalPages={totalPages}
+            totalItems={totalRegions}
             onPageChange={(p) => setPage(p - 1)}
           />
         </div>

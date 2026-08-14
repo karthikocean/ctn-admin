@@ -43,6 +43,7 @@ const CategoriesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCategoriesCount, setTotalCategoriesCount] = useState(0);
   const pageSize = 10;
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -77,6 +78,7 @@ const CategoriesPage = () => {
       });
       setCategories(response.data.data || []);
       setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
+      setTotalCategoriesCount(response.data.total || 0);
     } catch (error) {
       console.error("Failed to fetch categories:", error);
     } finally {
@@ -350,6 +352,7 @@ const CategoriesPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={totalCategoriesCount}
               onPageChange={handlePageChange}
             />
           </div>
@@ -468,6 +471,7 @@ export const SubCategoriesPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalSubCategoriesCount, setTotalSubCategoriesCount] = useState(0);
   const pageSize = 10;
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -519,6 +523,7 @@ export const SubCategoriesPage = () => {
       });
       setSubCategories(response.data.data || []);
       setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
+      setTotalSubCategoriesCount(response.data.total || 0);
     } catch (error) {
       console.error("Failed to fetch subcategories:", error);
     } finally {
@@ -806,6 +811,7 @@ export const SubCategoriesPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={totalSubCategoriesCount}
               onPageChange={handlePageChange}
             />
           </div>

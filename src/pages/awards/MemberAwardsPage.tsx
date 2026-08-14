@@ -151,7 +151,7 @@ const MemberAwardsPage = () => {
           </table>
         </div>
         <div className="px-6 pb-4">
-          <PaginationBar currentPage={page} totalPages={Math.ceil(filteredMembers.length / 10)} onPageChange={setPage} />
+          <PaginationBar currentPage={page} totalPages={Math.ceil(filteredMembers.length / 10)} totalItems={filteredMembers.length} onPageChange={setPage} />
         </div>
       </motion.div>
     </div>

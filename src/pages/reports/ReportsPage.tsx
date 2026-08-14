@@ -161,6 +161,7 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
     activeTrial: 0
   });
   const [freeEndingsTotal, setFreeEndingsTotal] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   // Load Regions & Plans
   useEffect(() => {
@@ -332,8 +333,8 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
     }
   }, [page, search, statusFilter, regionFilter, planFilter, startDate, endDate, activeTab, canViewReports]);
 
-  // Client-Side CSV Exporter
-  const handleExportCSV = () => {
+  // CSV Exporter (Full Data Export)
+  const handleExportCSV = async () => {
     if (!canExportReports) {
       toast({
         title: "Permission Denied",
@@ -343,73 +344,111 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
       return;
     }
 
-    const isRenewals = activeTab === "renewals";
-    const dataToExport = isRenewals ? renewalsData : freeEndingsData;
+    setExporting(true);
+    try {
+      const isRenewals = activeTab === "renewals";
+      const exportParams: ReportQueryParams = {
+        page: 0,
+        limit: 10000,
+        search: search.trim() || undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
+        regionId: regionFilter !== "ALL" ? regionFilter : undefined,
+        planId: planFilter !== "ALL" ? planFilter : undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        fromDate: startDate || undefined,
+        toDate: endDate || undefined
+      };
 
-    if (dataToExport.length === 0) {
-      toast({
-        title: "No Data",
-        description: "There are no records to export.",
-        variant: "default"
+      let fullList: any[] = [];
+      if (isRenewals) {
+        const res = await getSubscriptionRenewalsReport(exportParams);
+        if (res.success && res.data) {
+          fullList = res.data.list || [];
+        }
+      } else {
+        const res = await getFreeSubscriptionEndingsReport(exportParams);
+        if (res.success && res.data) {
+          fullList = res.data.list || [];
+        }
+      }
+
+      const dataToExport = fullList.length > 0 ? fullList : (isRenewals ? renewalsData : freeEndingsData);
+
+      if (dataToExport.length === 0) {
+        toast({
+          title: "No Data",
+          description: "There are no records to export.",
+          variant: "default"
+        });
+        return;
+      }
+
+      const headers = isRenewals
+        ? ["S.No", "Member Name", "Business Name", "Mobile Number", "Email", "Region", "Plan Title", "Billing Cycle", "Amount (INR)", "Start Date", "Expiry Date", "Days Remaining", "Status"]
+        : ["S.No", "Member Name", "Business Name", "Mobile Number", "Email", "Region", "Plan Title", "Trial Duration (Days)", "Start Date", "Ending Date", "Days Remaining", "Status"];
+
+      const csvRows = [headers.join(",")];
+
+      dataToExport.forEach((row, idx) => {
+        const sNo = idx + 1;
+        const values = isRenewals
+          ? [
+            `"${sNo}"`,
+            `"${row.fullName || ""}"`,
+            `"${row.businessName || ""}"`,
+            `"${row.mobileNumber || ""}"`,
+            `"${row.email || ""}"`,
+            `"${row.regionName || ""}"`,
+            `"${row.planName || ""}"`,
+            `"${row.billingCycle || ""}"`,
+            `"${row.amount || 0}"`,
+            `"${row.startDate ? new Date(row.startDate).toLocaleDateString() : ""}"`,
+            `"${row.endDate ? new Date(row.endDate).toLocaleDateString() : ""}"`,
+            `"${row.daysRemaining}"`,
+            `"${row.status}"`
+          ]
+          : [
+            `"${sNo}"`,
+            `"${row.fullName || ""}"`,
+            `"${row.businessName || ""}"`,
+            `"${row.mobileNumber || ""}"`,
+            `"${row.email || ""}"`,
+            `"${row.regionName || ""}"`,
+            `"${row.planName || ""}"`,
+            `"${row.trialDays || 0}"`,
+            `"${row.startDate ? new Date(row.startDate).toLocaleDateString() : ""}"`,
+            `"${row.endDate ? new Date(row.endDate).toLocaleDateString() : ""}"`,
+            `"${row.daysRemaining}"`,
+            `"${row.status}"`
+          ];
+        csvRows.push(values.join(","));
       });
-      return;
+
+      const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `${isRenewals ? "Subscription_Renewals_Report" : "Free_Subscription_Endings_Report"}_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: "Export Successful",
+        description: `Exported all ${dataToExport.length} report record(s) to CSV successfully.`,
+        variant: "success"
+      });
+    } catch (err: any) {
+      console.error("Export failed:", err);
+      toast({
+        title: "Export Error",
+        description: "Failed to export report data.",
+        variant: "destructive"
+      });
+    } finally {
+      setExporting(false);
     }
-
-    const headers = isRenewals
-      ? ["S.No", "Member Name", "Business Name", "Mobile Number", "Email", "Region", "Plan Title", "Billing Cycle", "Amount (INR)", "Start Date", "Expiry Date", "Days Remaining", "Status"]
-      : ["S.No", "Member Name", "Business Name", "Mobile Number", "Email", "Region", "Plan Title", "Trial Duration (Days)", "Start Date", "Ending Date", "Days Remaining", "Status"];
-
-    const csvRows = [headers.join(",")];
-
-    dataToExport.forEach((row, idx) => {
-      const sNo = page * limit + idx + 1;
-      const values = isRenewals
-        ? [
-          `"${sNo}"`,
-          `"${row.fullName || ""}"`,
-          `"${row.businessName || ""}"`,
-          `"${row.mobileNumber || ""}"`,
-          `"${row.email || ""}"`,
-          `"${row.regionName || ""}"`,
-          `"${row.planName || ""}"`,
-          `"${row.billingCycle || ""}"`,
-          `"${row.amount || 0}"`,
-          `"${row.startDate ? new Date(row.startDate).toLocaleDateString() : ""}"`,
-          `"${row.endDate ? new Date(row.endDate).toLocaleDateString() : ""}"`,
-          `"${row.daysRemaining}"`,
-          `"${row.status}"`
-        ]
-        : [
-          `"${sNo}"`,
-          `"${row.fullName || ""}"`,
-          `"${row.businessName || ""}"`,
-          `"${row.mobileNumber || ""}"`,
-          `"${row.email || ""}"`,
-          `"${row.regionName || ""}"`,
-          `"${row.planName || ""}"`,
-          `"${row.trialDays || 0}"`,
-          `"${row.startDate ? new Date(row.startDate).toLocaleDateString() : ""}"`,
-          `"${row.endDate ? new Date(row.endDate).toLocaleDateString() : ""}"`,
-          `"${row.daysRemaining}"`,
-          `"${row.status}"`
-        ];
-      csvRows.push(values.join(","));
-    });
-
-    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${isRenewals ? "Subscription_Renewals_Report" : "Free_Subscription_Endings_Report"}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast({
-      title: "Export Successful",
-      description: "Report data exported to CSV successfully.",
-      variant: "success"
-    });
   };
 
   // Render Access Denied if user lacks permission
@@ -467,10 +506,11 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
           {canExportReports && (activeTab === "renewals" || activeTab === "free-endings") && (
             <button
               onClick={handleExportCSV}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-xs font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
+              disabled={exporting}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-xs font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-800 hover:text-white hover:border-slate-800 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
             >
-              <Download size={14} />
-              Export Report (CSV)
+              {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              {exporting ? "Exporting All Rows..." : "Export Report (CSV)"}
             </button>
           )}
         </div>
@@ -852,17 +892,17 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
                         {/* Status */}
                         <td className="px-6 py-4 text-center">
                           {row.status === "DUE_SOON" && (
-                            <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-none">
                               DUE SOON
                             </Badge>
                           )}
                           {row.status === "EXPIRED" && (
-                            <Badge className="bg-red-50 text-red-700 border border-red-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border border-red-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-none">
                               EXPIRED
                             </Badge>
                           )}
                           {row.status === "ACTIVE" && (
-                            <Badge className="bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            <Badge className="bg-emerald-50 text-emerald-600 hover:bg-emerald-50 border border-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-none">
                               ACTIVE
                             </Badge>
                           )}
@@ -879,6 +919,7 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
               <PaginationBar
                 currentPage={page + 1}
                 totalPages={Math.ceil(renewalsTotal / limit) || 1}
+                totalItems={renewalsTotal}
                 onPageChange={(p) => setPage(p - 1)}
               />
             </div>
@@ -1259,17 +1300,17 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
                         {/* Status */}
                         <td className="px-6 py-4 text-center">
                           {row.status === "ENDING_SOON" && (
-                            <Badge className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-none">
                               ENDING SOON
                             </Badge>
                           )}
                           {row.status === "EXPIRED" && (
-                            <Badge className="bg-red-50 text-red-700 border border-red-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            <Badge className="bg-red-50 text-red-700 hover:bg-red-50 border border-red-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-none">
                               EXPIRED
                             </Badge>
                           )}
                           {row.status === "ACTIVE_TRIAL" && (
-                            <Badge className="bg-blue-50 text-blue-600 border border-blue-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase">
+                            <Badge className="bg-blue-50 text-blue-600 hover:bg-blue-50 border border-blue-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shadow-none">
                               TRIAL
                             </Badge>
                           )}
@@ -1286,6 +1327,7 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
               <PaginationBar
                 currentPage={page + 1}
                 totalPages={Math.ceil(freeEndingsTotal / limit) || 1}
+                totalItems={freeEndingsTotal}
                 onPageChange={(p) => setPage(p - 1)}
               />
             </div>

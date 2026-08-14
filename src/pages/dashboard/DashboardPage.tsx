@@ -201,49 +201,7 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Global Actions */}
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          {/* Search */}
-          <div className="relative flex-1 md:w-64">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search analytics..."
-              className="h-10 pl-9 pr-4 w-full rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/50 transition-all"
-            />
-          </div>
 
-          <Button
-            variant={activeFilterCount > 0 ? "default" : "outline"}
-            size="icon"
-            onClick={() => {
-              setDraftFilters(filters);
-              setFilterModalOpen(true);
-            }}
-            className="h-10 w-10 md:w-auto md:px-4 rounded-xl border-border bg-card relative"
-          >
-            <Filter size={16} className="md:mr-2" />
-            <span className="hidden md:inline">Filters</span>
-            {activeFilterCount > 0 && (
-              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] bg-primary text-primary-foreground font-bold rounded-full">
-                {activeFilterCount}
-              </span>
-            )}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => loadStats(filters)}
-            disabled={fetchingStats}
-            title="Refresh metrics"
-            className="h-10 w-10 rounded-xl border-border bg-card"
-          >
-            <RefreshCw size={16} className={fetchingStats ? "animate-spin text-primary" : ""} />
-          </Button>
-        </div>
       </div>
 
       {/* Active Filter Badges */}

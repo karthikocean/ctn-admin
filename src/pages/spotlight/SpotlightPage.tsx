@@ -41,6 +41,7 @@ const SpotlightPage = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalSpotlights, setTotalSpotlights] = useState(0);
 
   const canCreate = hasPermission("spotlight", "create");
   const canEdit = hasPermission("spotlight", "edit");
@@ -65,6 +66,7 @@ const SpotlightPage = () => {
       });
       setSpotlights(result.data || []);
       setTotalPages(result.totalPages || 1);
+      setTotalSpotlights(result.total || result.totalItems || 0);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -333,6 +335,7 @@ const SpotlightPage = () => {
             <PaginationBar
               currentPage={page + 1}
               totalPages={totalPages}
+              totalItems={totalSpotlights}
               onPageChange={(p) => setPage(p - 1)}
             />
           </div>

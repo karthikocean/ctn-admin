@@ -66,6 +66,7 @@ const FranchisesPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalFranchises, setTotalFranchises] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -118,6 +119,7 @@ const FranchisesPage = () => {
       });
       setFranchises(data.data || []);
       setTotalPages(data.totalPages || 1);
+      setTotalFranchises(data.total || data.totalItems || 0);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -606,6 +608,7 @@ const FranchisesPage = () => {
           <PaginationBar
             currentPage={page + 1}
             totalPages={totalPages}
+            totalItems={totalFranchises}
             onPageChange={(p) => setPage(p - 1)}
           />
         </div>

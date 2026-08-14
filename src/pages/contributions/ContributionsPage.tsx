@@ -407,9 +407,9 @@ const ContributionsPage = () => {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
+        {!loading && contributions.length > 0 && (
           <div className="px-6 pb-4 border-t border-border pt-4 bg-card">
-            <PaginationBar currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+            <PaginationBar currentPage={page} totalPages={totalPages} totalItems={totalCount} onPageChange={setPage} />
           </div>
         )}
       </motion.div>
