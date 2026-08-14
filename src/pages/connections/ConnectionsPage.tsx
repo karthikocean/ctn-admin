@@ -214,9 +214,9 @@ const ConnectionsPage = () => {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
+        {!isLoading && connections.length > 0 && (
           <div className="px-6 pb-4">
-            <PaginationBar currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+            <PaginationBar currentPage={page} totalPages={totalPages} totalItems={totalConnections} onPageChange={setPage} />
           </div>
         )}
       </motion.div>

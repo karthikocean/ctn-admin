@@ -505,11 +505,12 @@ const StallAttributesPage = () => {
           </table>
         </div>
 
-        {filteredAttributes.length > pageSize && (
+        {!loading && filteredAttributes.length > 0 && (
           <div className="px-6 pb-4 border-t border-border">
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={filteredAttributes.length}
               onPageChange={setPage}
             />
           </div>

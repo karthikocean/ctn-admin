@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -65,7 +65,9 @@ import {
   getMemberDetails,
   deleteMember,
   updateMemberStatus,
-  getBusinessRegion
+  getBusinessRegion,
+  getStates,
+  getCities
 } from "@/api/MembersApi";
 import { uploadFiles } from "@/api/MediaApi";
 import { getCategories } from "@/api/CategoryApi";
@@ -241,6 +243,7 @@ const MembersPage = () => {
     fullName: "",
     mobileNumber: "",
     email: "",
+    dob: "",
     about: "",
     gstNumber: "",
     businessName: "",
@@ -263,7 +266,8 @@ const MembersPage = () => {
     targetAudience: "",
     websiteUrl: "",
     linkedinProfile: "",
-    instagramFacebook: "",
+    instagram: "",
+    facebook: "",
     youtubeLink: "",
     profilePhoto: "",
     profileBanner: "",
@@ -274,8 +278,60 @@ const MembersPage = () => {
 
   const [mainCategories, setMainCategories] = useState<any[]>([]);
   const [subCategories, setSubCategories] = useState<any[]>([]);
-
   const [isSubCategoriesLoading, setIsSubCategoriesLoading] = useState(false);
+
+  const [apiStates, setApiStates] = useState<any[]>([]);
+  const [apiCities, setApiCities] = useState<any[]>([]);
+  const [isStatesLoading, setIsStatesLoading] = useState(false);
+  const [isCitiesLoading, setIsCitiesLoading] = useState(false);
+
+  const fetchStatesApi = async () => {
+    setIsStatesLoading(true);
+    try {
+      const res = await getStates();
+      const stateList = res?.data || res || [];
+      if (Array.isArray(stateList)) {
+        setApiStates(stateList);
+      }
+    } catch (err) {
+      console.error("Error fetching states from API:", err);
+    } finally {
+      setIsStatesLoading(false);
+    }
+  };
+
+  const fetchCitiesApi = async (stateId?: string, search?: string) => {
+    setIsCitiesLoading(true);
+    try {
+      const res = await getCities({ stateIds: stateId, search });
+      const cityList = res?.data || res || [];
+      if (Array.isArray(cityList)) {
+        setApiCities(cityList);
+      }
+    } catch (err) {
+      console.error("Error fetching cities from API:", err);
+    } finally {
+      setIsCitiesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatesApi();
+  }, []);
+
+  const allStateItems = useMemo(() => {
+    return apiStates
+      .filter((s: any) => s && s.name)
+      .map((s: any) => ({ _id: s._id, name: s.name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [apiStates]);
+
+  const allCityItems = useMemo(() => {
+    return apiCities
+      .filter((c: any) => c && c.name)
+      .map((c: any) => ({ _id: c._id, name: c.name, stateId: c.stateId }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [apiCities]);
 
   const allStates = State.getStatesOfCountry("IN");
   const citiesInState = selectedStateCode ? City.getCitiesOfState("IN", selectedStateCode) : [];
@@ -512,6 +568,7 @@ const MembersPage = () => {
       fullName: "",
       mobileNumber: "",
       email: "",
+      dob: "",
       about: "",
       gstNumber: "",
       businessName: "",
@@ -534,7 +591,8 @@ const MembersPage = () => {
       targetAudience: "",
       websiteUrl: "",
       linkedinProfile: "",
-      instagramFacebook: "",
+      instagram: "",
+      facebook: "",
       youtubeLink: "",
       profilePhoto: "",
       profileBanner: "",
@@ -599,8 +657,17 @@ const MembersPage = () => {
           }
         }
 
+        let formattedDob = "";
+        if (fullData.dob) {
+          const dobDate = new Date(fullData.dob);
+          if (!isNaN(dobDate.getTime())) {
+            formattedDob = dobDate.toISOString().split("T")[0];
+          }
+        }
+
         setFormData({
           ...fullData,
+          dob: formattedDob,
           businessCategory: fullData.businessCategory?._id || fullData.businessCategory || "",
           subCategory: fullData.subCategory?._id || fullData.subCategory || "",
           about: fullData.about || "",
@@ -613,6 +680,11 @@ const MembersPage = () => {
           city: fullData.city || "",
           businessRegion: fullData.businessRegion?._id?.toString() ||
             (typeof fullData.businessRegion === 'string' ? fullData.businessRegion : "") || "",
+          websiteUrl: fullData.websiteUrl || "",
+          linkedinProfile: fullData.linkedinProfile || "",
+          instagram: fullData.instagram || fullData.instagramFacebook || "",
+          facebook: fullData.facebook || "",
+          youtubeLink: fullData.youtubeLink || "",
           profileBanner: fullData.profileBanner || "",
           workImages: fullData.workImages || [],
           certifications: fullData.certifications || [],
@@ -620,9 +692,13 @@ const MembersPage = () => {
         });
 
         if (fullData.state) {
-          const allStates = State.getStatesOfCountry("IN");
-          const stateObj = allStates.find(s => s.name === fullData.state);
-          if (stateObj) setSelectedStateCode(stateObj.isoCode);
+          const matchedState = allStateItems.find(s => s.name.toLowerCase() === fullData.state.toLowerCase());
+          if (matchedState?._id) {
+            fetchCitiesApi(matchedState._id);
+          } else {
+            const apiSt = apiStates.find((st: any) => st.name?.toLowerCase() === fullData.state.toLowerCase());
+            if (apiSt?._id) fetchCitiesApi(apiSt._id);
+          }
         }
 
         setShowGstStep(false);
@@ -856,6 +932,12 @@ const MembersPage = () => {
 
       const payload = { ...dataToSave };
 
+      if (payload.dob && typeof payload.dob === "string" && payload.dob.trim()) {
+        payload.dob = payload.dob.trim();
+      } else {
+        delete payload.dob;
+      }
+
       if (!payload.businessRegion || !payload.businessRegion.trim()) {
         payload.businessRegion = null;
       }
@@ -1084,6 +1166,11 @@ const MembersPage = () => {
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{member.fullName}</span>
                           <span className="text-xs text-muted-foreground font-medium">{member.mobileNumber}</span>
+                          {member.dob && (
+                            <span className="text-[11px] text-slate-500 font-normal">
+                              DOB: {new Date(member.dob).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </TableCell>
@@ -1143,6 +1230,7 @@ const MembersPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages || 1}
+              totalItems={totalMembers}
               onPageChange={setPage}
             />
           </div>
@@ -1351,6 +1439,21 @@ const MembersPage = () => {
                           onChange={handleInputChange}
                         />
                         <ErrorMsg message={errors.email} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-5">
+                      <div>
+                        <Label htmlFor="dob" className="text-xs font-bold text-slate-700 mb-2 block">
+                          Date of Birth
+                        </Label>
+                        <Input
+                          id="dob"
+                          type="date"
+                          className={`h-11 bg-white border-slate-300 font-medium ${errors.dob ? "border-red-500 focus:border-red-500" : ""}`}
+                          value={formData.dob}
+                          onChange={handleInputChange}
+                        />
+                        <ErrorMsg message={errors.dob} />
                       </div>
                     </div>
                   </div>
@@ -1644,7 +1747,10 @@ const MembersPage = () => {
                     <div className="grid grid-cols-2 gap-5">
                       {/* State Combobox */}
                       <div>
-                        <Label className="text-xs font-bold text-slate-700 mb-2 block">State</Label>
+                        <Label className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                          State
+                          {isStatesLoading && <Loader2 size={10} className="animate-spin text-primary" />}
+                        </Label>
                         <Popover modal={true} open={stateOpen} onOpenChange={(o) => { setStateOpen(o); if (!o) setStateSearch(""); }}>
                           <PopoverTrigger asChild>
                             <Button
@@ -1670,20 +1776,31 @@ const MembersPage = () => {
                               <CommandEmpty>No state found.</CommandEmpty>
                               <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
                                 <CommandGroup>
-                                  {allStates
+                                  {allStateItems
                                     .filter(s => s.name.toLowerCase().includes(stateSearch.toLowerCase()))
                                     .map(s => (
                                       <CommandItem
-                                        key={s.isoCode}
+                                        key={s._id || s.name}
                                         value={s.name}
                                         onSelect={() => {
-                                          setSelectedStateCode(s.isoCode);
-                                          setFormData(prev => ({ ...prev, state: s.name, city: "", businessRegion: "" }));
+                                          const stateName = s.name;
+                                          setFormData(prev => ({ ...prev, state: stateName, city: "", businessRegion: "" }));
                                           setAreasOptions([]);
                                           setCitySearch("");
                                           setRegionSearch("");
                                           setStateOpen(false);
                                           setStateSearch("");
+
+                                          if (s._id) {
+                                            fetchCitiesApi(s._id);
+                                          } else {
+                                            const matchedState = apiStates.find((st: any) => st.name?.toLowerCase() === stateName.toLowerCase());
+                                            if (matchedState?._id) {
+                                              fetchCitiesApi(matchedState._id);
+                                            } else {
+                                              fetchCitiesApi();
+                                            }
+                                          }
                                         }}
                                         className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg"
                                       >
@@ -1700,21 +1817,24 @@ const MembersPage = () => {
 
                       {/* City Combobox */}
                       <div>
-                        <Label className="text-xs font-bold text-slate-700 mb-2 block">City</Label>
+                        <Label className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                          City
+                          {isCitiesLoading && <Loader2 size={10} className="animate-spin text-primary" />}
+                        </Label>
                         <Popover modal={true} open={cityOpen} onOpenChange={(o) => { setCityOpen(o); if (!o) setCitySearch(""); }}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               role="combobox"
                               aria-expanded={cityOpen}
-                              disabled={!selectedStateCode}
+                              disabled={!formData.state}
                               className={cn(
                                 "w-full h-11 bg-white border border-slate-300 rounded-lg justify-between px-3 text-sm font-medium text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-slate-50 transition-all",
-                                !selectedStateCode && "opacity-50 cursor-not-allowed"
+                                !formData.state && "opacity-50 cursor-not-allowed"
                               )}
                             >
                               <span className="truncate">
-                                {formData.city || (selectedStateCode ? "Select City" : "Choose state first")}
+                                {formData.city || (formData.state ? "Select City" : "Choose state first")}
                               </span>
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -1725,16 +1845,22 @@ const MembersPage = () => {
                                 placeholder="Search city..."
                                 className="h-10 text-xs"
                                 value={citySearch}
-                                onValueChange={setCitySearch}
+                                onValueChange={(val) => {
+                                  setCitySearch(val);
+                                  if (val.length > 2) {
+                                    const matchedState = apiStates.find((st: any) => st.name?.toLowerCase() === formData.state.toLowerCase());
+                                    fetchCitiesApi(matchedState?._id, val);
+                                  }
+                                }}
                               />
                               <CommandEmpty>No city found.</CommandEmpty>
                               <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
                                 <CommandGroup>
-                                  {citiesInState
+                                  {allCityItems
                                     .filter(c => c.name.toLowerCase().includes(citySearch.toLowerCase()))
                                     .map(c => (
                                       <CommandItem
-                                        key={c.name}
+                                        key={c._id || c.name}
                                         value={c.name}
                                         onSelect={() => {
                                           setFormData(prev => ({ ...prev, city: c.name, businessRegion: "" }));
@@ -1748,7 +1874,7 @@ const MembersPage = () => {
                                         {c.name}
                                       </CommandItem>
                                     ))}
-                                  {citiesInState.length === 0 && selectedStateCode && (
+                                  {allCityItems.length === 0 && formData.state && !isCitiesLoading && (
                                     <div className="p-2 text-xs text-muted-foreground text-center italic">No cities found</div>
                                   )}
                                 </CommandGroup>
@@ -1880,7 +2006,7 @@ const MembersPage = () => {
                                   <CommandItem
                                     value="select-all-states"
                                     onSelect={() => {
-                                      const allStateNames = allStates.map(s => s.name);
+                                      const allStateNames = allStateItems.map(s => s.name);
                                       const allSelected = allStateNames.every(name => formData.serviceLocations.states.includes(name));
                                       setFormData(prev => ({
                                         ...prev,
@@ -1893,14 +2019,14 @@ const MembersPage = () => {
                                     }}
                                     className="text-xs font-bold cursor-pointer text-primary hover:bg-secondary/50 rounded-lg border-b border-slate-100 flex items-center"
                                   >
-                                    <Check className={cn("mr-2 h-3.5 w-3.5", allStates.length > 0 && allStates.every(s => formData.serviceLocations.states.includes(s.name)) ? "opacity-100" : "opacity-0")} />
+                                    <Check className={cn("mr-2 h-3.5 w-3.5", allStateItems.length > 0 && allStateItems.every(s => formData.serviceLocations.states.includes(s.name)) ? "opacity-100" : "opacity-0")} />
                                     Select All States
                                   </CommandItem>
-                                  {allStates
+                                  {allStateItems
                                     .filter(s => s.name.toLowerCase().includes(serviceStateSearch.toLowerCase()))
                                     .map(s => (
                                       <CommandItem
-                                        key={s.isoCode}
+                                        key={s._id || s.name}
                                         value={s.name}
                                         onSelect={() => {
                                           if (formData.serviceLocations.states.includes(s.name)) {
@@ -1980,11 +2106,7 @@ const MembersPage = () => {
                               <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
                                 <CommandGroup>
                                   {(() => {
-                                    const availableCities = formData.serviceLocations.states.flatMap(stateName => {
-                                      const stateObj = allStates.find(s => s.name.toLowerCase() === stateName.toLowerCase());
-                                      if (!stateObj) return [];
-                                      return City.getCitiesOfState("IN", stateObj.isoCode);
-                                    });
+                                    const availableCities = allCityItems;
                                     const filteredCities = availableCities.filter(c => c.name.toLowerCase().includes(serviceCitySearch.toLowerCase()));
                                     const allCityNames = availableCities.map(c => c.name);
                                     const allCitiesSelected = allCityNames.length > 0 && allCityNames.every(name => formData.serviceLocations.cities.includes(name));
@@ -2231,13 +2353,20 @@ const MembersPage = () => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="instagramFacebook" className="text-xs font-bold text-slate-700 mb-2 block">
-                        Instagram/Facebook
-                      </Label>
+                      <Label htmlFor="instagram" className="text-xs font-bold text-slate-700 mb-2 block">Instagram Profile</Label>
                       <Input
-                        id="instagramFacebook"
+                        id="instagram"
                         className="h-11 bg-white border-slate-300 font-medium"
-                        value={formData.instagramFacebook}
+                        value={formData.instagram}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="facebook" className="text-xs font-bold text-slate-700 mb-2 block">Facebook Profile</Label>
+                      <Input
+                        id="facebook"
+                        className="h-11 bg-white border-slate-300 font-medium"
+                        value={formData.facebook}
                         onChange={handleInputChange}
                       />
                     </div>

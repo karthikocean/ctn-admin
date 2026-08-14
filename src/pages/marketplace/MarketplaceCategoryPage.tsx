@@ -56,6 +56,7 @@ const MarketplaceCategoryPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCategoriesCount, setTotalCategoriesCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -88,6 +89,7 @@ const MarketplaceCategoryPage = () => {
       });
       setCategories(data.data || []);
       setTotalPages(data.totalPages || 1);
+      setTotalCategoriesCount(data.total || data.totalItems || 0);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -363,6 +365,7 @@ const MarketplaceCategoryPage = () => {
           <PaginationBar
             currentPage={page + 1}
             totalPages={totalPages}
+            totalItems={totalCategoriesCount}
             onPageChange={(p) => setPage(p - 1)}
           />
         </div>

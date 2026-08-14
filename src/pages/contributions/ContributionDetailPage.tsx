@@ -127,17 +127,17 @@ const ContributionDetailPage = () => {
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-primary/[0.02] border border-primary/5">
               {/* Giver Node */}
-              <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-3 flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-col sm:flex-row">
-                  <Avatar className="w-12 h-12 border-2 border-background shadow-md">
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-3 flex-1 min-w-0 w-full sm:w-auto">
+                <div className="flex items-center gap-3 flex-col sm:flex-row min-w-0 w-full">
+                  <Avatar className="w-12 h-12 border-2 border-background shadow-md shrink-0">
                     <AvatarImage src={getFullUrl(contribution.sender?.profilePhoto)} alt={contribution.sender?.fullName} className="object-cover" />
                     <AvatarFallback className="bg-primary/10 text-sm text-primary font-bold">
                       {contribution.sender?.fullName?.charAt(0).toUpperCase() || "?"}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-bold text-sm text-foreground truncate">{contribution.sender?.fullName || "—"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{contribution.sender?.businessName || "No Company"}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm text-foreground truncate" title={contribution.sender?.fullName}>{contribution.sender?.fullName || "—"}</p>
+                    <p className="text-xs text-muted-foreground truncate" title={contribution.sender?.businessName}>{contribution.sender?.businessName || "No Company"}</p>
                     <span className="inline-block text-[9px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded mt-1">Giver</span>
                   </div>
                 </div>
@@ -150,9 +150,9 @@ const ContributionDetailPage = () => {
                     </div>
                   )}
                   {contribution.sender?.email && (
-                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 min-w-0">
                       <Mail size={11} className="text-primary/70 shrink-0" />
-                      <span className="truncate max-w-[180px]">{contribution.sender.email}</span>
+                      <span className="truncate max-w-full" title={contribution.sender.email}>{contribution.sender.email}</span>
                     </div>
                   )}
                 </div>
@@ -168,17 +168,17 @@ const ContributionDetailPage = () => {
               </div>
 
               {/* Recipient Node */}
-              <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-3 flex-1 min-w-0">
-                <div className="flex items-center gap-3 flex-col sm:flex-row">
-                  <Avatar className="w-12 h-12 border-2 border-background shadow-md">
+              <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-3 flex-1 min-w-0 w-full sm:w-auto">
+                <div className="flex items-center gap-3 flex-col sm:flex-row min-w-0 w-full">
+                  <Avatar className="w-12 h-12 border-2 border-background shadow-md shrink-0">
                     <AvatarImage src={getFullUrl(contribution.receiver?.profilePhoto)} alt={contribution.receiver?.fullName} className="object-cover" />
                     <AvatarFallback className="bg-primary/5 text-sm text-primary/80 font-bold">
                       {contribution.receiver?.fullName?.charAt(0).toUpperCase() || "?"}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-bold text-sm text-foreground truncate">{contribution.receiver?.fullName || "—"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{contribution.receiver?.businessName || "No Company"}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm text-foreground truncate" title={contribution.receiver?.fullName}>{contribution.receiver?.fullName || "—"}</p>
+                    <p className="text-xs text-muted-foreground truncate" title={contribution.receiver?.businessName}>{contribution.receiver?.businessName || "No Company"}</p>
                     <span className="inline-block text-[9px] font-bold text-muted-foreground uppercase tracking-wider bg-secondary px-1.5 py-0.5 rounded mt-1">Recipient</span>
                   </div>
                 </div>
@@ -191,9 +191,9 @@ const ContributionDetailPage = () => {
                     </div>
                   )}
                   {contribution.receiver?.email && (
-                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <div className="flex items-center justify-center sm:justify-start gap-2 min-w-0">
                       <Mail size={11} className="text-primary/70 shrink-0" />
-                      <span className="truncate max-w-[180px]">{contribution.receiver.email}</span>
+                      <span className="truncate max-w-full" title={contribution.receiver.email}>{contribution.receiver.email}</span>
                     </div>
                   )}
                 </div>

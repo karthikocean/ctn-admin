@@ -47,6 +47,7 @@ const SpotlightRequestsPage = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalRequests, setTotalRequests] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -86,6 +87,7 @@ const SpotlightRequestsPage = () => {
 
       setRequests(fetchedData);
       setTotalPages(result.totalPages || 1);
+      setTotalRequests(result.total || result.totalItems || 0);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -383,6 +385,7 @@ const SpotlightRequestsPage = () => {
             <PaginationBar
               currentPage={page + 1}
               totalPages={totalPages}
+              totalItems={totalRequests}
               onPageChange={(p) => setPage(p - 1)}
             />
           </div>

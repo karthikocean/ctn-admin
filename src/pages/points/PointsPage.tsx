@@ -377,7 +377,7 @@ const PointsPage = () => {
           </table>
         </div>
         <div className="px-6 pb-4">
-          <PaginationBar currentPage={page} totalPages={Math.ceil(groupedPoints.length / 10)} onPageChange={setPage} />
+          <PaginationBar currentPage={page} totalPages={Math.ceil(groupedPoints.length / 10)} totalItems={groupedPoints.length} onPageChange={setPage} />
         </div>
       </motion.div>
 

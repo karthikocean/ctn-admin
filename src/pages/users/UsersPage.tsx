@@ -452,6 +452,7 @@ const UsersPage = () => {
             <PaginationBar
               currentPage={page}
               totalPages={totalPages}
+              totalItems={totalCount}
               onPageChange={setPage}
             />
           </div>

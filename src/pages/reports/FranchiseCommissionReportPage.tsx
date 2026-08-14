@@ -94,6 +94,7 @@ const FranchiseCommissionReportPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [month, setMonth] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [totalRecords, setTotalRecords] = useState(0);
 
   // Settlement dialog states
   const [settleDialogOpen, setSettleDialogOpen] = useState(false);
@@ -131,6 +132,7 @@ const FranchiseCommissionReportPage = () => {
       });
       setReportList(data.data || []);
       setTotalPages(data.totalPages || 1);
+      setTotalRecords(data.total || data.totalItems || 0);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -463,6 +465,7 @@ const FranchiseCommissionReportPage = () => {
           <PaginationBar
             currentPage={page + 1}
             totalPages={totalPages}
+            totalItems={totalRecords}
             onPageChange={(p) => setPage(p - 1)}
           />
         </div>
