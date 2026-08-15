@@ -13,16 +13,20 @@ import { cn } from "@/lib/utils";
 const getFullUrl = (path: string) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+  const baseUrl = import.meta.env.VITE_MEDIA_URL || "-"}${path}`;
 };
 
 const formatType = (type: string) => {
-  if (!type) return "";
-  return type
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  switch (type) {
+    case "one_to_one": return "Direct Meet";
+    case "thank_you_slip": return "Business Done";
+    case "referral": return "Recommendations";
+    default:
+      return type
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+  }
 };
 
 const ContributionDetailPage = () => {
@@ -45,33 +49,8 @@ const ContributionDetailPage = () => {
         }
       } catch (err: any) {
         console.error(err);
-        setError(err.response?.data?.message || "Failed to load contribution details.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDetail();
-  }, [id]);
-
-  if (loading) {
-    return (
-      <GlobalNetworkLoader
-        fullScreen={false}
-        title="Loading Contribution..."
-        subtitle="Retrieving value exchange metadata"
-      />
-    );
-  }
-
-  if (error || !contribution) {
-    return (
-      <div className="page-container flex flex-col items-center justify-center min-h-[400px] text-center">
-        <div className="w-12 h-12 rounded-xl bg-destructive/10 text-destructive flex items-center justify-center mb-4">
-          <FileText size={24} />
-        </div>
-        <h2 className="text-lg font-bold text-foreground mb-2">Error</h2>
-        <p className="text-sm text-muted-foreground mb-6 max-w-sm">{error || "Contribution not found."}</p>
-        <Button onClick={() => navigate("/contributions")} className="rounded-xl">
+        setError(err.response?.data?.message || "-"}</p>
+        <Button onClick={() => navigate(-1)} className="rounded-xl">
           <ArrowLeft size={16} className="mr-2" /> Back to Log
         </Button>
       </div>
@@ -93,7 +72,7 @@ const ContributionDetailPage = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate("/contributions")}
+            onClick={() => navigate(-1)}
             className="rounded-xl border border-border bg-card hover:bg-secondary text-foreground hover:text-primary h-9 transition-colors"
           >
             <ArrowLeft size={16} className="mr-2" /> Back
@@ -132,12 +111,12 @@ const ContributionDetailPage = () => {
                   <Avatar className="w-12 h-12 border-2 border-background shadow-md shrink-0">
                     <AvatarImage src={getFullUrl(contribution.sender?.profilePhoto)} alt={contribution.sender?.fullName} className="object-cover" />
                     <AvatarFallback className="bg-primary/10 text-sm text-primary font-bold">
-                      {contribution.sender?.fullName?.charAt(0).toUpperCase() || "?"}
+                      {contribution.sender?.fullName?.charAt(0).toUpperCase() || "-"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm text-foreground truncate" title={contribution.sender?.fullName}>{contribution.sender?.fullName || "—"}</p>
-                    <p className="text-xs text-muted-foreground truncate" title={contribution.sender?.businessName}>{contribution.sender?.businessName || "No Company"}</p>
+                    <p className="font-bold text-sm text-foreground truncate" title={contribution.sender?.fullName}>{contribution.sender?.fullName || "-"}</p>
+                    <p className="text-xs text-muted-foreground truncate" title={contribution.sender?.businessName}>{contribution.sender?.businessName || "-"}</p>
                     <span className="inline-block text-[9px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded mt-1">Giver</span>
                   </div>
                 </div>
@@ -173,12 +152,12 @@ const ContributionDetailPage = () => {
                   <Avatar className="w-12 h-12 border-2 border-background shadow-md shrink-0">
                     <AvatarImage src={getFullUrl(contribution.receiver?.profilePhoto)} alt={contribution.receiver?.fullName} className="object-cover" />
                     <AvatarFallback className="bg-primary/5 text-sm text-primary/80 font-bold">
-                      {contribution.receiver?.fullName?.charAt(0).toUpperCase() || "?"}
+                      {contribution.receiver?.fullName?.charAt(0).toUpperCase() || "-"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm text-foreground truncate" title={contribution.receiver?.fullName}>{contribution.receiver?.fullName || "—"}</p>
-                    <p className="text-xs text-muted-foreground truncate" title={contribution.receiver?.businessName}>{contribution.receiver?.businessName || "No Company"}</p>
+                    <p className="font-bold text-sm text-foreground truncate" title={contribution.receiver?.fullName}>{contribution.receiver?.fullName || "-"}</p>
+                    <p className="text-xs text-muted-foreground truncate" title={contribution.receiver?.businessName}>{contribution.receiver?.businessName || "-"}</p>
                     <span className="inline-block text-[9px] font-bold text-muted-foreground uppercase tracking-wider bg-secondary px-1.5 py-0.5 rounded mt-1">Recipient</span>
                   </div>
                 </div>
@@ -240,7 +219,7 @@ const ContributionDetailPage = () => {
                   >
                     <img
                       src={getFullUrl(img)}
-                      alt={`One-to-One Media ${idx + 1}`}
+                      alt={`Direct Meet Media ${idx + 1}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </a>
@@ -275,7 +254,7 @@ const ContributionDetailPage = () => {
             {isThankYouSlip && (
               <div className="p-6 text-center space-y-2.5">
                 <p className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest">Business Value Generated</p>
-                <p className="text-3xl font-black text-primary tracking-tight">₹{contribution.amount?.toLocaleString() || 0}</p>
+                <p className="text-3xl font-black text-primary tracking-tight">{"\u20B9"}{contribution.amount?.toLocaleString() || 0}</p>
                 <span className="inline-block text-[10px] font-bold text-primary bg-primary/5 px-2.5 py-0.5 rounded-full border border-primary/10 mt-1">
                   Exchange Realized
                 </span>
@@ -287,7 +266,7 @@ const ContributionDetailPage = () => {
               <div className="p-6 space-y-4">
                 <div className="space-y-1 pb-3 border-b border-border/60">
                   <span className="text-muted-foreground font-bold uppercase tracking-wider text-[9px]">Contact Name</span>
-                  <p className="font-extrabold text-sm text-foreground">{contribution.referralDetails?.referralName || "—"}</p>
+                  <p className="font-extrabold text-sm text-foreground">{contribution.referralDetails?.referralName || "-"}</p>
                 </div>
 
                 <div className="space-y-3.5 text-xs">
@@ -295,21 +274,21 @@ const ContributionDetailPage = () => {
                     <span className="text-muted-foreground font-bold uppercase tracking-wider text-[9px]">Mobile Phone</span>
                     <p className="font-semibold text-foreground/90 flex items-center gap-1.5">
                       <Phone size={12} className="text-primary/70 shrink-0" />
-                      {contribution.referralDetails?.referralMobile || "—"}
+                      {contribution.referralDetails?.referralMobile || "-"}
                     </p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-muted-foreground font-bold uppercase tracking-wider text-[9px]">Email Address</span>
                     <p className="font-semibold text-foreground/90 flex items-center gap-1.5 truncate">
                       <Mail size={12} className="text-primary/70 shrink-0" />
-                      <span className="truncate">{contribution.referralDetails?.referralEmail || "—"}</span>
+                      <span className="truncate">{contribution.referralDetails?.referralEmail || "-"}</span>
                     </p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-muted-foreground font-bold uppercase tracking-wider text-[9px]">Location</span>
                     <p className="font-semibold text-foreground/90 flex items-center gap-1.5">
                       <MapPin size={12} className="text-primary/70 shrink-0" />
-                      {contribution.referralDetails?.location || "—"}
+                      {contribution.referralDetails?.location || "-"}
                     </p>
                   </div>
                 </div>
@@ -322,7 +301,7 @@ const ContributionDetailPage = () => {
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto">
                   <Handshake size={18} />
                 </div>
-                <p className="font-bold text-sm text-foreground mt-2">1-on-1 Session</p>
+                <p className="font-bold text-sm text-foreground mt-2">Direct Meet Session</p>
                 <p className="text-xs text-muted-foreground">Successfully logged & verified.</p>
               </div>
             )}

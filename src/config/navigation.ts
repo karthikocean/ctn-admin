@@ -79,7 +79,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { title: "Referrals", path: "/referrals", icon: Users, moduleId: "referral" },
   { title: "Billings", path: "/billings", icon: CreditCard, moduleId: "billings" },
   { title: "Coupons", path: "/coupons", icon: Ticket, moduleId: "coupons" },
-  { title: "Marketplace Category", path: "/marketplace-category", icon: ShoppingBag, moduleId: "marketplace_category" },
+  // { title: "Marketplace Category", path: "/marketplace-category", icon: ShoppingBag, moduleId: "marketplace_category" },
   { title: "Help Center", path: "/help-center", icon: HelpCircle, moduleId: "help_center" },
   { title: "Modules", path: "/modules", icon: Layers, moduleId: "modules" },
 ];

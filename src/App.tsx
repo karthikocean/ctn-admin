@@ -40,7 +40,7 @@ import PlansPage from "@/pages/plans/PlansPage";
 import ReferralsPage from "@/pages/referrals/ReferralsPage";
 import BillingsPage from "@/pages/billings/BillingsPage";
 import CouponsPage from "@/pages/coupons/CouponsPage";
-import MarketplaceCategoryPage from "@/pages/marketplace/MarketplaceCategoryPage";
+// import MarketplaceCategoryPage from "@/pages/marketplace/MarketplaceCategoryPage";
 import ModulesPage from "@/pages/modules/ModulesPage";
 import HelpCenterPage from "@/pages/helpcenter/HelpCenterPage";
 import NotFound from "@/pages/NotFound";
@@ -221,7 +221,7 @@ const App = () => (
                   <CouponsPage />
                 </PermissionRoute>
               } />
-              <Route path="/marketplace-category" element={<MarketplaceCategoryPage />} />
+              {/* <Route path="/marketplace-category" element={<MarketplaceCategoryPage />} /> */}
               <Route path="/modules" element={
                 <PermissionRoute module="modules" action="view">
                   <ModulesPage />
