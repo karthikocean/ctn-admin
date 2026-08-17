@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Heart, Filter, RefreshCw, Calendar as CalendarIcon, Eye } from "lucide-react";
-import StatusBadge from "@/components/common/StatusBadge";
+import { Search, Heart, Filter, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
 import PaginationBar from "@/components/common/PaginationBar";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import EmptyState from "@/components/common/EmptyState";
@@ -30,21 +29,32 @@ const getFullUrl = (path: string) => {
 
 const ContributionsPage = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Read URL params as single source of truth
+  const page = searchParams.get("page") ? Math.max(1, parseInt(searchParams.get("page")!, 10)) : 1;
+  const typeFilter = searchParams.get("type") || "all";
+  const statusFilter = searchParams.get("status") || "all";
+  const startDateStr = searchParams.get("startDate") || "";
+  const endDateStr = searchParams.get("endDate") || "";
+  const searchParam = searchParams.get("search") || "";
+
+  const [searchInput, setSearchInput] = useState(searchParam);
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    startDateStr ? new Date(startDateStr) : undefined
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    endDateStr ? new Date(endDateStr) : undefined
+  );
+  const [filtersExpanded, setFiltersExpanded] = useState(
+    !!(statusFilter !== "all" || startDateStr || endDateStr)
+  );
+
   const [limit] = useState(10);
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState(searchParams.get("type") || "all");
   const [loading, setLoading] = useState(true);
   const [contributions, setContributions] = useState<any[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-
-  // Additional advanced filters
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const fetchContributions = async () => {
     setLoading(true);
@@ -53,11 +63,11 @@ const ContributionsPage = () => {
         page: page - 1,
         limit,
       };
-      if (search) params.search = search;
+      if (searchParam) params.search = searchParam;
       if (typeFilter && typeFilter !== "all") params.type = typeFilter;
       if (statusFilter && statusFilter !== "all") params.status = statusFilter;
-      if (startDate) params.startDate = format(startDate, "yyyy-MM-dd");
-      if (endDate) params.endDate = format(endDate, "yyyy-MM-dd");
+      if (startDateStr) params.startDate = startDateStr;
+      if (endDateStr) params.endDate = endDateStr;
 
       const response = await getContributions(params);
       if (response && response.data) {
@@ -81,29 +91,92 @@ const ContributionsPage = () => {
 
   useEffect(() => {
     fetchContributions();
-  }, [page, typeFilter, statusFilter, startDate, endDate]);
+  }, [page, typeFilter, statusFilter, startDateStr, endDateStr, searchParam]);
 
-  // Reset page to 1 when filters change to avoid empty out-of-range pages
+  // Sync search input if URL changes externally
   useEffect(() => {
-    setPage(1);
-  }, [typeFilter, statusFilter, startDate, endDate]);
+    setSearchInput(searchParam);
+  }, [searchParam]);
 
+  // Debounced search input handler
   useEffect(() => {
+    if (searchInput === searchParam) return;
     const timer = setTimeout(() => {
-      if (page !== 1) setPage(1);
-      else fetchContributions();
+      const next = new URLSearchParams(searchParams);
+      if (searchInput.trim()) {
+        next.set("search", searchInput.trim());
+      } else {
+        next.delete("search");
+      }
+      next.delete("page");
+      setSearchParams(next);
     }, 500);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [searchInput]);
+
+  const handlePageChange = (newPage: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (newPage > 1) {
+      next.set("page", String(newPage));
+    } else {
+      next.delete("page");
+    }
+    setSearchParams(next);
+  };
+
+  const handleTypeChange = (val: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (val && val !== "all") next.set("type", val);
+    else next.delete("type");
+    next.delete("page");
+    setSearchParams(next);
+  };
+
+  const handleStatusChange = (val: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (val && val !== "all") next.set("status", val);
+    else next.delete("status");
+    next.delete("page");
+    setSearchParams(next);
+  };
+
+  const handleStartDateChange = (date: Date | undefined) => {
+    setStartDate(date);
+    const next = new URLSearchParams(searchParams);
+    if (date) next.set("startDate", format(date, "yyyy-MM-dd"));
+    else next.delete("startDate");
+    next.delete("page");
+    setSearchParams(next);
+  };
+
+  const handleEndDateChange = (date: Date | undefined) => {
+    setEndDate(date);
+    const next = new URLSearchParams(searchParams);
+    if (date) next.set("endDate", format(date, "yyyy-MM-dd"));
+    else next.delete("endDate");
+    next.delete("page");
+    setSearchParams(next);
+  };
+
+  const handleResetFilters = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+    const next = new URLSearchParams(searchParams);
+    next.delete("status");
+    next.delete("startDate");
+    next.delete("endDate");
+    next.delete("page");
+    setSearchParams(next);
+  };
 
   const formatType = (type: string) => {
     switch (type) {
       case "one_to_one":
-        return "One to One";
+        return "Direct Meet";
       case "thank_you_slip":
-        return "Thank You Slip";
+        return "Business Done";
       case "referral":
-        return "Referral";
+        return "Recommendations";
       default:
         return type;
     }
@@ -138,7 +211,7 @@ const ContributionsPage = () => {
           <div>
             <h1 className="text-xl font-bold">Contributions Log</h1>
             <p className="text-xs text-muted-foreground">
-              Monitor value exchange network: One-to-Ones, Thank You Slips, and Referrals
+              Monitor value exchange network: Direct Meets, Business Done, and Recommendations
             </p>
           </div>
         </div>
@@ -151,30 +224,30 @@ const ContributionsPage = () => {
             <input
               type="text"
               placeholder="Search by member..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-10 pl-9 pr-3 w-full sm:w-56 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60 transition-all shadow-sm"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="h-10 pl-9 pr-4 rounded-xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full sm:w-64"
             />
           </div>
 
-          {/* Type Filter */}
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="h-10 w-full sm:w-44 rounded-xl border border-border bg-card text-sm shadow-sm focus:ring-primary/20">
+          {/* Type Filter Select */}
+          <Select value={typeFilter} onValueChange={handleTypeChange}>
+            <SelectTrigger className="w-full sm:w-44 h-10 rounded-xl border border-border bg-card text-sm">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl border border-border bg-card shadow-lg">
-              <SelectItem value="all" className="focus:bg-secondary focus:text-primary">All Types</SelectItem>
-              <SelectItem value="one_to_one" className="focus:bg-secondary focus:text-primary">One to One</SelectItem>
-              <SelectItem value="thank_you_slip" className="focus:bg-secondary focus:text-primary">Thank You Slip</SelectItem>
-              <SelectItem value="referral" className="focus:bg-secondary focus:text-primary">Referral</SelectItem>
+            <SelectContent className="rounded-xl border border-border bg-card">
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="one_to_one">Direct Meets</SelectItem>
+              <SelectItem value="thank_you_slip">Business Done</SelectItem>
+              <SelectItem value="referral">Recommendations</SelectItem>
             </SelectContent>
           </Select>
 
-          {/* Advanced Filters Button */}
+          {/* Toggle Advanced Filters Button */}
           <Button
             variant="outline"
             onClick={() => setFiltersExpanded(!filtersExpanded)}
-            className={`h-10 rounded-xl px-4 flex items-center gap-1.5 border border-border text-sm shadow-sm transition-all ${
+            className={`h-10 rounded-xl border gap-2 text-sm transition-colors ${
               filtersExpanded 
                 ? "bg-primary/10 text-primary border-primary/30 hover:bg-primary/15 hover:text-primary" 
                 : "bg-card text-foreground hover:bg-secondary/50 hover:text-foreground"
@@ -196,7 +269,7 @@ const ContributionsPage = () => {
           {/* Status */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground">Status</label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={handleStatusChange}>
               <SelectTrigger className="h-10 rounded-xl border border-border bg-transparent text-sm">
                 <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
@@ -230,7 +303,7 @@ const ContributionsPage = () => {
                 <Calendar
                   mode="single"
                   selected={startDate}
-                  onSelect={setStartDate}
+                  onSelect={handleStartDateChange}
                   initialFocus
                 />
               </PopoverContent>
@@ -258,7 +331,7 @@ const ContributionsPage = () => {
                   <Calendar
                     mode="single"
                     selected={endDate}
-                    onSelect={setEndDate}
+                    onSelect={handleEndDateChange}
                     initialFocus
                   />
                 </PopoverContent>
@@ -267,11 +340,7 @@ const ContributionsPage = () => {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => {
-                    setStatusFilter("all");
-                    setStartDate(undefined);
-                    setEndDate(undefined);
-                  }}
+                  onClick={handleResetFilters}
                   className="h-10 w-10 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/30 shrink-0"
                   title="Reset filters"
                 >
@@ -347,7 +416,7 @@ const ContributionsPage = () => {
                         <div>
                           <p className="font-semibold text-sm text-foreground flex items-center gap-1.5 flex-wrap">
                             <span>{c.sender?.fullName || "Unknown"}</span>
-                            <span className="text-foreground/60 font-normal">➜</span>
+                            <span className="text-foreground/60 font-normal">{"->"}</span>
                             <span className="text-foreground">{c.receiver?.fullName || "Unknown"}</span>
                           </p>
                           <p className="text-[10px] text-foreground font-semibold mt-0.5">
@@ -371,9 +440,7 @@ const ContributionsPage = () => {
                       <div>
                         <p className="text-sm font-semibold text-foreground">
                           {c.type === "thank_you_slip" && (
-                            <span className="text-emerald-600 font-bold">
-                              ₹{c.amount?.toLocaleString() || 0}
-                            </span>
+                            <span className="text-emerald-600 font-bold">{"\u20B9"}{c.amount?.toLocaleString() || 0}</span>
                           )}
                           {c.type === "referral" && (
                             <span className="text-primary font-bold">
@@ -409,7 +476,7 @@ const ContributionsPage = () => {
         </div>
         {!loading && contributions.length > 0 && (
           <div className="px-6 pb-4 border-t border-border pt-4 bg-card">
-            <PaginationBar currentPage={page} totalPages={totalPages} totalItems={totalCount} onPageChange={setPage} />
+            <PaginationBar currentPage={page} totalPages={totalPages} totalItems={totalCount} onPageChange={handlePageChange} />
           </div>
         )}
       </motion.div>

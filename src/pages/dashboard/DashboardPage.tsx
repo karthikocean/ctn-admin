@@ -267,10 +267,10 @@ const DashboardPage = () => {
 
       {/* Network Interactions Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="One to One Count" value={stats.oneToOneCount.toLocaleString('en-IN')} icon="Handshake" delay={0.6} path="/contributions?type=one_to_one" />
-        <StatCard title="Referral Count" value={stats.referralCount.toLocaleString('en-IN')} icon="UserPlus" delay={0.65} path="/contributions?type=referral" />
-        <StatCard title="Thank You Slip Count" value={stats.thankYouSlipCount.toLocaleString('en-IN')} icon="Receipt" delay={0.7} path="/contributions?type=thank_you_slip" />
-        <StatCard title="Thank You Slip Amount" value={`₹${stats.thankYouSlipAmount.toLocaleString('en-IN')}`} icon="IndianRupee" delay={0.75} path="/contributions?type=thank_you_slip" />
+        <StatCard title="Direct Meet" value={stats.oneToOneCount.toLocaleString('en-IN')} icon="Handshake" delay={0.6} path="/contributions?type=one_to_one" />
+        <StatCard title="Recommendations" value={stats.referralCount.toLocaleString('en-IN')} icon="UserPlus" delay={0.65} path="/contributions?type=referral" />
+        <StatCard title="Business Done" value={stats.thankYouSlipCount.toLocaleString('en-IN')} icon="Receipt" delay={0.7} path="/contributions?type=thank_you_slip" />
+        <StatCard title="Business Done Amount" value={`₹${stats.thankYouSlipAmount.toLocaleString('en-IN')}`} icon="IndianRupee" delay={0.75} path="/contributions?type=thank_you_slip" />
       </div>
 
       {/* Charts Row 1 */}
