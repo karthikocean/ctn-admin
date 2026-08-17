@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const getFullUrl = (path: string) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "-"}${path}`;
+  return `${import.meta.env.VITE_MEDIA_URL || ""}${path}`;
 };
 
 const formatType = (type: string) => {
@@ -49,13 +49,13 @@ const ContributionDetailPage = () => {
         }
       } catch (err: any) {
         console.error(err);
-        setError(err.response?.data?.message || "-"}</p>
-        <Button onClick={() => navigate(-1)} className="rounded-xl">
-          <ArrowLeft size={16} className="mr-2" /> Back to Log
-        </Button>
-      </div>
-    );
-  }
+        setError(err.response?.data?.message || "An unexpected error occurred.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [id]);
 
   const isOneToOne = contribution.type === "one_to_one";
   const isThankYouSlip = contribution.type === "thank_you_slip";
