@@ -235,22 +235,27 @@ const AnnouncementsPage = () => {
     }
   });
 
+  const existingStallsRef = useRef<any[]>([]);
+
   const handleCountChange = (count: number) => {
     const safeCount = Math.max(0, count);
     setFormData((prev) => {
-      const stalls = [...prev.stallConfig.stalls];
-      if (safeCount > stalls.length) {
-        for (let i = stalls.length; i < safeCount; i++) {
-          stalls.push({ name: `Stall ${i + 1}`, size: "", points: "" });
+      const currentStalls = prev.stallConfig?.stalls || [];
+      const newStalls: any[] = [];
+      for (let i = 0; i < safeCount; i++) {
+        if (currentStalls[i]) {
+          newStalls.push(currentStalls[i]);
+        } else if (existingStallsRef.current[i]) {
+          newStalls.push({ ...existingStallsRef.current[i] });
+        } else {
+          newStalls.push({ name: `Stall ${i + 1}`, size: "", points: "" });
         }
-      } else {
-        stalls.splice(safeCount);
       }
       return {
         ...prev,
         stallConfig: {
           totalStallCount: safeCount,
-          stalls
+          stalls: newStalls
         }
       };
     });
@@ -258,11 +263,19 @@ const AnnouncementsPage = () => {
 
   const handleStallFieldChange = (index: number, field: string, value: any) => {
     setFormData((prev) => {
-      const stalls = [...prev.stallConfig.stalls];
-      stalls[index] = {
+      const stalls = [...(prev.stallConfig?.stalls || [])];
+      const updatedStall = {
         ...stalls[index],
         [field]: field === "points" ? (value === "" ? "" : Number(value)) : value
       };
+      stalls[index] = updatedStall;
+
+      if (existingStallsRef.current[index]) {
+        existingStallsRef.current[index] = { ...existingStallsRef.current[index], ...updatedStall };
+      } else {
+        existingStallsRef.current[index] = { ...updatedStall };
+      }
+
       return {
         ...prev,
         stallConfig: {
@@ -502,6 +515,7 @@ const AnnouncementsPage = () => {
         stalls: []
       }
     });
+    existingStallsRef.current = [];
     setFilesToUpload({ image: null, video: null });
     setEditingId(null);
     setErrors({});
@@ -673,6 +687,14 @@ const AnnouncementsPage = () => {
         const toParts   = parseTimeParts(data.toTime, data.toDate);
         const schedParts = parseTimeParts(undefined, data.scheduleDate);
 
+        const loadedStalls = (data.stallConfig?.stalls || []).map((s: any) => ({
+          _id: s._id ? (typeof s._id === "object" ? s._id.toString() : String(s._id)) : undefined,
+          name: s.name || "",
+          size: s.size || "",
+          points: s.points !== undefined && s.points !== null ? s.points : ""
+        }));
+        existingStallsRef.current = loadedStalls;
+
         setFormData({
           title: data.title,
           content: data.content,
@@ -702,7 +724,10 @@ const AnnouncementsPage = () => {
           regionId: data.regionId || "",
           regionIds: data.regionIds || (data.regionId ? [data.regionId] : []),
           isOfflineStallExist: data.isOfflineStallExist || false,
-          stallConfig: data.stallConfig || { totalStallCount: 0, stalls: [] }
+          stallConfig: {
+            totalStallCount: data.stallConfig?.totalStallCount || loadedStalls.length || 0,
+            stalls: loadedStalls
+          }
         });
         setDrawerOpen(true);
       }
