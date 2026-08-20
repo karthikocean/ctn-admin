@@ -23,6 +23,7 @@ import {
   updateTrainingCategory,
   deleteTrainingCategory
 } from "@/api/TrainingCategoryApi";
+import { getTrainings } from "@/api/TrainingApi";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
 interface TrainingCategory {
@@ -117,6 +118,30 @@ const TrainingCategoriesPage = () => {
     setSaving(true);
     try {
       if (editingCategory) {
+        // Validate if attempting to deactivate a category that has active trainings
+        if (categoryStatus === "inactive" && editingCategory.status !== "inactive") {
+          try {
+            const trainingsRes = await getTrainings({ limit: 1000, status: "active" });
+            const activeTrainings = trainingsRes.data || trainingsRes || [];
+            const hasActiveTraining = Array.isArray(activeTrainings) && activeTrainings.some((t: any) => {
+              const catId = t.categoryId || t.category?._id || t.category?.id;
+              return catId === editingCategory._id || String(catId) === String(editingCategory._id);
+            });
+
+            if (hasActiveTraining) {
+              toast({
+                title: "Cannot Deactivate Category",
+                description: "Cannot deactivate this category because it contains active trainings. Please deactivate or reassign the trainings first.",
+                variant: "destructive"
+              });
+              setSaving(false);
+              return;
+            }
+          } catch (verifyErr) {
+            console.error("Error verifying active trainings:", verifyErr);
+          }
+        }
+
         await updateTrainingCategory(editingCategory._id, {
           name: categoryName.trim(),
           status: categoryStatus
@@ -151,6 +176,30 @@ const TrainingCategoriesPage = () => {
     if (!categoryToDelete) return;
     setIsDeleting(true);
     try {
+      // Validate if attempting to delete a category that has active trainings
+      try {
+        const trainingsRes = await getTrainings({ limit: 1000, status: "active" });
+        const activeTrainings = trainingsRes.data || trainingsRes || [];
+        const hasActiveTraining = Array.isArray(activeTrainings) && activeTrainings.some((t: any) => {
+          const catId = t.categoryId || t.category?._id || t.category?.id;
+          return catId === categoryToDelete || String(catId) === String(categoryToDelete);
+        });
+
+        if (hasActiveTraining) {
+          toast({
+            title: "Cannot Delete Category",
+            description: "Cannot delete this category because it contains active trainings. Please delete or reassign the trainings first.",
+            variant: "destructive"
+          });
+          setIsDeleting(false);
+          setDeleteDialogOpen(false);
+          setCategoryToDelete(null);
+          return;
+        }
+      } catch (verifyErr) {
+        console.error("Error verifying active trainings:", verifyErr);
+      }
+
       await deleteTrainingCategory(categoryToDelete);
       toast({
         title: "Deleted",

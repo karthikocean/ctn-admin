@@ -442,10 +442,7 @@ const BlogsPage = () => {
           {/* Slug */}
           <div className="space-y-2">
             <Label htmlFor="slug" className="text-xs font-bold uppercase tracking-wider text-slate-600">Slug <span className="text-red-500">*</span></Label>
-            <div className="relative">
-              <Input id="slug" value={formData.slug} onChange={handleInputChange} placeholder="blog-url-slug" className={`h-11 ${errors.slug ? "border-red-500" : ""}`} />
-              <Globe size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            </div>
+            <Input id="slug" value={formData.slug} onChange={handleInputChange} placeholder="blog-url-slug" className={`h-11 ${errors.slug ? "border-red-500" : ""}`} />
             {errors.slug && <p className="text-[10px] text-red-500 font-bold">{errors.slug}</p>}
           </div>
 

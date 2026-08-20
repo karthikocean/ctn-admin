@@ -33,12 +33,11 @@ api.interceptors.response.use(
       message.includes("invalid signature") ||
       message.includes("invalid token") ||
       message.includes("session expired") ||
-      message.includes("token missing") ||
-      message.includes("unauthorized");
-    const isUnauthorized = error.response?.status === 401 || error.response?.status === 403;
+      message.includes("token missing");
+    const isUnauthorized = error.response?.status === 401;
 
     if ((isUnauthorized || isJwtError) && window.location.pathname !== "/login") {
-      // Clear storage and redirect to login if unauthorized or token expired
+      // Clear storage and redirect to login only if unauthorized (401) or token expired
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
       localStorage.removeItem("permissions");

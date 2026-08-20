@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { Search, Layers, Loader2, AlertCircle, Calendar } from "lucide-react";
+import { Search, Layers, Loader2, AlertCircle, Calendar, Trash2, Plus } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
 import FormDrawer from "@/components/common/FormDrawer";
 import { Button } from "@/components/ui/button";
@@ -173,6 +173,36 @@ const StallAttributesPage = () => {
       }
 
       return { ...prev, stalls };
+    });
+  };
+
+  const handleAddStall = () => {
+    setFormData((prev) => {
+      const currentStalls = prev.stalls || [];
+      const nextIndex = currentStalls.length + 1;
+      const newStall = { name: `Stall ${nextIndex}`, size: "", points: "" as any };
+      return {
+        ...prev,
+        totalStallCount: currentStalls.length + 1,
+        stalls: [...currentStalls, newStall]
+      };
+    });
+  };
+
+  const handleDeleteStall = (indexToDelete: number) => {
+    setFormData((prev) => {
+      const currentStalls = prev.stalls || [];
+      const updatedStalls = currentStalls.filter((_, idx) => idx !== indexToDelete);
+      return {
+        ...prev,
+        totalStallCount: Math.max(0, updatedStalls.length),
+        stalls: updatedStalls
+      };
+    });
+    setValidationErrors((prev) => {
+      if (!prev.stalls) return prev;
+      const updatedStallErrors = prev.stalls.filter((_, idx) => idx !== indexToDelete);
+      return { ...prev, stalls: updatedStallErrors };
     });
   };
 
@@ -641,11 +671,22 @@ const StallAttributesPage = () => {
           </div>
 
           {/* Stall cards */}
-          {formData.totalStallCount > 0 && (
+          {formData.totalStallCount > 0 ? (
             <div className="space-y-3 pt-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Stalls Configuration
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                  Stalls Configuration
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddStall}
+                  className="h-7 px-2.5 text-xs font-bold text-primary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                >
+                  <Plus size={13} className="mr-1" /> Add Stall
+                </Button>
+              </div>
               <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 space-y-3 max-h-[360px] overflow-y-auto pr-1">
                 {formData.stalls.map((stall, index) => {
                   const stallErr = validationErrors.stalls?.[index];
@@ -661,6 +702,14 @@ const StallAttributesPage = () => {
                             Stall #{index + 1}
                           </span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteStall(index)}
+                          className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title="Delete Stall"
+                        >
+                          <Trash2 size={13} />
+                        </button>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                         <div className="sm:col-span-6 space-y-1">
@@ -724,8 +773,28 @@ const StallAttributesPage = () => {
                     </div>
                   );
                 })}
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddStall}
+                  className="w-full h-9 rounded-lg border-dashed border-primary/30 text-primary hover:text-primary hover:bg-primary/5 hover:border-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Plus size={14} /> Add Stall
+                </Button>
               </div>
             </div>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddStall}
+              className="w-full h-10 rounded-lg border-dashed border-primary/30 text-primary hover:text-primary hover:bg-primary/5 hover:border-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors mt-2"
+            >
+              <Plus size={14} /> Add Stall
+            </Button>
           )}
 
           <Button
