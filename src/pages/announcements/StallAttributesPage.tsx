@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Search, Layers, Loader2, AlertCircle, Calendar } from "lucide-react";
 import ActionMenu from "@/components/common/ActionMenu";
@@ -82,6 +82,8 @@ const StallAttributesPage = () => {
 
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
+  const existingStallsRef = useRef<Stall[]>([]);
+
   // View Details Modal State
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedAttribute, setSelectedAttribute] = useState<StallAttribute | null>(null);
@@ -91,7 +93,7 @@ const StallAttributesPage = () => {
   const fetchStallAnnouncements = async () => {
     setLoading(true);
     try {
-      const res = await getAnnouncements({ limit: 200 });
+      const res = await getAnnouncements({ limit: 1000 });
       const all: any[] = res.data || [];
 
       // For the dropdown: published Event announcements
@@ -130,15 +132,18 @@ const StallAttributesPage = () => {
     }
 
     setFormData((prev) => {
-      const stalls = [...prev.stalls];
-      if (safeCount > stalls.length) {
-        for (let i = stalls.length; i < safeCount; i++) {
-          stalls.push({ name: `Stall ${i + 1}`, size: "", points: "" });
+      const currentStalls = prev.stalls || [];
+      const newStalls: Stall[] = [];
+      for (let i = 0; i < safeCount; i++) {
+        if (currentStalls[i]) {
+          newStalls.push(currentStalls[i]);
+        } else if (existingStallsRef.current[i]) {
+          newStalls.push({ ...existingStallsRef.current[i] });
+        } else {
+          newStalls.push({ name: `Stall ${i + 1}`, size: "", points: "" });
         }
-      } else {
-        stalls.splice(safeCount);
       }
-      return { ...prev, totalStallCount: safeCount, stalls };
+      return { ...prev, totalStallCount: safeCount, stalls: newStalls };
     });
   };
 
@@ -155,10 +160,18 @@ const StallAttributesPage = () => {
 
     setFormData((prev) => {
       const stalls = [...prev.stalls];
-      stalls[index] = {
+      const updatedStall = {
         ...stalls[index],
         [field]: field === "points" ? (value === "" ? "" : Number(value)) : value,
       };
+      stalls[index] = updatedStall;
+
+      if (existingStallsRef.current[index]) {
+        existingStallsRef.current[index] = { ...existingStallsRef.current[index], ...updatedStall };
+      } else {
+        existingStallsRef.current[index] = { ...updatedStall };
+      }
+
       return { ...prev, stalls };
     });
   };
@@ -284,6 +297,7 @@ const StallAttributesPage = () => {
 
       setDrawerOpen(false);
       setEditingId(null);
+      existingStallsRef.current = [];
       setFormData({ eventId: "", totalStallCount: 0, stalls: [] });
       await fetchStallAnnouncements();
     } catch (err: any) {
@@ -308,7 +322,7 @@ const StallAttributesPage = () => {
       const announcement = res.data;
       const stallConfig = announcement?.stallConfig;
       const count = stallConfig?.totalStallCount || attr.totalStallCount || 0;
-      const stalls: Stall[] =
+      const rawStalls: any[] =
         stallConfig?.stalls?.length > 0
           ? stallConfig.stalls
           : attr.stalls.length > 0
@@ -319,25 +333,41 @@ const StallAttributesPage = () => {
               points: 0,
             }));
 
+      const loadedStalls: Stall[] = rawStalls.map((s) => ({
+        _id: s._id ? (typeof s._id === "object" ? s._id.toString() : String(s._id)) : undefined,
+        name: s.name || "",
+        size: s.size || "",
+        points: s.points !== undefined && s.points !== null ? s.points : "",
+      }));
+      existingStallsRef.current = loadedStalls;
+
       setFormData({
         eventId: attr.id,
-        totalStallCount: count,
-        stalls,
+        totalStallCount: count || loadedStalls.length,
+        stalls: loadedStalls,
       });
     } catch {
       // Fallback to local data if API fails
       const count = attr.totalStallCount || 0;
+      const fallbackStalls: Stall[] = (attr.stalls.length > 0
+        ? attr.stalls
+        : Array.from({ length: count }, (_, i) => ({
+            name: `Stall ${i + 1}`,
+            size: "",
+            points: 0,
+          }))
+      ).map((s: any) => ({
+        _id: s._id ? (typeof s._id === "object" ? s._id.toString() : String(s._id)) : undefined,
+        name: s.name || "",
+        size: s.size || "",
+        points: s.points !== undefined && s.points !== null ? s.points : "",
+      }));
+      existingStallsRef.current = fallbackStalls;
+
       setFormData({
         eventId: attr.id,
-        totalStallCount: count,
-        stalls:
-          attr.stalls.length > 0
-            ? attr.stalls
-            : Array.from({ length: count }, (_, i) => ({
-                name: `Stall ${i + 1}`,
-                size: "",
-                points: 0,
-              })),
+        totalStallCount: count || fallbackStalls.length,
+        stalls: fallbackStalls,
       });
     }
   };
@@ -524,6 +554,7 @@ const StallAttributesPage = () => {
           setDrawerOpen(open);
           if (!open) {
             setEditingId(null);
+            existingStallsRef.current = [];
             setFormData({ eventId: "", totalStallCount: 0, stalls: [] });
             setValidationErrors({});
           }
