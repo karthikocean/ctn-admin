@@ -110,13 +110,15 @@ const PostCard = ({ post, onReport, onView }: PostCardProps) => {
                 <Eye size={14} className="text-blue-500" />
                 <span>View Details</span>
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => onReport && onReport(post)} 
-                className="cursor-pointer gap-2 text-red-600 focus:text-red-700 focus:bg-red-50"
-              >
-                <AlertTriangle size={14} />
-                <span>Report</span>
-              </DropdownMenuItem>
+              {onReport && post.status !== "reported" && (
+                <DropdownMenuItem 
+                  onClick={() => onReport(post)} 
+                  className="cursor-pointer gap-2 text-red-600 focus:text-red-700 focus:bg-red-50"
+                >
+                  <AlertTriangle size={14} />
+                  <span>Report</span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

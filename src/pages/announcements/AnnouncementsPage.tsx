@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye, Check, ChevronsUpDown, Link as LinkIcon, GraduationCap } from "lucide-react";
+import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye, Check, ChevronsUpDown, Link as LinkIcon, GraduationCap, Plus } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -286,6 +286,41 @@ const AnnouncementsPage = () => {
     });
   };
 
+  const handleAddStall = () => {
+    setFormData((prev) => {
+      const currentStalls = prev.stallConfig?.stalls || [];
+      const nextIndex = currentStalls.length + 1;
+      const newStall = { name: `Stall ${nextIndex}`, size: "", points: "" };
+      return {
+        ...prev,
+        stallConfig: {
+          totalStallCount: currentStalls.length + 1,
+          stalls: [...currentStalls, newStall]
+        }
+      };
+    });
+  };
+
+  const handleDeleteStall = (indexToDelete: number) => {
+    setFormData((prev) => {
+      const currentStalls = prev.stallConfig?.stalls || [];
+      const updatedStalls = currentStalls.filter((_, idx) => idx !== indexToDelete);
+      return {
+        ...prev,
+        stallConfig: {
+          totalStallCount: Math.max(0, updatedStalls.length),
+          stalls: updatedStalls
+        }
+      };
+    });
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[`stall_${indexToDelete}_name`];
+      delete next[`stall_${indexToDelete}_points`];
+      return next;
+    });
+  };
+
 
 
   const [filesToUpload, setFilesToUpload] = useState({
@@ -344,7 +379,9 @@ const AnnouncementsPage = () => {
     if (!formData.content) newErrors.content = "Content is required";
     if (!formData.fromDate) newErrors.fromDate = "From Date is required";
     if (!formData.toDate) newErrors.toDate = "To Date is required";
-    if (!formData.location) newErrors.location = "Location is required";
+    if (formData.announcementType !== "Training" && !formData.location) {
+      newErrors.location = "Location is required";
+    }
     if (!formData.image && !filesToUpload.image) newErrors.image = "Image is required";
     
     if (formData.status === "scheduled" && !formData.scheduleDate) {
@@ -432,11 +469,13 @@ const AnnouncementsPage = () => {
         }
       }
     }
-    if (formData.points !== undefined && formData.points !== null && formData.points !== "" && formData.points < 0) {
-      newErrors.points = "Points must be a positive value";
-    }
-    if (formData.membersLimit !== undefined && formData.membersLimit !== null && formData.membersLimit !== "" && formData.membersLimit < 0) {
-      newErrors.membersLimit = "Members Limit must be a positive value";
+    if (formData.announcementType !== "Training") {
+      if (formData.points !== undefined && formData.points !== null && formData.points !== "" && formData.points < 0) {
+        newErrors.points = "Points must be a positive value";
+      }
+      if (formData.membersLimit !== undefined && formData.membersLimit !== null && formData.membersLimit !== "" && formData.membersLimit < 0) {
+        newErrors.membersLimit = "Members Limit must be a positive value";
+      }
     }
     if (formData.announcementType === "Others") {
       if (!formData.link || !formData.link.trim()) {
@@ -551,8 +590,9 @@ const AnnouncementsPage = () => {
         ...dataToSave,
         link: formData.announcementType === "Others" ? formData.link : undefined,
         trainingId: formData.announcementType === "Training" ? formData.trainingId : undefined,
-        points: formData.points === "" ? 0 : Number(formData.points),
-        membersLimit: formData.membersLimit === "" ? 0 : Number(formData.membersLimit),
+        points: formData.announcementType === "Training" ? 0 : (formData.points === "" ? 0 : Number(formData.points)),
+        membersLimit: formData.announcementType === "Training" ? 0 : (formData.membersLimit === "" ? 0 : Number(formData.membersLimit)),
+        location: formData.location || "",
         date: finalFromDate,
         time: finalFromTime,
         fromDate: finalFromDate,
@@ -863,17 +903,26 @@ const AnnouncementsPage = () => {
                       </div>
                     </div>
 
-                    <div className="flex flex-col gap-1">
-                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Limit & Points</span>
+                    {a.announcementType !== "Training" ? (
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-                          <Users size={12} className="text-indigo-500/60" /> {a.membersLimit || 'Unlimited'}
-                        </div>
-                        <div className="w-fit bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-emerald-100 flex items-center gap-1">
-                          <CheckCircle2 size={10} /> {a.points || 0} Pts
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Limit & Points</span>
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
+                            <Users size={12} className="text-indigo-500/60" /> {a.membersLimit || 'Unlimited'}
+                          </div>
+                          <div className="w-fit bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-emerald-100 flex items-center gap-1">
+                            <CheckCircle2 size={10} /> {a.points || 0} Pts
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Type</span>
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-primary">
+                          <GraduationCap size={12} className="text-primary flex-shrink-0" /> Training
+                        </div>
+                      </div>
+                    )}
 
                     {a.location && (
                       <div className="col-span-2 flex flex-col gap-1 pt-0.5">
@@ -1006,6 +1055,7 @@ const AnnouncementsPage = () => {
               onValueChange={(value) => {
                 setFormData(prev => ({ ...prev, announcementType: value }));
                 if (errors.announcementType) setErrors(prev => ({ ...prev, announcementType: "" }));
+                if (value === "Training" && errors.location) setErrors(prev => ({ ...prev, location: "" }));
               }}
             >
               <SelectTrigger id="announcementType" className="w-full h-11 px-3 rounded-md border border-input bg-background text-sm">
@@ -1087,11 +1137,22 @@ const AnnouncementsPage = () => {
                     {errors.totalStallCount && <p className="text-[10px] text-red-500 font-bold">{errors.totalStallCount}</p>}
                   </div>
 
-                  {formData.stallConfig.totalStallCount > 0 && (
+                  {formData.stallConfig.totalStallCount > 0 ? (
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        Stalls Configuration
-                      </Label>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Stalls Configuration
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleAddStall}
+                          className="h-7 px-2.5 text-xs font-bold text-primary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                        >
+                          <Plus size={13} className="mr-1" /> Add Stall
+                        </Button>
+                      </div>
                       <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 space-y-3 max-h-[340px] overflow-y-auto pr-1">
                         {formData.stallConfig.stalls.map((stall, index) => {
                           const nameErr = errors[`stall_${index}_name`];
@@ -1108,6 +1169,14 @@ const AnnouncementsPage = () => {
                                     Stall #{index + 1}
                                   </span>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteStall(index)}
+                                  className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                  title="Delete Stall"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
                               </div>
                               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
                                 <div className="sm:col-span-6 space-y-1">
@@ -1153,8 +1222,28 @@ const AnnouncementsPage = () => {
                             </div>
                           );
                         })}
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddStall}
+                          className="w-full h-9 rounded-lg border-dashed border-primary/30 text-primary hover:text-primary hover:bg-primary/5 hover:border-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Plus size={14} /> Add Stall
+                        </Button>
                       </div>
                     </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddStall}
+                      className="w-full h-10 rounded-lg border-dashed border-primary/30 text-primary hover:text-primary hover:bg-primary/5 hover:border-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors mt-2"
+                    >
+                      <Plus size={14} /> Add Stall
+                    </Button>
                   )}
                 </div>
               )}
@@ -1287,7 +1376,9 @@ const AnnouncementsPage = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-slate-600">Location <span className="text-red-500">*</span></Label>
+            <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Location {formData.announcementType === "Training" ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}
+            </Label>
             <div className="relative">
               <Input id="location" value={formData.location} onChange={handleInputChange} placeholder="Announcement location" className={`h-11 pl-10 ${errors.location ? "border-red-500" : ""}`} />
               <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -1377,18 +1468,20 @@ const AnnouncementsPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="points" className="text-xs font-bold uppercase tracking-wider text-slate-600">Points</Label>
-              <Input type="number" id="points" min="0" value={formData.points === undefined || formData.points === null ? "" : formData.points} onChange={handleInputChange} placeholder="0" className={`h-11 ${errors.points ? "border-red-500" : ""}`} />
-              {errors.points && <p className="text-[10px] text-red-500 font-bold">{errors.points}</p>}
+          {formData.announcementType !== "Training" && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="points" className="text-xs font-bold uppercase tracking-wider text-slate-600">Points</Label>
+                <Input type="number" id="points" min="0" value={formData.points === undefined || formData.points === null ? "" : formData.points} onChange={handleInputChange} placeholder="0" className={`h-11 ${errors.points ? "border-red-500" : ""}`} />
+                {errors.points && <p className="text-[10px] text-red-500 font-bold">{errors.points}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="membersLimit" className="text-xs font-bold uppercase tracking-wider text-slate-600">Members Limit</Label>
+                <Input type="number" id="membersLimit" min="0" value={formData.membersLimit === undefined || formData.membersLimit === null ? "" : formData.membersLimit} onChange={handleInputChange} placeholder="0 (No limit)" className={`h-11 ${errors.membersLimit ? "border-red-500" : ""}`} />
+                {errors.membersLimit && <p className="text-[10px] text-red-500 font-bold">{errors.membersLimit}</p>}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="membersLimit" className="text-xs font-bold uppercase tracking-wider text-slate-600">Members Limit</Label>
-              <Input type="number" id="membersLimit" min="0" value={formData.membersLimit === undefined || formData.membersLimit === null ? "" : formData.membersLimit} onChange={handleInputChange} placeholder="0 (No limit)" className={`h-11 ${errors.membersLimit ? "border-red-500" : ""}`} />
-              {errors.membersLimit && <p className="text-[10px] text-red-500 font-bold">{errors.membersLimit}</p>}
-            </div>
-          </div>
+          )}
 
           <div className="grid grid-cols-1 gap-6">
             <div className="space-y-2">
@@ -1638,14 +1731,18 @@ const AnnouncementsPage = () => {
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
-                        <Users size={14} className="text-slate-400" />
-                        <span>Limit: {previewData.membersLimit ? `${previewData.membersLimit} Members` : "Unlimited"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 bg-emerald-50 w-fit px-2 py-0.5 rounded-full border border-emerald-100">
-                        <CheckCircle2 size={12} />
-                        <span>Cost: {previewData.points || 0} Pts</span>
-                      </div>
+                      {previewData.announcementType !== "Training" && (
+                        <>
+                          <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                            <Users size={14} className="text-slate-400" />
+                            <span>Limit: {previewData.membersLimit ? `${previewData.membersLimit} Members` : "Unlimited"}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 bg-emerald-50 w-fit px-2 py-0.5 rounded-full border border-emerald-100">
+                            <CheckCircle2 size={12} />
+                            <span>Cost: {previewData.points || 0} Pts</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

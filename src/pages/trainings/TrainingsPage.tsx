@@ -173,6 +173,84 @@ const TrainingsPage = () => {
   }, [form.lessons]);
 
   // --- Validation Logic ---
+  const validateBasicStep = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.title.trim()) newErrors.title = "Training title is required";
+    if (!form.categoryId) newErrors.categoryId = "Training category is required";
+    if (!form.thumbnail && !form.thumbnailFile) newErrors.thumbnail = "Thumbnail is required";
+    if (!form.banner && !form.bannerFile) newErrors.banner = "Banner is required";
+
+    setErrors(prev => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateAuthorStep = () => {
+    const newErrors: Record<string, string> = {};
+    if (!form.authorImage && !form.authorImageFile) newErrors.authorImage = "Instructor image is required";
+    if (!form.authorName.trim()) newErrors.authorName = "Instructor name is required";
+    if (!form.authorBio.trim()) newErrors.authorBio = "Instructor bio is required";
+
+    setErrors(prev => ({ ...prev, ...newErrors }));
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (activeTab === "basic") {
+      if (!validateBasicStep()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill all required fields marked with * in General Info",
+          variant: "destructive"
+        });
+        return;
+      }
+      setActiveTab("author");
+    } else if (activeTab === "author") {
+      if (!validateAuthorStep()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill all required fields marked with * in Instructor Info",
+          variant: "destructive"
+        });
+        return;
+      }
+      setActiveTab("lessons");
+    }
+  };
+
+  const handleTabChange = (targetTab: "basic" | "author" | "lessons") => {
+    if (targetTab === "author") {
+      if (!validateBasicStep()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill all required fields in General Info first",
+          variant: "destructive"
+        });
+        return;
+      }
+    } else if (targetTab === "lessons") {
+      if (!validateBasicStep()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill all required fields in General Info first",
+          variant: "destructive"
+        });
+        setActiveTab("basic");
+        return;
+      }
+      if (!validateAuthorStep()) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill all required fields in Instructor Info first",
+          variant: "destructive"
+        });
+        setActiveTab("author");
+        return;
+      }
+    }
+    setActiveTab(targetTab);
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -374,6 +452,7 @@ const TrainingsPage = () => {
 
   const handleEdit = (training: any) => {
     setEditingId(training._id);
+    setErrors({});
     setForm({
       title: training.title,
       description: training.description,
@@ -456,7 +535,7 @@ const TrainingsPage = () => {
           {canCreate && (
             <Button
               className="h-11 px-6 rounded-2xl bg-primary hover:bg-primary/90 text-sm font-bold shadow-lg shadow-primary/20"
-              onClick={() => { setEditingId(null); setForm(initialForm); setDrawerOpen(true); }}
+              onClick={() => { setEditingId(null); setForm(initialForm); setErrors({}); setActiveTab("basic"); setDrawerOpen(true); }}
             >
               <Plus size={18} className="mr-2" /> New Training
             </Button>
@@ -542,7 +621,7 @@ const TrainingsPage = () => {
               { id: "author", label: "Instructor Info", icon: User },
               { id: "lessons", label: "Curriculum / Lessons", icon: FileText },
             ].map((tab) => (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all", activeTab === tab.id ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-secondary")}>
+              <button key={tab.id} onClick={() => handleTabChange(tab.id as any)} className={cn("flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all", activeTab === tab.id ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-secondary")}>
                 <tab.icon size={14} /> {tab.label}
               </button>
             ))}
@@ -563,7 +642,21 @@ const TrainingsPage = () => {
 
                 <div className="space-y-2">
                   <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Training Title <span className="text-red-500">*</span></Label>
-                  <Input placeholder="e.g. Mastering Client Relationships" className={cn("h-12 rounded-2xl", errors.title && "border-red-500 focus-visible:ring-red-500")} value={form.title} onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))} />
+                  <Input
+                    placeholder="e.g. Mastering Client Relationships"
+                    className={cn("h-12 rounded-2xl", errors.title && "border-red-500 focus-visible:ring-red-500")}
+                    value={form.title}
+                    onChange={(e) => {
+                      setForm(prev => ({ ...prev, title: e.target.value }));
+                      if (errors.title) {
+                        setErrors(prev => {
+                          const next = { ...prev };
+                          delete next.title;
+                          return next;
+                        });
+                      }
+                    }}
+                  />
                   {errors.title && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.title}</p>}
                 </div>
                 <div className="space-y-2">
@@ -710,6 +803,13 @@ const TrainingsPage = () => {
                       onChange={(e) => {
                         const cleaned = e.target.value.replace(/[^A-Za-z\s]/g, "");
                         setForm(prev => ({ ...prev, authorName: cleaned }));
+                        if (errors.authorName) {
+                          setErrors(prev => {
+                            const next = { ...prev };
+                            delete next.authorName;
+                            return next;
+                          });
+                        }
                       }}
                     />
                     {errors.authorName && <p className="text-red-500 text-[10px] font-bold mt-1">{errors.authorName}</p>}
@@ -843,10 +943,7 @@ const TrainingsPage = () => {
                 {isLoading ? "Saving..." : editingId ? "Update Training" : "Publish Training"}
               </Button>
             ) : (
-              <Button className="flex-1 h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={() => {
-                if (activeTab === "basic") setActiveTab("author");
-                else if (activeTab === "author") setActiveTab("lessons");
-              }}>
+              <Button className="flex-1 h-12 rounded-2xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" onClick={handleNext}>
                 Next
               </Button>
             )}

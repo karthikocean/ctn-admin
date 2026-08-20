@@ -255,7 +255,7 @@ const GenericActivityPage = ({
               <PostCard 
                 key={post._id} 
                 post={post} 
-                onReport={(p) => setStatusUpdatePost(p)} 
+                onReport={showReportedOnly ? undefined : (p) => setStatusUpdatePost(p)} 
                 onView={handleOpenPreview} 
               />
             ))}
@@ -732,10 +732,12 @@ const GenericActivityTablePage = ({
                           <Eye size={14} className="text-blue-500" />
                           <span>View</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setStatusUpdatePost(post)} className="cursor-pointer gap-2 text-red-600 focus:text-red-700 focus:bg-red-50">
-                          <AlertTriangle size={14} />
-                          <span>Report</span>
-                        </DropdownMenuItem>
+                        {!showReportedOnly && post.status !== "reported" && (
+                          <DropdownMenuItem onClick={() => setStatusUpdatePost(post)} className="cursor-pointer gap-2 text-red-600 focus:text-red-700 focus:bg-red-50">
+                            <AlertTriangle size={14} />
+                            <span>Report</span>
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>

@@ -16,9 +16,17 @@ interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  className?: string;
+  editorClassName?: string;
 }
 
-const RichTextEditor = ({ value, onChange, placeholder = "Enter Description" }: RichTextEditorProps) => {
+const RichTextEditor = ({
+  value,
+  onChange,
+  placeholder = "Enter Description",
+  className = "",
+  editorClassName = ""
+}: RichTextEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -189,7 +197,7 @@ const RichTextEditor = ({ value, onChange, placeholder = "Enter Description" }: 
         onInput={handleInput}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        className="min-h-[160px] p-4 text-sm text-slate-700 focus:outline-none overflow-y-auto cursor-text prose prose-sm max-w-none rich-editor"
+        className={`h-[200px] p-4 text-sm text-slate-700 focus:outline-none overflow-y-auto cursor-text prose prose-sm max-w-none rich-editor ${editorClassName}`}
         data-placeholder={placeholder}
         style={{ outline: "none" }}
       />

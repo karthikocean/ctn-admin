@@ -319,21 +319,75 @@ const MembersPage = () => {
     fetchStatesApi();
   }, []);
 
+  const allStates = useMemo(() => State.getStatesOfCountry("IN"), []);
+
   const allStateItems = useMemo(() => {
-    return apiStates
-      .filter((s: any) => s && s.name)
-      .map((s: any) => ({ _id: s._id, name: s.name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [apiStates]);
+    const statesMap = new Map<string, { _id?: string; name: string; isoCode?: string }>();
+    
+    allStates.forEach(s => {
+      statesMap.set(s.name.toLowerCase(), { name: s.name, isoCode: s.isoCode });
+    });
+
+    apiStates.forEach((s: any) => {
+      if (s && s.name) {
+        const key = s.name.toLowerCase();
+        const existing = statesMap.get(key);
+        statesMap.set(key, { ...existing, _id: s._id, name: s.name });
+      }
+    });
+
+    return Array.from(statesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [apiStates, allStates]);
 
   const allCityItems = useMemo(() => {
-    return apiCities
-      .filter((c: any) => c && c.name)
-      .map((c: any) => ({ _id: c._id, name: c.name, stateId: c.stateId }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [apiCities]);
+    if (!formData.state) return [];
 
-  const allStates = State.getStatesOfCountry("IN");
+    const matchedState = allStates.find(
+      s => s.name.toLowerCase() === formData.state.toLowerCase() || s.isoCode.toLowerCase() === formData.state.toLowerCase()
+    );
+
+    const citiesMap = new Map<string, { _id?: string; name: string; stateId?: string }>();
+
+    if (matchedState) {
+      const cscCities = City.getCitiesOfState("IN", matchedState.isoCode) || [];
+      cscCities.forEach(c => {
+        citiesMap.set(c.name.toLowerCase(), { name: c.name });
+      });
+    }
+
+    apiCities.forEach((c: any) => {
+      if (c && c.name) {
+        const key = c.name.toLowerCase();
+        const existing = citiesMap.get(key);
+        citiesMap.set(key, { ...existing, _id: c._id, name: c.name, stateId: c.stateId });
+      }
+    });
+
+    return Array.from(citiesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [formData.state, apiCities, allStates]);
+
+  const availableServiceCities = useMemo(() => {
+    if (!formData.serviceLocations.states || formData.serviceLocations.states.length === 0) {
+      return [];
+    }
+
+    const citiesMap = new Map<string, { _id?: string; name: string }>();
+
+    formData.serviceLocations.states.forEach(stateName => {
+      const stateObj = allStates.find(
+        s => s.name.toLowerCase() === stateName.toLowerCase() || s.isoCode.toLowerCase() === stateName.toLowerCase()
+      );
+      if (stateObj) {
+        const cscCities = City.getCitiesOfState("IN", stateObj.isoCode) || [];
+        cscCities.forEach(c => {
+          citiesMap.set(c.name.toLowerCase(), { name: c.name });
+        });
+      }
+    });
+
+    return Array.from(citiesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [formData.serviceLocations.states, allStates]);
+
   const citiesInState = selectedStateCode ? City.getCitiesOfState("IN", selectedStateCode) : [];
 
   const [areasOptions, setAreasOptions] = useState<any[]>([]);
@@ -886,8 +940,10 @@ const MembersPage = () => {
       newErrors.mobileNumber = "Enter a valid 10-digit mobile number";
     }
 
-    // Email validation (optional but must be valid if entered)
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    // Email validation (mandatory)
+    if (!formData.email) {
+      newErrors.email = "Email Address is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Enter a valid email address";
     }
 
@@ -899,6 +955,15 @@ const MembersPage = () => {
     // GST validation
     if (!formData.gstNumber) {
       newErrors.gstNumber = "GST Number is required";
+    }
+
+    // DOB validation
+    if (formData.dob) {
+      const selectedDob = new Date(formData.dob);
+      const today = new Date();
+      if (selectedDob > today) {
+        newErrors.dob = "Date of Birth cannot be in the future";
+      }
     }
 
     // Photo validation
@@ -1428,7 +1493,7 @@ const MembersPage = () => {
                       </div>
                       <div>
                         <Label htmlFor="email" className="text-xs font-bold text-slate-700 mb-2 block">
-                          Email Address
+                          Email Address <span className="text-destructive">*</span>
                         </Label>
                         <Input
                           id="email"
@@ -1449,6 +1514,7 @@ const MembersPage = () => {
                         <Input
                           id="dob"
                           type="date"
+                          max={new Date().toISOString().split("T")[0]}
                           className={`h-11 bg-white border-slate-300 font-medium ${errors.dob ? "border-red-500 focus:border-red-500" : ""}`}
                           value={formData.dob}
                           onChange={handleInputChange}
@@ -2106,7 +2172,7 @@ const MembersPage = () => {
                               <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
                                 <CommandGroup>
                                   {(() => {
-                                    const availableCities = allCityItems;
+                                    const availableCities = availableServiceCities;
                                     const filteredCities = availableCities.filter(c => c.name.toLowerCase().includes(serviceCitySearch.toLowerCase()));
                                     const allCityNames = availableCities.map(c => c.name);
                                     const allCitiesSelected = allCityNames.length > 0 && allCityNames.every(name => formData.serviceLocations.cities.includes(name));

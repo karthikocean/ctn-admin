@@ -131,18 +131,33 @@ const RolesPage = () => {
   const [usersListLoading, setUsersListLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Helper to resolve role name consistently
+  const resolveRoleName = (u: any) => {
+    if (!u) return "—";
+    if (u.roleName && u.roleName !== "N/A") return u.roleName;
+    const uRoleId = getIdString(u.roleId || u.role?._id || u.role?.id || (typeof u.role === "string" ? u.role : null));
+    if (uRoleId) {
+      const matchedRole = roles.find((r: any) => getIdString(r._id || r.id) === uRoleId);
+      if (matchedRole?.name) return matchedRole.name;
+    }
+    if (typeof u.role === "string" && u.role) return u.role;
+    if (u.role?.name) return u.role.name;
+    if (u.roleName) return u.roleName;
+    return "—";
+  };
+
   // Memoized user lists with resolved role names
   const memoizedUsersList = useMemo(() => {
     return usersList.map((u: any) => ({
       ...u,
-      resolvedRole: roles.find((r: any) => r._id === u.roleId)?.name || u.role || "N/A"
+      resolvedRole: resolveRoleName(u)
     }));
   }, [usersList, roles]);
 
   const memoizedRoleUsers = useMemo(() => {
     return roleUsers.map((u: any) => ({
       ...u,
-      resolvedRole: roles.find((r: any) => r._id === u.roleId)?.name || u.role || "N/A"
+      resolvedRole: resolveRoleName(u)
     }));
   }, [roleUsers, roles]);
 
@@ -1185,7 +1200,10 @@ const RolesPage = () => {
                           </th>
                           {actions.map(action => (
                             <th key={action} className="py-3 text-center">
-                              <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => handleToggleColumn(action)}>
+                              <div
+                                className={cn("flex flex-col items-center gap-2 group", canEdit ? "cursor-pointer" : "cursor-not-allowed opacity-60")}
+                                onClick={() => canEdit && handleToggleColumn(action)}
+                              >
                                 <span className="text-xs font-black text-muted-foreground uppercase tracking-widest group-hover:text-primary transition-colors">
                                   {action}
                                 </span>
@@ -1227,8 +1245,8 @@ const RolesPage = () => {
                                 action === "DELETE" ? "rounded-r-xl border-r" : ""
                               )}>
                                 <div
-                                  className="flex justify-center cursor-pointer"
-                                  onClick={() => handleTogglePermission(mod, action)}
+                                  className={cn("flex justify-center", canEdit ? "cursor-pointer" : "cursor-not-allowed")}
+                                  onClick={() => canEdit && handleTogglePermission(mod, action)}
                                 >
                                   <div className={cn(
                                     "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200",
@@ -1256,15 +1274,17 @@ const RolesPage = () => {
 
                 <div className="px-6 py-5 bg-muted/30 border-t border-border flex items-center justify-end gap-3">
                   <Button variant="outline" onClick={() => setPermDialogOpen(false)} className="rounded-xl bg-card">
-                    Discard Changes
+                    {canEdit ? "Discard Changes" : "Close"}
                   </Button>
-                  <Button
-                    className="rounded-xl bg-primary hover:bg-primary/90 px-6 shadow-lg shadow-primary/20 flex items-center gap-2"
-                    onClick={handleUpdatePermissions}
-                  >
-                    <CheckCircle2 size={16} />
-                    Save Permissions
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      className="rounded-xl bg-primary hover:bg-primary/90 px-6 shadow-lg shadow-primary/20 flex items-center gap-2"
+                      onClick={handleUpdatePermissions}
+                    >
+                      <CheckCircle2 size={16} />
+                      Save Permissions
+                    </Button>
+                  )}
                 </div>
               </div>
             </DialogContent>
@@ -1345,7 +1365,7 @@ const RolesPage = () => {
               </div>
 
               <div className="table-responsive mt-4 flex-1 overflow-y-auto border border-border rounded-xl min-h-[300px]">
-                {usersLoading && roleUsers.length === 0 ? (
+                {usersLoading && memoizedRoleUsers.length === 0 ? (
                   <div className="py-24">
                     <PremiumLoader variant="centered" style="tech-circle" text="Establishing member connection..." />
                   </div>
@@ -1364,7 +1384,7 @@ const RolesPage = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {roleUsers.length === 0 ? (
+                      {memoizedRoleUsers.length === 0 ? (
                         <tr>
                           <td colSpan={modalRoleFilter === "all" ? 8 : 7} className="px-6 py-12 text-center">
                             <div className="flex flex-col items-center gap-2">
@@ -1374,7 +1394,7 @@ const RolesPage = () => {
                           </td>
                         </tr>
                       ) : (
-                        roleUsers.map((user, idx) => (
+                        memoizedRoleUsers.map((user, idx) => (
                           <tr key={user._id || user.id} className="hover:bg-secondary/30 transition-colors">
                             <td className="px-4 py-4 text-xs font-semibold text-muted-foreground text-center">{(usersPage - 1) * pageSize + idx + 1}</td>
                             <td className="px-6 py-4 text-xs font-bold text-foreground">{user.userId || "—"}</td>
@@ -1410,7 +1430,7 @@ const RolesPage = () => {
               </div>
 
               {/* Pagination and Count */}
-              {totalPages >= 1 && roleUsers.length > 0 && (
+              {totalPages >= 1 && memoizedRoleUsers.length > 0 && (
                 <div className="mt-4 px-2 border-t border-border pt-4 flex-shrink-0">
                   <PaginationBar
                     currentPage={usersPage}

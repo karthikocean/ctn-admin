@@ -140,11 +140,15 @@ const UsersPage = () => {
 
   // Map users with role name
   const memoizedUsers = useMemo(() => {
-    return users.map((user) => {
-      const matchedRole = roles.find((r) => r._id === user.roleId);
+    return users.map((user: any) => {
+      if (user.roleName && user.roleName !== "N/A") {
+        return { ...user, resolvedRole: user.roleName };
+      }
+      const uRoleId = user.roleId || user.role?._id || user.role?.id || (typeof user.role === "string" ? user.role : null);
+      const matchedRole = roles.find((r: any) => (r._id && uRoleId && r._id.toString() === uRoleId.toString()) || r._id === uRoleId);
       return {
         ...user,
-        resolvedRole: matchedRole ? matchedRole.name : "N/A"
+        resolvedRole: matchedRole ? matchedRole.name : (typeof user.role === "string" ? user.role : user.role?.name || user.roleName || "N/A")
       };
     });
   }, [users, roles]);
