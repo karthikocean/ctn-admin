@@ -196,33 +196,37 @@ const GenericActivityPage = ({
           </Toggle>
 
           {/* Date Filters */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground hidden sm:inline">From:</span>
-            <Input
-              key="gridFromDate"
-              id="gridFromDate"
-              name="gridFromDate"
-              type="date"
-              value={fromDate}
-              onChange={(e) => {
-                setFromDate(e.target.value);
-                setPage(1);
-              }}
-              className="h-9 w-[130px] rounded-lg text-xs"
-            />
-            <span className="text-xs text-muted-foreground hidden sm:inline">To:</span>
-            <Input
-              key="gridToDate"
-              id="gridToDate"
-              name="gridToDate"
-              type="date"
-              value={toDate}
-              onChange={(e) => {
-                setToDate(e.target.value);
-                setPage(1);
-              }}
-              className="h-9 w-[130px] rounded-lg text-xs"
-            />
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">From:</span>
+              <Input
+                key="gridFromDate"
+                id="gridFromDate"
+                name="gridFromDate"
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-[142px] rounded-lg text-xs bg-background px-2"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">To:</span>
+              <Input
+                key="gridToDate"
+                id="gridToDate"
+                name="gridToDate"
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-[142px] rounded-lg text-xs bg-background px-2"
+              />
+            </div>
           </div>
 
           {/* Search */}
@@ -617,33 +621,37 @@ const GenericActivityTablePage = ({
           </Toggle>
 
           {/* Date Filters */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground hidden sm:inline">From:</span>
-            <Input
-              key="tableFromDate"
-              id="tableFromDate"
-              name="tableFromDate"
-              type="date"
-              value={fromDate}
-              onChange={(e) => {
-                setFromDate(e.target.value);
-                setPage(1);
-              }}
-              className="h-9 w-[130px] rounded-lg text-xs"
-            />
-            <span className="text-xs text-muted-foreground hidden sm:inline">To:</span>
-            <Input
-              key="tableToDate"
-              id="tableToDate"
-              name="tableToDate"
-              type="date"
-              value={toDate}
-              onChange={(e) => {
-                setToDate(e.target.value);
-                setPage(1);
-              }}
-              className="h-9 w-[130px] rounded-lg text-xs"
-            />
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">From:</span>
+              <Input
+                key="tableFromDate"
+                id="tableFromDate"
+                name="tableFromDate"
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-[142px] rounded-lg text-xs bg-background px-2"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">To:</span>
+              <Input
+                key="tableToDate"
+                id="tableToDate"
+                name="tableToDate"
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-9 w-[142px] rounded-lg text-xs bg-background px-2"
+              />
+            </div>
           </div>
 
           <div className="relative">

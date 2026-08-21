@@ -10,6 +10,7 @@ import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { getDashboardStats, DashboardQueryParams } from "@/api/DashboardApi";
 import { getRegions } from "@/api/RegionApi";
 import { getCategories } from "@/api/CategoryApi";
+import { formatCompactNumber } from "@/lib/utils";
 
 const COLORS = ["hsl(210,97%,23%)", "hsl(0,72%,50%)", "hsl(142,71%,45%)", "hsl(38,92%,50%)", "hsl(262,83%,58%)", "hsl(210,60%,50%)"];
 const TRAINING_BAR_COLOR = "#1d4ed8";
@@ -270,7 +271,7 @@ const DashboardPage = () => {
         <StatCard title="Direct Meet" value={stats.oneToOneCount.toLocaleString('en-IN')} icon="Handshake" delay={0.6} path="/contributions?type=one_to_one" />
         <StatCard title="Recommendations" value={stats.referralCount.toLocaleString('en-IN')} icon="UserPlus" delay={0.65} path="/contributions?type=referral" />
         <StatCard title="Business Done" value={stats.thankYouSlipCount.toLocaleString('en-IN')} icon="Receipt" delay={0.7} path="/contributions?type=thank_you_slip" />
-        <StatCard title="Business Done Amount" value={`₹${stats.thankYouSlipAmount.toLocaleString('en-IN')}`} icon="IndianRupee" delay={0.75} path="/contributions?type=thank_you_slip" />
+        <StatCard title="Business Done Amount" value={`₹${formatCompactNumber(stats.thankYouSlipAmount)}`} icon="IndianRupee" delay={0.75} path="/contributions?type=thank_you_slip" />
       </div>
 
       {/* Charts Row 1 */}

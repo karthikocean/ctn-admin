@@ -88,7 +88,9 @@ const StatCard = ({ title, value, change, changeType = "neutral", icon, iconColo
               <ChevronRight size={14} className="text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
             )}
           </div>
-          <p className="text-2xl font-bold text-foreground">{typeof value === "number" ? value.toLocaleString() : value}</p>
+          <p className="text-2xl font-bold text-foreground truncate" title={typeof value === "number" ? value.toLocaleString("en-IN") : String(value)}>
+            {typeof value === "number" ? value.toLocaleString() : value}
+          </p>
           {change && (
             <div className="flex items-center gap-1 text-xs">
               {changeType === "positive" && <TrendingUp size={14} className="text-emerald-500" />}

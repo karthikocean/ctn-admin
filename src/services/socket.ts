@@ -1,6 +1,23 @@
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace("/api/admin", "").replace("/api", "") || "http://localhost:5001";
+const getSocketUrl = () => {
+  let apiUrl = (import.meta.env.VITE_API_URL || "").trim();
+  if (!apiUrl) return "http://localhost:5001";
+
+  if (apiUrl.startsWith("https//")) {
+    apiUrl = apiUrl.replace("https//", "https://");
+  } else if (apiUrl.startsWith("http//")) {
+    apiUrl = apiUrl.replace("http//", "http://");
+  } else if (!apiUrl.startsWith("http://") && !apiUrl.startsWith("https://") && !apiUrl.startsWith("ws://") && !apiUrl.startsWith("wss://")) {
+    apiUrl = `https://${apiUrl}`;
+  }
+
+  // Strip path suffixes like /api/admin or /api
+  let socketUrl = apiUrl.replace(/\/api\/admin\/?$/, "").replace(/\/api\/?$/, "").replace(/\/+$/, "");
+  return socketUrl || "http://localhost:5001";
+};
+
+const SOCKET_URL = getSocketUrl();
 
 class SocketService {
   private socket: Socket | null = null;

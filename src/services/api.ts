@@ -1,6 +1,20 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const formatApiUrl = (url?: string) => {
+  let u = (url || "").trim();
+  if (!u) return "http://localhost:5001/api/admin";
+  // Fix missing colon or protocol
+  if (u.startsWith("https//")) {
+    u = u.replace("https//", "https://");
+  } else if (u.startsWith("http//")) {
+    u = u.replace("http//", "http://");
+  } else if (!u.startsWith("http://") && !u.startsWith("https://")) {
+    u = `https://${u}`;
+  }
+  return u.replace(/\/+$/, "");
+};
+
+const API_URL = formatApiUrl(import.meta.env.VITE_API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
