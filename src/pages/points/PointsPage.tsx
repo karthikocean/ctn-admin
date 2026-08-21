@@ -38,7 +38,9 @@ import { getPointsHistory } from "@/api/PointsApi";
 const getFullUrl = (path?: string | null) => {
   if (!path) return "";
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `${import.meta.env.VITE_API_URL || "http://localhost:5001"}/${path}`;
+  const mediaUrl = (import.meta.env.VITE_MEDIA_URL || "").replace(/\/+$/, "");
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${mediaUrl}${cleanPath}`;
 };
 
 interface ExtendedPointEntry extends PointEntry {

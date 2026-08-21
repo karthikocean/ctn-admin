@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Calendar, FileText, Phone, Mail, MapPin, Handshake, Users, Receipt, IndianRupee, Image as ImageIcon, CheckCircle2, MessageSquare } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, FileText, Phone, Mail, MapPin, Handshake, Users, Receipt, IndianRupee, Image as ImageIcon, CheckCircle2, MessageSquare } from "lucide-react";
 import { getContributionDetails } from "@/api/ContributionsApi";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import StatusBadge from "@/components/common/StatusBadge";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatCompactNumber } from "@/lib/utils";
 
 const getFullUrl = (path: string) => {
   if (!path) return "";
@@ -57,12 +57,33 @@ const ContributionDetailPage = () => {
     fetchDetail();
   }, [id]);
 
-  const isOneToOne = contribution.type === "one_to_one";
-  const isThankYouSlip = contribution.type === "thank_you_slip";
-  const isReferral = contribution.type === "referral";
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <GlobalNetworkLoader />
+      </div>
+    );
+  }
+
+  if (error || !contribution) {
+    return (
+      <div className="page-container w-full max-w-4xl mx-auto space-y-6 text-center py-12">
+        <div className="bg-card rounded-2xl border border-border p-8 space-y-4">
+          <p className="text-sm font-semibold text-destructive">{error || "Contribution record not found."}</p>
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="rounded-xl">
+            <ArrowLeft size={16} className="mr-2" /> Back
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const isOneToOne = contribution?.type === "one_to_one";
+  const isThankYouSlip = contribution?.type === "thank_you_slip";
+  const isReferral = contribution?.type === "referral";
 
   // Check if there are any notes/comments to display
-  const hasComments = isThankYouSlip ? contribution.businessDetails : (isReferral ? contribution.referralDetails?.comments : false);
+  const hasComments = isThankYouSlip ? contribution?.businessDetails : (isReferral ? contribution?.referralDetails?.comments : false);
 
   return (
     <div className="page-container w-full max-w-7xl mx-auto space-y-6">
@@ -78,11 +99,12 @@ const ContributionDetailPage = () => {
             <ArrowLeft size={16} className="mr-2" /> Back
           </Button>
           <div>
-            <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
+            <h1 className="text-lg font-bold text-foreground flex items-center gap-2 flex-wrap">
               Contribution Details
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border bg-primary/5 text-primary border-primary/20">
                 {formatType(contribution.type)}
               </span>
+              <StatusBadge status={contribution.status || "active"} />
             </h1>
             <p className="text-xs text-muted-foreground">Value exchange record details</p>
           </div>
@@ -104,75 +126,95 @@ const ContributionDetailPage = () => {
               <Users size={14} /> Network Connection
             </h3>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-6 rounded-2xl bg-primary/[0.02] border border-primary/5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-5 rounded-2xl bg-primary/[0.02] border border-primary/5">
               {/* Giver Node */}
-              <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-3 flex-1 min-w-0 w-full sm:w-auto">
-                <div className="flex items-center gap-3 flex-col sm:flex-row min-w-0 w-full">
-                  <Avatar className="w-12 h-12 border-2 border-background shadow-md shrink-0">
+              <div className="flex-1 min-w-0 bg-background/80 rounded-xl p-4 border border-border/60 shadow-xs space-y-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Avatar className="w-11 h-11 border-2 border-background shadow-xs shrink-0 mt-0.5">
                     <AvatarImage src={getFullUrl(contribution.sender?.profilePhoto)} alt={contribution.sender?.fullName} className="object-cover" />
-                    <AvatarFallback className="bg-primary/10 text-sm text-primary font-bold">
+                    <AvatarFallback className="bg-primary/10 text-xs text-primary font-bold">
                       {contribution.sender?.fullName?.charAt(0).toUpperCase() || "-"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm text-foreground truncate" title={contribution.sender?.fullName}>{contribution.sender?.fullName || "-"}</p>
-                    <p className="text-xs text-muted-foreground truncate" title={contribution.sender?.businessName}>{contribution.sender?.businessName || "-"}</p>
-                    <span className="inline-block text-[9px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded mt-1">Giver</span>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-sm text-foreground truncate" title={contribution.sender?.fullName}>
+                        {contribution.sender?.fullName || "-"}
+                      </p>
+                      <span className="inline-block text-[9px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
+                        Giver
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate" title={contribution.sender?.businessName}>
+                      {contribution.sender?.businessName || "-"}
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-1 text-[11px] text-muted-foreground w-full pt-2 border-t border-border/40 sm:border-0">
+                <div className="space-y-1.5 text-xs text-muted-foreground pt-2.5 border-t border-border/40">
                   {contribution.sender?.mobileNumber && (
-                    <div className="flex items-center justify-center sm:justify-start gap-2">
-                      <Phone size={11} className="text-primary/70 shrink-0" />
+                    <div className="flex items-center gap-2">
+                      <Phone size={12} className="text-primary/70 shrink-0" />
                       <span>{contribution.sender.mobileNumber}</span>
                     </div>
                   )}
                   {contribution.sender?.email && (
-                    <div className="flex items-center justify-center sm:justify-start gap-2 min-w-0">
-                      <Mail size={11} className="text-primary/70 shrink-0" />
-                      <span className="truncate max-w-full" title={contribution.sender.email}>{contribution.sender.email}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Mail size={12} className="text-primary/70 shrink-0" />
+                      <span className="truncate max-w-full" title={contribution.sender.email}>
+                        {contribution.sender.email}
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Dotted Flow Connector */}
-              <div className="flex sm:flex-row flex-col items-center justify-center shrink-0 gap-1.5 py-2 w-full sm:w-auto">
-                <div className="h-6 w-[2px] sm:h-[2px] sm:w-16 border-l-2 sm:border-l-0 sm:border-t-2 border-dashed border-primary/20" />
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-sm">
-                  ➜
+              {/* Flow Connector Arrow */}
+              <div className="flex sm:flex-col items-center justify-center shrink-0 gap-1.5 py-1 px-1">
+                <div className="hidden sm:block h-4 w-[2px] border-l-2 border-dashed border-primary/20" />
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xs">
+                  <ArrowRight size={14} className="sm:rotate-0 rotate-90" />
                 </div>
-                <div className="h-6 w-[2px] sm:h-[2px] sm:w-16 border-l-2 sm:border-l-0 sm:border-t-2 border-dashed border-primary/20" />
+                <div className="hidden sm:block h-4 w-[2px] border-l-2 border-dashed border-primary/20" />
               </div>
 
               {/* Recipient Node */}
-              <div className="flex flex-col items-center sm:items-start text-center sm:text-left space-y-3 flex-1 min-w-0 w-full sm:w-auto">
-                <div className="flex items-center gap-3 flex-col sm:flex-row min-w-0 w-full">
-                  <Avatar className="w-12 h-12 border-2 border-background shadow-md shrink-0">
+              <div className="flex-1 min-w-0 bg-background/80 rounded-xl p-4 border border-border/60 shadow-xs space-y-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Avatar className="w-11 h-11 border-2 border-background shadow-xs shrink-0 mt-0.5">
                     <AvatarImage src={getFullUrl(contribution.receiver?.profilePhoto)} alt={contribution.receiver?.fullName} className="object-cover" />
-                    <AvatarFallback className="bg-primary/5 text-sm text-primary/80 font-bold">
+                    <AvatarFallback className="bg-primary/5 text-xs text-primary/80 font-bold">
                       {contribution.receiver?.fullName?.charAt(0).toUpperCase() || "-"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm text-foreground truncate" title={contribution.receiver?.fullName}>{contribution.receiver?.fullName || "-"}</p>
-                    <p className="text-xs text-muted-foreground truncate" title={contribution.receiver?.businessName}>{contribution.receiver?.businessName || "-"}</p>
-                    <span className="inline-block text-[9px] font-bold text-muted-foreground uppercase tracking-wider bg-secondary px-1.5 py-0.5 rounded mt-1">Recipient</span>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-sm text-foreground truncate" title={contribution.receiver?.fullName}>
+                        {contribution.receiver?.fullName || "-"}
+                      </p>
+                      <span className="inline-block text-[9px] font-bold text-muted-foreground uppercase tracking-wider bg-secondary px-1.5 py-0.5 rounded">
+                        Recipient
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate" title={contribution.receiver?.businessName}>
+                      {contribution.receiver?.businessName || "-"}
+                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-1 text-[11px] text-muted-foreground w-full pt-2 border-t border-border/40 sm:border-0">
+                <div className="space-y-1.5 text-xs text-muted-foreground pt-2.5 border-t border-border/40">
                   {contribution.receiver?.mobileNumber && (
-                    <div className="flex items-center justify-center sm:justify-start gap-2">
-                      <Phone size={11} className="text-primary/70 shrink-0" />
+                    <div className="flex items-center gap-2">
+                      <Phone size={12} className="text-primary/70 shrink-0" />
                       <span>{contribution.receiver.mobileNumber}</span>
                     </div>
                   )}
                   {contribution.receiver?.email && (
-                    <div className="flex items-center justify-center sm:justify-start gap-2 min-w-0">
-                      <Mail size={11} className="text-primary/70 shrink-0" />
-                      <span className="truncate max-w-full" title={contribution.receiver.email}>{contribution.receiver.email}</span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Mail size={12} className="text-primary/70 shrink-0" />
+                      <span className="truncate max-w-full" title={contribution.receiver.email}>
+                        {contribution.receiver.email}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -254,7 +296,12 @@ const ContributionDetailPage = () => {
             {isThankYouSlip && (
               <div className="p-6 text-center space-y-2.5">
                 <p className="text-[10px] font-extrabold text-primary/70 uppercase tracking-widest">Business Value Generated</p>
-                <p className="text-3xl font-black text-primary tracking-tight">{"\u20B9"}{contribution.amount?.toLocaleString() || 0}</p>
+                <p
+                  className="text-2xl sm:text-3xl font-black text-primary tracking-tight truncate max-w-full"
+                  title={`₹${(contribution.amount || 0).toLocaleString("en-IN")}`}
+                >
+                  {"\u20B9"}{formatCompactNumber(contribution.amount || 0)}
+                </p>
                 <span className="inline-block text-[10px] font-bold text-primary bg-primary/5 px-2.5 py-0.5 rounded-full border border-primary/10 mt-1">
                   Exchange Realized
                 </span>
@@ -318,12 +365,26 @@ const ContributionDetailPage = () => {
 
             <div className="space-y-3.5 text-xs text-muted-foreground">
               <div className="flex items-center justify-between">
+                <span>Status</span>
+                <StatusBadge status={contribution.status || "active"} />
+              </div>
+
+              <div className="flex items-center justify-between">
                 <span>Date Logged</span>
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
                   <Calendar size={12} className="text-primary/75" />
                   {contribution.date ? format(new Date(contribution.date), "PPP") : "—"}
                 </span>
               </div>
+
+              {contribution.reason && (
+                <div className="space-y-1 pt-2 border-t border-border/50">
+                  <span className="font-bold text-[10px] uppercase tracking-wider text-destructive">Report Reason</span>
+                  <p className="text-xs font-medium text-destructive bg-destructive/10 p-2.5 rounded-xl border border-destructive/20 leading-relaxed">
+                    {contribution.reason}
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center gap-1.5 pt-2 text-[10px] text-emerald-600 font-bold border-t border-border/50">
                 <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
