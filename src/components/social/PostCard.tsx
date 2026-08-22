@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageCircle, Share, MoreHorizontal, MapPin, Clock, AlertTriangle, Eye } from "lucide-react";
+import { MessageCircle, MoreHorizontal, MapPin, Clock, AlertTriangle, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -193,11 +193,6 @@ const PostCard = ({ post, onReport, onView }: PostCardProps) => {
         <div className="flex items-center gap-2 text-slate-500 hover:text-slate-700 cursor-pointer transition-colors">
           <MessageCircle size={22} className="stroke-[1.5]" />
           <span className="text-sm font-medium">{post.responsedCount || 0}</span>
-        </div>
-
-        <div className="flex items-center gap-2 text-slate-500 hover:text-slate-700 cursor-pointer transition-colors">
-          <Share size={22} className="stroke-[1.5]" />
-          <span className="text-sm font-medium">{post.sharedCount || 0}</span>
         </div>
       </div>
     </motion.div>

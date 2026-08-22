@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, Filter, MessageSquare, Handshake, Layout, ClipboardList, Loader2, Eye, AlertTriangle, MoreVertical, MapPin, Clock, Share } from "lucide-react";
+import { Search, Filter, MessageSquare, Handshake, Layout, ClipboardList, Loader2, Eye, AlertTriangle, MoreVertical, MapPin, Clock, Calendar, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PostCard from "@/components/social/PostCard";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
@@ -45,6 +45,214 @@ const formatDate = (dateStr: string) => {
   } catch {
     return dateStr;
   }
+};
+
+interface ActivityDetailModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedPost: Post | null;
+  newStatus: string;
+  setNewStatus: (status: string) => void;
+  statusReason: string;
+  setStatusReason: (reason: string) => void;
+  handleStatusUpdate: () => void;
+  isUpdating: boolean;
+  title: string;
+}
+
+const ActivityDetailModal = ({
+  open,
+  onOpenChange,
+  selectedPost,
+  newStatus,
+  setNewStatus,
+  statusReason,
+  setStatusReason,
+  handleStatusUpdate,
+  isUpdating,
+  title,
+}: ActivityDetailModalProps) => {
+  if (!selectedPost) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto no-scrollbar rounded-2xl border border-slate-200 p-6 sm:p-7 pb-8 bg-white shadow-2xl">
+        <DialogHeader className="sr-only">
+          <DialogTitle>{title} Details</DialogTitle>
+          <DialogDescription>Full details of the selected post</DialogDescription>
+        </DialogHeader>
+
+        {/* Modal Header: Author Info & Status Pill */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <Avatar className="h-12 w-12 border-2 border-white shadow-sm ring-1 ring-slate-200/80 flex-shrink-0">
+              {selectedPost.member?.profilePhoto && (
+                <AvatarImage src={getFullUrl(selectedPost.member.profilePhoto)} className="object-cover" />
+              )}
+              <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
+                {getInitials(selectedPost.member?.fullName || "Anonymous")}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="font-bold text-base text-slate-900 leading-tight">
+                  {selectedPost.member?.fullName || "Anonymous"}
+                </h4>
+                {selectedPost.member?.businessName && (
+                  <span className="text-[11px] font-medium text-blue-700 bg-blue-50 border border-blue-100/80 px-2 py-0.5 rounded-md truncate max-w-[260px]" title={selectedPost.member.businessName}>
+                    {selectedPost.member.businessName}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 font-medium">
+                <Calendar size={13} className="text-slate-400" />
+                Posted on {formatDate(selectedPost.createdAt)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 ${
+                selectedPost.status === "active"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
+                  : selectedPost.status === "reported"
+                  ? "bg-rose-50 text-rose-700 border border-rose-200/80"
+                  : selectedPost.status === "blocked"
+                  ? "bg-red-50 text-red-700 border border-red-200/80"
+                  : "bg-slate-100 text-slate-700 border border-slate-200/80"
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  selectedPost.status === "active"
+                    ? "bg-emerald-500"
+                    : selectedPost.status === "reported"
+                    ? "bg-rose-500"
+                    : selectedPost.status === "blocked"
+                    ? "bg-red-500"
+                    : "bg-slate-400"
+                }`}
+              />
+              {selectedPost.status || "active"}
+            </span>
+          </div>
+        </div>
+
+        {/* Modal Body: 2 columns layout */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-5 pb-2">
+          {/* Left Column: Post Content (2 cols) */}
+          <div className="md:col-span-2 space-y-4">
+            {/* Title */}
+            {selectedPost.title && (
+              <h3 className="font-bold text-lg text-slate-900 leading-snug tracking-tight break-words">
+                {selectedPost.title}
+              </h3>
+            )}
+
+            {/* Location & Period chips */}
+            {(selectedPost.location || selectedPost.period) && (
+              <div className="flex flex-wrap gap-2 text-xs font-medium text-slate-600">
+                {selectedPost.location && (
+                  <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-2.5 py-1 rounded-lg text-slate-600">
+                    <MapPin size={13} className="text-red-500" />
+                    {selectedPost.location}
+                  </span>
+                )}
+                {selectedPost.period && (
+                  <span className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200/60 px-2.5 py-1 rounded-lg text-slate-600">
+                    <Clock size={13} className="text-blue-500" />
+                    {selectedPost.period}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Description */}
+            {selectedPost.description && (
+              <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap break-words bg-slate-50/70 p-4 rounded-xl border border-slate-200/60">
+                {selectedPost.description}
+              </div>
+            )}
+
+            {/* Media Attachment */}
+            {selectedPost.media && selectedPost.media.length > 0 && (
+              <div className="rounded-xl border border-slate-200/80 overflow-hidden bg-slate-900/5 max-h-[260px] flex justify-center items-center p-2 mb-1">
+                <img
+                  src={getFullUrl(selectedPost.media[0])}
+                  alt="Post media"
+                  className="max-h-[240px] max-w-full w-auto h-auto object-contain rounded-lg shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.png";
+                    e.currentTarget.className = "max-h-[100px] max-w-[100px] object-contain opacity-50";
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Metrics & Admin Controls (1 col) */}
+          <div className="space-y-4">
+            {/* Metric Card */}
+            <div className="bg-gradient-to-br from-blue-50/60 via-white to-slate-50 p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-500/10 text-primary rounded-xl flex-shrink-0">
+                  <MessageSquare size={20} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-slate-900 leading-none">{selectedPost.responsedCount || 0}</p>
+                  <p className="text-xs font-semibold text-slate-500 mt-1">Total Responses</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Admin Controls */}
+            <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200/80 space-y-3.5">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+                <ShieldCheck size={14} className="text-primary" />
+                <span>Admin Control</span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Status</label>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 shadow-xs cursor-pointer"
+                  >
+                    <option value="active">Active</option>
+                    <option value="reported">Reported</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Reason / Log Note</label>
+                  <Textarea
+                    placeholder="Provide status update details..."
+                    value={statusReason}
+                    onChange={(e) => setStatusReason(e.target.value)}
+                    className="min-h-[85px] text-xs rounded-xl bg-white resize-none border-slate-200 focus-visible:ring-primary/20"
+                  />
+                </div>
+
+                <Button
+                  className="w-full h-10 text-xs font-bold rounded-xl shadow-sm transition-all"
+                  onClick={handleStatusUpdate}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Update Status
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 interface GenericActivityPageProps {
@@ -98,6 +306,7 @@ const GenericActivityPage = ({
       setTotalPostsCount(result.total || result.totalItems || 0);
     } catch (error) {
       console.error(`Error fetching ${type} posts:`, error);
+      toast.error(`Failed to load ${type.toLowerCase()} activities`);
     } finally {
       setLoading(false);
     }
@@ -161,16 +370,17 @@ const GenericActivityPage = ({
     return () => clearTimeout(timer);
   }, [search]);
 
+  if (loading && posts.length === 0) {
+    return (
+      <GlobalNetworkLoader
+        title={loaderTitle}
+        subtitle={loaderSubtitle}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 space-y-4 max-w-[1600px] mx-auto relative overflow-hidden">
-      {loading && posts.length === 0 && (
-        <GlobalNetworkLoader
-          fullScreen={false}
-          title={loaderTitle}
-          subtitle={loaderSubtitle}
-        />
-      )}
-
       {/* Single Row Header (fixed at top) */}
       <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border relative z-20">
         {/* Title Block */}
@@ -316,154 +526,18 @@ const GenericActivityPage = ({
       </Dialog>
 
       {/* View Post Dialog */}
-      <Dialog open={!!selectedPost} onOpenChange={(open) => !open && setSelectedPost(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-3xl border border-slate-100 p-6 md:p-8 bg-white shadow-2xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{title} Details</DialogTitle>
-            <DialogDescription>Full details of the selected post</DialogDescription>
-          </DialogHeader>
-
-          {selectedPost && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 pt-2">
-              {/* Left Side: Post Content details (col-span-2) */}
-              <div className="md:col-span-2 space-y-6">
-                {/* Author Info */}
-                <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
-                  <Avatar className="h-12 w-12 border border-slate-200">
-                    {selectedPost.member?.profilePhoto ? (
-                      <AvatarImage src={getFullUrl(selectedPost.member.profilePhoto)} className="object-cover" />
-                    ) : null}
-                    <AvatarFallback className="bg-primary/10 text-primary text-base font-bold">
-                      {getInitials(selectedPost.member?.fullName || "Anonymous")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h4 className="font-bold text-base text-slate-900 leading-tight">
-                      {selectedPost.member?.fullName || "Anonymous"}
-                    </h4>
-                    {selectedPost.member?.businessName && (
-                      <p className="text-xs text-blue-600 font-semibold mt-0.5">
-                        {selectedPost.member.businessName}
-                      </p>
-                    )}
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Posted on {formatDate(selectedPost.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Post Info Section */}
-                <div className="space-y-4">
-                  <h3 className="font-extrabold text-xl text-slate-900 leading-snug tracking-tight break-words">
-                    {selectedPost.title}
-                  </h3>
-
-                  {/* Metadata Chips */}
-                  {(selectedPost.location || selectedPost.period) && (
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                      {selectedPost.location && (
-                        <span className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full shadow-sm">
-                          <MapPin size={13} className="text-red-500" />
-                          {selectedPost.location}
-                        </span>
-                      )}
-                      {selectedPost.period && (
-                        <span className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full shadow-sm">
-                          <Clock size={13} className="text-indigo-500" />
-                          {selectedPost.period}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Description Box */}
-                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap break-words bg-slate-50/40 p-5 rounded-2xl border border-slate-100/60 shadow-inner">
-                    {selectedPost.description}
-                  </div>
-
-                  {/* Media attachment */}
-                  <div className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50/50 shadow-sm max-h-[300px] min-h-[150px] flex justify-center items-center p-4">
-                    <img
-                      src={selectedPost.media && selectedPost.media.length > 0 ? getFullUrl(selectedPost.media[0]) : "/placeholder.png"}
-                      alt="Post media"
-                      className={selectedPost.media && selectedPost.media.length > 0 
-                        ? "w-full h-full object-contain max-h-[280px]" 
-                        : "max-h-[100px] max-w-[100px] object-contain opacity-50"
-                      }
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.png";
-                        e.currentTarget.className = "max-h-[100px] max-w-[100px] object-contain opacity-50";
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Side: Metrics & Action Panel (col-span-1) */}
-              <div className="md:col-span-1">
-                <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-100 flex flex-col justify-between h-full space-y-6">
-                  {/* Activity stats */}
-                  <div className="space-y-4">
-                    <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activity Metrics</h5>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm text-center">
-                        <MessageSquare size={16} className="text-slate-400 mx-auto mb-1" />
-                        <p className="text-lg font-bold text-slate-800 leading-tight">{selectedPost.responsedCount || 0}</p>
-                        <p className="text-[10px] text-muted-foreground font-semibold">Responses</p>
-                      </div>
-                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm text-center">
-                        <Share size={16} className="text-slate-400 mx-auto mb-1" />
-                        <p className="text-lg font-bold text-slate-800 leading-tight">{selectedPost.sharedCount || 0}</p>
-                        <p className="text-[10px] text-muted-foreground font-semibold">Shares</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Admin controls */}
-                  <div className="space-y-4 pt-2 border-t border-slate-200/60">
-                    <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Admin Control</h5>
-
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Status</label>
-                        <select
-                          value={newStatus}
-                          onChange={(e) => setNewStatus(e.target.value)}
-                          className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
-                        >
-                          <option value="active">Active</option>
-                          <option value="reported">Reported</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="blocked">Blocked</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Reason / Log Note</label>
-                        <Textarea
-                          placeholder="Provide status update details..."
-                          value={statusReason}
-                          onChange={(e) => setStatusReason(e.target.value)}
-                          className="min-h-[80px] text-xs rounded-xl bg-white resize-none border-slate-200"
-                        />
-                      </div>
-
-                      <Button
-                        className="w-full h-10 text-xs font-bold rounded-xl shadow-md shadow-primary/10 mt-1"
-                        onClick={handleStatusUpdateFromView}
-                        disabled={isUpdating}
-                      >
-                        {isUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        Update Status
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ActivityDetailModal
+        open={!!selectedPost}
+        onOpenChange={(open) => !open && setSelectedPost(null)}
+        selectedPost={selectedPost}
+        newStatus={newStatus}
+        setNewStatus={setNewStatus}
+        statusReason={statusReason}
+        setStatusReason={setStatusReason}
+        handleStatusUpdate={handleStatusUpdateFromView}
+        isUpdating={isUpdating}
+        title={title}
+      />
 
       {/* Footer (fixed at bottom) */}
       {!loading && posts.length > 0 && (
@@ -494,6 +568,7 @@ const GenericActivityTablePage = ({
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalPostsCount, setTotalPostsCount] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [statusUpdatePost, setStatusUpdatePost] = useState<Post | null>(null);
   const [showReportedOnly, setShowReportedOnly] = useState(false);
@@ -503,8 +578,30 @@ const GenericActivityTablePage = ({
   const [searchParams] = useSearchParams();
   const [fromDate, setFromDate] = useState(searchParams.get("fromDate") || "");
   const [toDate, setToDate] = useState(searchParams.get("toDate") || "");
-  const pageSize = 10; // default page size for table
   const isMounted = useRef(false);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      const fetchApi = showReportedOnly ? getReportedActivities : getPosts;
+      const result = await fetchApi({
+        page: page - 1,
+        limit: pageSize,
+        type,
+        search,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      });
+      setPosts(result.data || []);
+      setTotalPages(result.totalPages || 1);
+      setTotalPostsCount(result.total || result.totalItems || 0);
+    } catch (error) {
+      console.error(`Error fetching ${type} posts:`, error);
+      toast.error(`Failed to load ${type.toLowerCase()} activities`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenPreview = (post: Post) => {
     setSelectedPost(post);
@@ -531,28 +628,6 @@ const GenericActivityTablePage = ({
     }
   };
 
-  const fetchPosts = async () => {
-    setLoading(true);
-    try {
-      const fetchApi = showReportedOnly ? getReportedActivities : getPosts;
-      const result = await fetchApi({
-        page: page - 1,
-        limit: pageSize,
-        type,
-        search,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
-      });
-      setPosts(result.data || []);
-      setTotalPages(result.totalPages || 1);
-      setTotalPostsCount(result.total || result.totalItems || 0);
-    } catch (error) {
-      console.error(`Error fetching ${type} posts:`, error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleStatusUpdate = async () => {
     if (!statusUpdatePost) return;
     setIsUpdating(true);
@@ -572,7 +647,7 @@ const GenericActivityTablePage = ({
 
   useEffect(() => {
     fetchPosts();
-  }, [page, showReportedOnly, fromDate, toDate]);
+  }, [page, pageSize, showReportedOnly, fromDate, toDate]);
 
   useEffect(() => {
     if (!isMounted.current) {
@@ -586,16 +661,17 @@ const GenericActivityTablePage = ({
     return () => clearTimeout(timer);
   }, [search]);
 
+  if (loading && posts.length === 0) {
+    return (
+      <GlobalNetworkLoader
+        title={loaderTitle}
+        subtitle={loaderSubtitle}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] p-4 sm:p-6 lg:p-8 space-y-4 max-w-[1600px] mx-auto relative overflow-hidden">
-      {loading && posts.length === 0 && (
-        <GlobalNetworkLoader
-          fullScreen={false}
-          title={loaderTitle}
-          subtitle={loaderSubtitle}
-        />
-      )}
-
       {/* Single Row Header (fixed at top) */}
       <div className="flex-shrink-0 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border relative z-20">
         {/* Title Block */}
@@ -678,20 +754,19 @@ const GenericActivityTablePage = ({
               <th className="px-6 py-4 font-semibold">Status</th>
               <th className="px-6 py-4 font-semibold">Created Date</th>
               <th className="px-6 py-4 font-semibold text-center">Responsed Count</th>
-              <th className="px-6 py-4 font-semibold text-center">Shared Count</th>
               <th className="px-6 py-4 font-semibold text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {loading && posts.length > 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-20">
+                <td colSpan={7} className="text-center py-20">
                   <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
                 </td>
               </tr>
             ) : posts.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-20 text-muted-foreground">
+                <td colSpan={7} className="text-center py-20 text-muted-foreground">
                   No records found matching your search.
                 </td>
               </tr>
@@ -727,7 +802,6 @@ const GenericActivityTablePage = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-slate-500">{formatDate(post.createdAt)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-center text-slate-600 font-medium">{post.responsedCount || 0}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-slate-600 font-medium">{post.sharedCount || 0}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -757,154 +831,18 @@ const GenericActivityTablePage = ({
       </div>
 
       {/* View Post Dialog */}
-      <Dialog open={!!selectedPost} onOpenChange={(open) => !open && setSelectedPost(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-3xl border border-slate-100 p-6 md:p-8 bg-white shadow-2xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>{title} Details</DialogTitle>
-            <DialogDescription>Full details of the selected post</DialogDescription>
-          </DialogHeader>
-
-          {selectedPost && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 pt-2">
-              {/* Left Side: Post Content details (col-span-2) */}
-              <div className="md:col-span-2 space-y-6">
-                {/* Author Info */}
-                <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100">
-                  <Avatar className="h-12 w-12 border border-slate-200">
-                    {selectedPost.member?.profilePhoto ? (
-                      <AvatarImage src={getFullUrl(selectedPost.member.profilePhoto)} className="object-cover" />
-                    ) : null}
-                    <AvatarFallback className="bg-primary/10 text-primary text-base font-bold">
-                      {getInitials(selectedPost.member?.fullName || "Anonymous")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h4 className="font-bold text-base text-slate-900 leading-tight">
-                      {selectedPost.member?.fullName || "Anonymous"}
-                    </h4>
-                    {selectedPost.member?.businessName && (
-                      <p className="text-xs text-blue-600 font-semibold mt-0.5">
-                        {selectedPost.member.businessName}
-                      </p>
-                    )}
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Posted on {formatDate(selectedPost.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Post Info Section */}
-                <div className="space-y-4">
-                  <h3 className="font-extrabold text-xl text-slate-900 leading-snug tracking-tight break-words">
-                    {selectedPost.title}
-                  </h3>
-
-                  {/* Metadata Chips */}
-                  {(selectedPost.location || selectedPost.period) && (
-                    <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                      {selectedPost.location && (
-                        <span className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full shadow-sm">
-                          <MapPin size={13} className="text-red-500" />
-                          {selectedPost.location}
-                        </span>
-                      )}
-                      {selectedPost.period && (
-                        <span className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full shadow-sm">
-                          <Clock size={13} className="text-indigo-500" />
-                          {selectedPost.period}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Description Box */}
-                  <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap break-words bg-slate-50/40 p-5 rounded-2xl border border-slate-100/60 shadow-inner">
-                    {selectedPost.description}
-                  </div>
-
-                  {/* Media attachment */}
-                  <div className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50/50 shadow-sm max-h-[300px] min-h-[150px] flex justify-center items-center p-4">
-                    <img
-                      src={selectedPost.media && selectedPost.media.length > 0 ? getFullUrl(selectedPost.media[0]) : "/placeholder.png"}
-                      alt="Post media"
-                      className={selectedPost.media && selectedPost.media.length > 0 
-                        ? "w-full h-full object-contain max-h-[280px]" 
-                        : "max-h-[100px] max-w-[100px] object-contain opacity-50"
-                      }
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.png";
-                        e.currentTarget.className = "max-h-[100px] max-w-[100px] object-contain opacity-50";
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Side: Metrics & Action Panel (col-span-1) */}
-              <div className="md:col-span-1">
-                <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-100 flex flex-col justify-between h-full space-y-6">
-                  {/* Activity stats */}
-                  <div className="space-y-4">
-                    <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activity Metrics</h5>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm text-center">
-                        <MessageSquare size={16} className="text-slate-400 mx-auto mb-1" />
-                        <p className="text-lg font-bold text-slate-800 leading-tight">{selectedPost.responsedCount || 0}</p>
-                        <p className="text-[10px] text-muted-foreground font-semibold">Responses</p>
-                      </div>
-                      <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm text-center">
-                        <Share size={16} className="text-slate-400 mx-auto mb-1" />
-                        <p className="text-lg font-bold text-slate-800 leading-tight">{selectedPost.sharedCount || 0}</p>
-                        <p className="text-[10px] text-muted-foreground font-semibold">Shares</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Admin controls */}
-                  <div className="space-y-4 pt-2 border-t border-slate-200/60">
-                    <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Admin Control</h5>
-
-                    <div className="space-y-3">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Status</label>
-                        <select
-                          value={newStatus}
-                          onChange={(e) => setNewStatus(e.target.value)}
-                          className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
-                        >
-                          <option value="active">Active</option>
-                          <option value="reported">Reported</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="blocked">Blocked</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Reason / Log Note</label>
-                        <Textarea
-                          placeholder="Provide status update details..."
-                          value={statusReason}
-                          onChange={(e) => setStatusReason(e.target.value)}
-                          className="min-h-[80px] text-xs rounded-xl bg-white resize-none border-slate-200"
-                        />
-                      </div>
-
-                      <Button
-                        className="w-full h-10 text-xs font-bold rounded-xl shadow-md shadow-primary/10 mt-1"
-                        onClick={handleStatusUpdateFromView}
-                        disabled={isUpdating}
-                      >
-                        {isUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                        Update Status
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ActivityDetailModal
+        open={!!selectedPost}
+        onOpenChange={(open) => !open && setSelectedPost(null)}
+        selectedPost={selectedPost}
+        newStatus={newStatus}
+        setNewStatus={setNewStatus}
+        statusReason={statusReason}
+        setStatusReason={setStatusReason}
+        handleStatusUpdate={handleStatusUpdateFromView}
+        isUpdating={isUpdating}
+        title={title}
+      />
 
       {/* Status Update Dialog */}
       <Dialog open={!!statusUpdatePost} onOpenChange={(open) => !open && setStatusUpdatePost(null)}>

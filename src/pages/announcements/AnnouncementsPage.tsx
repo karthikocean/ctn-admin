@@ -1255,16 +1255,15 @@ const AnnouncementsPage = () => {
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">From Date & Time <span className="text-red-500">*</span></Label>
               <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
+                <div className="flex-1">
                   <Input 
                     type="date" 
                     id="fromDate" 
                     min={getTodayDateString()} 
                     value={formData.fromDate} 
                     onChange={handleInputChange} 
-                    className={`h-11 pr-10 ${errors.fromDate ? "border-red-500" : ""}`} 
+                    className={`h-11 ${errors.fromDate ? "border-red-500" : ""}`} 
                   />
-                  <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
                 <div className="flex gap-1.5 items-center flex-shrink-0">
                   <span className="text-xs text-slate-400 font-semibold px-1">Time:</span>
@@ -1316,16 +1315,15 @@ const AnnouncementsPage = () => {
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">To Date & Time <span className="text-red-500">*</span></Label>
               <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
+                <div className="flex-1">
                   <Input 
                     type="date" 
                     id="toDate" 
                     min={formData.fromDate || getTodayDateString()} 
                     value={formData.toDate} 
                     onChange={handleInputChange} 
-                    className={`h-11 pr-10 ${errors.toDate ? "border-red-500" : ""}`} 
+                    className={`h-11 ${errors.toDate ? "border-red-500" : ""}`} 
                   />
-                  <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
                 <div className="flex gap-1.5 items-center flex-shrink-0">
                   <span className="text-xs text-slate-400 font-semibold px-1">Time:</span>
@@ -1566,16 +1564,15 @@ const AnnouncementsPage = () => {
             <div className="space-y-2 border-t border-slate-100 pt-4">
               <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Schedule Date & Time <span className="text-red-500">*</span></Label>
               <div className="flex flex-col sm:flex-row gap-2">
-                <div className="relative flex-1">
+                <div className="flex-1">
                   <Input 
                     type="date" 
                     id="scheduleDate" 
                     min={getTodayDateString()} 
                     value={formData.scheduleDate} 
                     onChange={handleInputChange} 
-                    className={`h-11 pr-10 ${errors.scheduleDate ? "border-red-500" : ""}`} 
+                    className={`h-11 ${errors.scheduleDate ? "border-red-500" : ""}`} 
                   />
-                  <Calendar size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                 </div>
                 <div className="flex gap-1.5 items-center flex-shrink-0">
                   <span className="text-xs text-slate-400 font-semibold px-1">Time:</span>
