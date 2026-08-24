@@ -69,6 +69,7 @@ import {
   getStates,
   getCities
 } from "@/api/MembersApi";
+import { getRegions } from "@/api/RegionApi";
 import { uploadFiles } from "@/api/MediaApi";
 import { getCategories } from "@/api/CategoryApi";
 import { useAuth } from "@/context/AuthContext";
@@ -284,6 +285,8 @@ const MembersPage = () => {
   const [apiCities, setApiCities] = useState<any[]>([]);
   const [isStatesLoading, setIsStatesLoading] = useState(false);
   const [isCitiesLoading, setIsCitiesLoading] = useState(false);
+  const [businessRegions, setBusinessRegions] = useState<any[]>([]);
+  const [isBusinessRegionsLoading, setIsBusinessRegionsLoading] = useState(false);
 
   const fetchStatesApi = async () => {
     setIsStatesLoading(true);
@@ -297,6 +300,19 @@ const MembersPage = () => {
       console.error("Error fetching states from API:", err);
     } finally {
       setIsStatesLoading(false);
+    }
+  };
+
+  const fetchBusinessRegions = async () => {
+    setIsBusinessRegionsLoading(true);
+    try {
+      const res = await getRegions({ limit: 1000, status: "active" });
+      const regionList = res?.data || [];
+      setBusinessRegions(regionList);
+    } catch (err) {
+      console.error("Error fetching business regions:", err);
+    } finally {
+      setIsBusinessRegionsLoading(false);
     }
   };
 
@@ -317,6 +333,7 @@ const MembersPage = () => {
 
   useEffect(() => {
     fetchStatesApi();
+    fetchBusinessRegions();
   }, []);
 
   const allStates = useMemo(() => State.getStatesOfCountry("IN"), []);
@@ -342,29 +359,37 @@ const MembersPage = () => {
   const allCityItems = useMemo(() => {
     if (!formData.state) return [];
 
-    const matchedState = allStates.find(
-      s => s.name.toLowerCase() === formData.state.toLowerCase() || s.isoCode.toLowerCase() === formData.state.toLowerCase()
-    );
+    const selectedStateName = formData.state.trim().toLowerCase();
+
+    // Filter business regions matching the selected state that have configured areas
+    const matchingRegions = businessRegions.filter((r: any) => {
+      if (!r.city || r.isDeleted) return false;
+      const stateName = (r.state?.name || r.state || "").toString().trim().toLowerCase();
+      const hasAreas = Array.isArray(r.areas) && r.areas.length > 0;
+      return stateName === selectedStateName && hasAreas;
+    });
 
     const citiesMap = new Map<string, { _id?: string; name: string; stateId?: string }>();
 
-    if (matchedState) {
-      const cscCities = City.getCitiesOfState("IN", matchedState.isoCode) || [];
-      cscCities.forEach(c => {
-        citiesMap.set(c.name.toLowerCase(), { name: c.name });
-      });
-    }
-
-    apiCities.forEach((c: any) => {
-      if (c && c.name) {
-        const key = c.name.toLowerCase();
-        const existing = citiesMap.get(key);
-        citiesMap.set(key, { ...existing, _id: c._id, name: c.name, stateId: c.stateId });
+    matchingRegions.forEach((r: any) => {
+      const cityName = (r.city?.name || r.city || "").toString().trim();
+      if (cityName) {
+        citiesMap.set(cityName.toLowerCase(), {
+          _id: r._id,
+          name: cityName,
+        });
       }
     });
 
+    // If the member already has a saved city, ensure it is included so it remains visible
+    if (formData.city && !citiesMap.has(formData.city.toLowerCase())) {
+      citiesMap.set(formData.city.toLowerCase(), {
+        name: formData.city,
+      });
+    }
+
     return Array.from(citiesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [formData.state, apiCities, allStates]);
+  }, [formData.state, formData.city, businessRegions]);
 
   const availableServiceCities = useMemo(() => {
     if (!formData.serviceLocations.states || formData.serviceLocations.states.length === 0) {
@@ -493,11 +518,19 @@ const MembersPage = () => {
 
   useEffect(() => {
     if (formData.state && formData.city) {
+      const matchedRegion = businessRegions.find((r: any) => {
+        const stateName = (r.state?.name || r.state || "").toString().trim().toLowerCase();
+        const cityName = (r.city?.name || r.city || "").toString().trim().toLowerCase();
+        return stateName === formData.state.trim().toLowerCase() && cityName === formData.city.trim().toLowerCase();
+      });
+      if (matchedRegion && Array.isArray(matchedRegion.areas) && matchedRegion.areas.length > 0) {
+        setAreasOptions(matchedRegion.areas);
+      }
       fetchAreas(formData.state, formData.city);
     } else {
       setAreasOptions([]);
     }
-  }, [formData.state, formData.city]);
+  }, [formData.state, formData.city, businessRegions]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -1885,7 +1918,7 @@ const MembersPage = () => {
                       <div>
                         <Label className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
                           City
-                          {isCitiesLoading && <Loader2 size={10} className="animate-spin text-primary" />}
+                          {(isCitiesLoading || isBusinessRegionsLoading) && <Loader2 size={10} className="animate-spin text-primary" />}
                         </Label>
                         <Popover modal={true} open={cityOpen} onOpenChange={(o) => { setCityOpen(o); if (!o) setCitySearch(""); }}>
                           <PopoverTrigger asChild>
@@ -1893,10 +1926,10 @@ const MembersPage = () => {
                               variant="outline"
                               role="combobox"
                               aria-expanded={cityOpen}
-                              disabled={!formData.state}
+                              disabled={!formData.state || isBusinessRegionsLoading}
                               className={cn(
                                 "w-full h-11 bg-white border border-slate-300 rounded-lg justify-between px-3 text-sm font-medium text-slate-900 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0 focus-visible:border-primary focus:ring-2 focus:ring-primary/20 focus:ring-offset-0 focus:border-primary hover:bg-slate-50 transition-all",
-                                !formData.state && "opacity-50 cursor-not-allowed"
+                                (!formData.state || isBusinessRegionsLoading) && "opacity-50 cursor-not-allowed"
                               )}
                             >
                               <span className="truncate">
@@ -1911,13 +1944,7 @@ const MembersPage = () => {
                                 placeholder="Search city..."
                                 className="h-10 text-xs"
                                 value={citySearch}
-                                onValueChange={(val) => {
-                                  setCitySearch(val);
-                                  if (val.length > 2) {
-                                    const matchedState = apiStates.find((st: any) => st.name?.toLowerCase() === formData.state.toLowerCase());
-                                    fetchCitiesApi(matchedState?._id, val);
-                                  }
-                                }}
+                                onValueChange={setCitySearch}
                               />
                               <CommandEmpty>No city found.</CommandEmpty>
                               <CommandList className="max-h-60 overflow-y-auto no-scrollbar">
@@ -1940,8 +1967,8 @@ const MembersPage = () => {
                                         {c.name}
                                       </CommandItem>
                                     ))}
-                                  {allCityItems.length === 0 && formData.state && !isCitiesLoading && (
-                                    <div className="p-2 text-xs text-muted-foreground text-center italic">No cities found</div>
+                                  {allCityItems.length === 0 && formData.state && !isCitiesLoading && !isBusinessRegionsLoading && (
+                                    <div className="p-2 text-xs text-muted-foreground text-center italic">No cities with business regions found</div>
                                   )}
                                 </CommandGroup>
                               </CommandList>
