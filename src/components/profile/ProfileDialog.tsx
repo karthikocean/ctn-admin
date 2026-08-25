@@ -1,22 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User as UserIcon, Mail, Phone, Camera, Lock, CheckCircle2, ShieldCheck, Key } from "lucide-react";
+import { User as UserIcon, Mail, Phone, Camera, Lock, CheckCircle2, ShieldCheck, Key, Eye, EyeOff, Check } from "lucide-react";
 import api from "@/services/api";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +27,20 @@ interface ProfileDialogProps {
   };
 }
 
+const SPECIAL_CHAR_REGEX = /[!@#$%^&*(),.?":{}|<>_\-+=~`[\]\\;/]/;
+
+const checkPasswordStrength = (pwd: string) => ({
+  hasLength: pwd.length >= 8,
+  hasUpper: /[A-Z]/.test(pwd),
+  hasNumber: /[0-9]/.test(pwd),
+  hasSpecial: SPECIAL_CHAR_REGEX.test(pwd),
+  isValid:
+    pwd.length >= 8 &&
+    /[A-Z]/.test(pwd) &&
+    /[0-9]/.test(pwd) &&
+    SPECIAL_CHAR_REGEX.test(pwd),
+});
+
 const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -51,7 +54,12 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
 
   const [roleName, setRoleName] = useState("Loading...");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [passwords, setPasswords] = useState({ oldPin: "", newPin: "", confirmPin: "" });
+  const [passwords, setPasswords] = useState({ oldPassword: "", newPassword: "", confirmPassword: "" });
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const newPasswordStrength = checkPasswordStrength(passwords.newPassword);
 
   useEffect(() => {
     const fetchRoleName = async () => {
@@ -93,7 +101,7 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
     if (user.id && open) {
       fetchUserDetails();
       setIsChangingPassword(false);
-      setPasswords({ oldPin: "", newPin: "", confirmPin: "" });
+      setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" });
     }
   }, [user.id, user.name, user.email, user.phoneNumber, user.roleId, open]);
 
@@ -126,28 +134,32 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
   };
 
   const handleChangePassword = async () => {
-    if (!passwords.oldPin || !passwords.newPin || !passwords.confirmPin) {
+    if (!passwords.oldPassword || !passwords.newPassword || !passwords.confirmPassword) {
       toast.error("Please fill in all password fields");
       return;
     }
-    if (passwords.newPin !== passwords.confirmPin) {
+    if (passwords.oldPassword === passwords.newPassword) {
+      toast.error("New password cannot be the same as current password");
+      return;
+    }
+    if (passwords.newPassword !== passwords.confirmPassword) {
       toast.error("New passwords do not match");
       return;
     }
-    if (passwords.newPin.length !== 4) {
-      toast.error("New PIN must be exactly 4 digits");
+    if (!newPasswordStrength.isValid) {
+      toast.error("Password must be at least 8 characters long and include an uppercase letter, a number, and a special character");
       return;
     }
     
     setLoading(true);
     try {
       await api.post(`/auth/change-pin`, {
-        oldPin: passwords.oldPin,
-        newPin: passwords.newPin,
+        oldPin: passwords.oldPassword,
+        newPin: passwords.newPassword,
       });
       toast.success("Password changed successfully");
       setIsChangingPassword(false);
-      setPasswords({ oldPin: "", newPin: "", confirmPin: "" });
+      setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" });
       onOpenChange(false);
       navigate("/");
     } catch (error: any) {
@@ -160,7 +172,7 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[340px] p-0 overflow-hidden bg-card border border-border shadow-2xl rounded-3xl">
+      <DialogContent className="max-w-[380px] p-0 overflow-hidden bg-card border border-border shadow-2xl rounded-3xl">
         <div className="relative h-20 bg-gradient-to-r from-primary/20 via-primary/10 to-background border-b border-border">
           <div className="absolute -bottom-8 left-5">
             <div className="relative group">
@@ -192,7 +204,7 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
               {isChangingPassword ? "Change Password" : "Profile Settings"}
             </h2>
             <p className="text-[10px] text-muted-foreground">
-              {isChangingPassword ? "Update your 4-digit PIN" : "Manage your personal information"}
+              {isChangingPassword ? "Update your account password with security criteria" : "Manage your personal information"}
             </p>
           </div>
 
@@ -263,52 +275,105 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
             </div>
           ) : (
             <div className="space-y-3">
+              {/* Current Password */}
               <div className="grid gap-1.5">
-                <Label htmlFor="old-pin" className="text-xs">Current PIN</Label>
+                <Label htmlFor="old-password" className="text-xs">Current Password</Label>
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
                   <Input
-                    id="old-pin"
-                    type="password"
-                    maxLength={4}
-                    placeholder="Enter current 4-digit PIN"
-                    className="pl-9 h-9 text-xs rounded-xl"
-                    value={passwords.oldPin}
-                    onChange={(e) => setPasswords({ ...passwords, oldPin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                    id="old-password"
+                    type={showOldPassword ? "text" : "password"}
+                    placeholder="Enter current password"
+                    className="pl-9 pr-9 h-9 text-xs rounded-xl"
+                    value={passwords.oldPassword}
+                    onChange={(e) => setPasswords({ ...passwords, oldPassword: e.target.value })}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowOldPassword(!showOldPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showOldPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
                 </div>
               </div>
 
+              {/* New Password */}
               <div className="grid gap-1.5">
-                <Label htmlFor="new-pin" className="text-xs">New PIN</Label>
+                <Label htmlFor="new-password" className="text-xs">New Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
                   <Input
-                    id="new-pin"
-                    type="password"
-                    maxLength={4}
-                    placeholder="Enter new 4-digit PIN"
-                    className="pl-9 h-9 text-xs rounded-xl"
-                    value={passwords.newPin}
-                    onChange={(e) => setPasswords({ ...passwords, newPin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                    id="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="Enter new password"
+                    className="pl-9 pr-9 h-9 text-xs rounded-xl"
+                    value={passwords.newPassword}
+                    onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showNewPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
                 </div>
+
+                {/* Same password warning */}
+                {passwords.oldPassword && passwords.newPassword && passwords.oldPassword === passwords.newPassword && (
+                  <p className="text-[10px] text-destructive font-medium ml-1">New password cannot be the same as current password.</p>
+                )}
+
+                {/* Real-time Checklist */}
+                {passwords.newPassword && (
+                  <div className="p-2.5 bg-muted/40 rounded-xl border border-border/70 space-y-1 mt-1 text-[10px]">
+                    <div className="grid grid-cols-2 gap-1">
+                      <div className={`flex items-center gap-1 ${newPasswordStrength.hasLength ? "text-green-600 font-semibold" : "text-muted-foreground"}`}>
+                        {newPasswordStrength.hasLength ? <Check size={11} className="stroke-[3]" /> : <div className="w-1 h-1 rounded-full bg-muted-foreground ml-1 mr-0.5" />}
+                        <span>Min. 8 chars</span>
+                      </div>
+                      <div className={`flex items-center gap-1 ${newPasswordStrength.hasUpper ? "text-green-600 font-semibold" : "text-muted-foreground"}`}>
+                        {newPasswordStrength.hasUpper ? <Check size={11} className="stroke-[3]" /> : <div className="w-1 h-1 rounded-full bg-muted-foreground ml-1 mr-0.5" />}
+                        <span>1 Uppercase (A-Z)</span>
+                      </div>
+                      <div className={`flex items-center gap-1 ${newPasswordStrength.hasNumber ? "text-green-600 font-semibold" : "text-muted-foreground"}`}>
+                        {newPasswordStrength.hasNumber ? <Check size={11} className="stroke-[3]" /> : <div className="w-1 h-1 rounded-full bg-muted-foreground ml-1 mr-0.5" />}
+                        <span>1 Number (0-9)</span>
+                      </div>
+                      <div className={`flex items-center gap-1 ${newPasswordStrength.hasSpecial ? "text-green-600 font-semibold" : "text-muted-foreground"}`}>
+                        {newPasswordStrength.hasSpecial ? <Check size={11} className="stroke-[3]" /> : <div className="w-1 h-1 rounded-full bg-muted-foreground ml-1 mr-0.5" />}
+                        <span>1 Special char</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Confirm New Password */}
               <div className="grid gap-1.5">
-                <Label htmlFor="confirm-pin" className="text-xs">Confirm New PIN</Label>
+                <Label htmlFor="confirm-password" className="text-xs">Confirm New Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
                   <Input
-                    id="confirm-pin"
-                    type="password"
-                    maxLength={4}
-                    placeholder="Confirm new 4-digit PIN"
-                    className="pl-9 h-9 text-xs rounded-xl"
-                    value={passwords.confirmPin}
-                    onChange={(e) => setPasswords({ ...passwords, confirmPin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    className="pl-9 pr-9 h-9 text-xs rounded-xl"
+                    value={passwords.confirmPassword}
+                    onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showConfirmPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                  </button>
                 </div>
+                {passwords.confirmPassword && passwords.newPassword !== passwords.confirmPassword && (
+                  <p className="text-[10px] text-destructive font-medium ml-1">Passwords do not match.</p>
+                )}
               </div>
             </div>
           )}
@@ -321,7 +386,7 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
             onClick={() => {
               if (isChangingPassword) {
                 setIsChangingPassword(false);
-                setPasswords({ oldPin: "", newPin: "", confirmPin: "" });
+                setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" });
               } else {
                 onOpenChange(false);
               }
@@ -333,7 +398,7 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
           <Button
             size="sm"
             onClick={handleSave}
-            disabled={loading}
+            disabled={loading || (isChangingPassword && (!newPasswordStrength.isValid || passwords.newPassword !== passwords.confirmPassword || passwords.oldPassword === passwords.newPassword))}
             className="rounded-xl h-9 text-xs bg-primary hover:bg-primary/90 px-4 shadow-lg shadow-primary/20 flex items-center gap-1.5"
           >
             {loading ? (

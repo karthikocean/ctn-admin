@@ -195,9 +195,9 @@ const UsersPage = () => {
       errors.phone = "Phone number must be a valid 10-digit number";
     }
     if (!isEditMode && !formValues.pin.trim()) {
-      errors.pin = "PIN is required for new users";
-    } else if (formValues.pin.trim() && !/^\d{4}$/.test(formValues.pin)) {
-      errors.pin = "PIN must be exactly 4 digits";
+      errors.pin = "Password is required for new users";
+    } else if (formValues.pin.trim() && !/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_\-+=~`[\]\\;/]).{8,}$/.test(formValues.pin)) {
+      errors.pin = "Password must be at least 8 characters long and include an uppercase letter, a number, and a special character";
     }
     if (!formValues.roleId) errors.roleId = "Role assignment is required";
 
@@ -508,14 +508,13 @@ const UsersPage = () => {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-foreground">PIN (4 Digits)</label>
+            <label className="text-sm font-medium text-foreground">Password</label>
             <input
               type="password"
-              maxLength={4}
               value={formValues.pin}
               onChange={(e) => setFormValues({ ...formValues, pin: e.target.value })}
               className="w-full mt-1 px-3 py-2.5 rounded-xl border border-border bg-secondary/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-              placeholder={isEditMode ? "Enter PIN to reset" : "Enter 4-digit PIN"}
+              placeholder={isEditMode ? "Enter new password (optional)" : "Enter password (min. 8 characters)"}
             />
             {formErrors.pin && <p className="text-xs text-destructive mt-1">{formErrors.pin}</p>}
           </div>
