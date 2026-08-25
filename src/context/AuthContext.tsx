@@ -23,7 +23,7 @@ interface AuthContextType {
   user: User | null;
   accessToken: string | null;
   permissions: Permission[];
-  login: (phoneNumber: string, pin: string) => Promise<{ success: boolean; message: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -251,11 +251,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [permissions, modulesList, user, location.pathname, navigate, hasPermission]);
 
 
-  const login = async (phoneNumber: string, pin: string): Promise<{ success: boolean; message: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
     try {
       const response = await api.post("/auth/login", {
-        phoneNumber,
-        pin,
+        email,
+        password,
       });
 
       if (response.data.accessToken) {

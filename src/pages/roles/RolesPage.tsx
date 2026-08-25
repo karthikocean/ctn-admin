@@ -192,7 +192,6 @@ const RolesPage = () => {
     name: "",
     email: "",
     phone: "",
-    pin: "",
     memberId: "",
   });
 
@@ -509,7 +508,6 @@ const RolesPage = () => {
       name: user.name || "",
       email: user.email || "",
       phone: user.phoneNumber || "",
-      pin: "",
       memberId: user.memberId || "",
     });
 
@@ -735,7 +733,7 @@ const RolesPage = () => {
   const handleAddUserAction = (roleName: string, roleId: string) => {
     setSelectedRole(roleName);
     setSelectedRoleId(roleId ? getIdString(roleId) : null);
-    setNewUser({ name: "", email: "", phone: "", pin: "", memberId: "" });
+    setNewUser({ name: "", email: "", phone: "", memberId: "" });
     setIsEditMode(false);
     setEditingUserId(null);
     setAddUserDialogOpen(true);
@@ -765,11 +763,6 @@ const RolesPage = () => {
       if (!newUser.phone) errors.phone = "Phone number is required";
       else if (newUser.phone.replace(/\D/g, "").length !== 10) errors.phone = "Phone must be exactly 10 digits";
 
-      if (!isEditMode || newUser.pin) {
-        if (!newUser.pin) errors.pin = "PIN is required";
-        else if (newUser.pin.length !== 4 || !/^\d{4}$/.test(newUser.pin)) errors.pin = "PIN must be exactly 4 digits";
-      }
-
       if (Object.keys(errors).length > 0) {
         setFormErrors(errors);
         toast({ title: "Error", description: "Please fix the errors in the form", variant: "destructive" });
@@ -789,10 +782,6 @@ const RolesPage = () => {
         memberId: newUser.memberId || null,
       };
 
-      if (newUser.pin) {
-        payload.pin = newUser.pin;
-      }
-
       if (isEditMode && editingUserId) {
         console.log("Triggering PATCH for user:", editingUserId);
         const response = await api.patch(`/admin-users/${editingUserId}`, payload);
@@ -800,7 +789,7 @@ const RolesPage = () => {
       } else {
         console.log("Triggering POST for new user");
         const response = await api.post("/admin-users", payload);
-        toast({ title: "Success", description: response.data?.message || "User created successfully", variant: "success" });
+        toast({ title: "Success", description: response.data?.message || "User created successfully! Login credentials have been sent to their email.", variant: "success" });
       }
 
 
@@ -954,24 +943,35 @@ const RolesPage = () => {
             </div>
           </div>
 
-          <div className="relative w-full group -mx-1 px-1">
-            <div
-              ref={scrollContainerRef}
-              className={cn(
-                "grid gap-4 transition-all duration-300",
-                roles.length > 4
-                  ? "flex overflow-x-auto pb-4 px-1 no-scrollbar snap-x snap-mandatory scroll-px-1"
-                  : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-              )}
-            >
-              {roles.length === 0 && loading ? (
-                Array(4).fill(0).map((_, i) => <RoleSkeleton key={i} />)
-              ) : roles.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-muted-foreground w-full">
-                  No roles found.
-                </div>
-              ) : (
-                roles.map((role, i) => (
+          {/* Roles Container - Only takes vertical space when roles exist, are loading, or when actively searching */}
+          {loading && roles.length === 0 ? (
+            <div className="relative w-full group -mx-1 px-1 mb-4">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                {Array(4).fill(0).map((_, i) => <RoleSkeleton key={i} />)}
+              </div>
+            </div>
+          ) : roles.length === 0 && searchTerm.trim() ? (
+            <div className="mb-4 py-2.5 px-4 rounded-xl border border-dashed border-border bg-secondary/20 text-xs text-muted-foreground flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Search size={14} className="text-muted-foreground/70" />
+                No roles found matching &ldquo;{searchTerm}&rdquo;
+              </span>
+              <Button variant="ghost" size="sm" className="h-7 text-xs px-2.5 hover:bg-secondary/50" onClick={() => setSearchTerm("")}>
+                Clear Search
+              </Button>
+            </div>
+          ) : roles.length > 0 ? (
+            <div className="relative w-full group -mx-1 px-1 mb-4">
+              <div
+                ref={scrollContainerRef}
+                className={cn(
+                  "grid gap-4 transition-all duration-300",
+                  roles.length > 4
+                    ? "flex overflow-x-auto pb-4 px-1 no-scrollbar snap-x snap-mandatory scroll-px-1"
+                    : "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
+                )}
+              >
+                {roles.map((role, i) => (
                   <motion.div
                     key={role._id}
                     initial={{ opacity: 0, y: 20 }}
@@ -995,7 +995,6 @@ const RolesPage = () => {
                         onDelete={canDelete ? () => handleDeleteRoleClick(role._id) : undefined}
                         onAddUser={canCreate ? () => handleAddUserAction(role.name, role._id) : undefined}
                       />
-
                     </div>
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
                       <Button
@@ -1016,35 +1015,34 @@ const RolesPage = () => {
                       </Button>
                     </div>
                   </motion.div>
-                ))
+                ))}
+              </div>
+
+              {roles.length > 4 && (
+                <>
+                  <button
+                    onClick={() => scroll("left")}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 w-10 h-10 rounded-full bg-background border border-border shadow-xl flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button
+                    onClick={() => scroll("right")}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 w-10 h-10 rounded-full bg-background border border-border shadow-xl flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </>
               )}
             </div>
-
-            {roles.length > 4 && (
-              <>
-                <button
-                  onClick={() => scroll("left")}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-5 w-10 h-10 rounded-full bg-background border border-border shadow-xl flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  onClick={() => scroll("right")}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-5 w-10 h-10 rounded-full bg-background border border-border shadow-xl flex items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-white"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </>
-            )}
-          </div>
-
+          ) : null}
 
           {/* Admin Users Table Card */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="mt-6"
+            transition={{ duration: 0.3 }}
+            className={cn("transition-all duration-300", roles.length > 0 ? "mt-2" : "mt-0")}
           >
             <div className="glass-card overflow-hidden">
               <div className="px-5 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1114,8 +1112,18 @@ const RolesPage = () => {
                       </tr>
                     ) : memoizedUsersList.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
-                          No users found matching the filter criteria.
+                        <td colSpan={8} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                            <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center">
+                              <Users size={18} className="text-muted-foreground/60" />
+                            </div>
+                            <span className="text-sm font-medium">No users found</span>
+                            <span className="text-xs text-muted-foreground/80 max-w-sm">
+                              {searchTerm || roleFilter !== "all" || statusFilter !== "all"
+                                ? "No users matching the selected filter criteria."
+                                : "No system users found."}
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     ) : (
@@ -1624,23 +1632,12 @@ const RolesPage = () => {
                   />
                   {formErrors.phone && <span className="text-[10px] text-destructive font-medium">{formErrors.phone}</span>}
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="pin" className={cn(formErrors.pin && "text-destructive")}>PIN (4 Digits) {isEditMode && <span className="text-muted-foreground font-normal text-[10px] ml-1">(Leave blank to keep unchanged)</span>}</Label>
-                  <Input
-                    id="pin"
-                    type="password"
-                    maxLength={4}
-                    placeholder="1234"
-                    value={newUser.pin}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-                      setNewUser({ ...newUser, pin: val });
-                      if (formErrors.pin) setFormErrors({ ...formErrors, pin: "" });
-                    }}
-                    className={cn(formErrors.pin && "border-destructive focus-visible:ring-destructive")}
-                  />
-                  {formErrors.pin && <span className="text-[10px] text-destructive font-medium">{formErrors.pin}</span>}
-                </div>
+                {!isEditMode && (
+                  <div className="p-3 bg-muted/40 rounded-xl border border-border/60 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground">Credentials Delivery</p>
+                    <p className="mt-0.5">A secure initial password and username will be automatically generated and sent to this email address.</p>
+                  </div>
+                )}
                 <div className="grid gap-2">
                   <Label htmlFor="role">Role</Label>
                   {!isEditMode ? (
