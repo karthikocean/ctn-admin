@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import socketService from "@/services/socket";
-import { toast } from "sonner";
 
 /**
  * Hook to synchronize permissions in real-time using Socket.io.
@@ -17,10 +16,6 @@ export const usePermissionsSync = () => {
       console.log("Real-time update: Permissions modified", data);
       try {
         await refreshPermissions();
-        toast.info("Your permissions have been updated.", {
-          description: "Changes have been applied successfully.",
-          duration: 5000,
-        });
       } catch (error) {
         console.error("Failed to sync permissions:", error);
       }
