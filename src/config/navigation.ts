@@ -13,6 +13,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { title: "User Roles & Permissions", path: "/roles", icon: Shield, moduleId: "roles_permissions" },
   { title: "Business Regions", path: "/regions", icon: MapPin, moduleId: "business_regions" },
   { title: "Franchises", path: "/franchises", icon: Globe, moduleId: "franchises" },
+  { title: "Franchise Applications", path: "/franchise-applications", icon: FileText, moduleId: "franchise_applications" },
   {
     title: "Categories", path: "/categories", icon: Layers, moduleId: "categories",
     children: [
@@ -81,6 +82,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   { title: "Coupons", path: "/coupons", icon: Ticket, moduleId: "coupons" },
   // { title: "Marketplace Category", path: "/marketplace-category", icon: ShoppingBag, moduleId: "marketplace_category" },
   { title: "Help Center", path: "/help-center", icon: HelpCircle, moduleId: "help_center" },
+  { title: "Enquiries", path: "/enquiries", icon: HelpCircle, moduleId: "enquiries" },
   { title: "Modules", path: "/modules", icon: Layers, moduleId: "modules" },
 ];
 

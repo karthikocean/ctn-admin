@@ -17,6 +17,8 @@ import SpotlightPage from "@/pages/spotlight/SpotlightPage";
 import SpotlightRequestsPage from "@/pages/spotlight/SpotlightRequestsPage";
 import RegionsPage from "@/pages/regions/RegionsPage";
 import FranchisesPage from "@/pages/regions/FranchisesPage";
+import FranchiseApplicationsPage from "@/pages/franchises/FranchiseApplicationsPage";
+import EnquiriesPage from "@/pages/enquiries/EnquiriesPage";
 import CategoriesPage from "@/pages/categories/CategoriesPage";
 import { SubCategoriesPage } from "@/pages/categories/CategoriesPage";
 import ReferralCategoriesPage from "@/pages/categories/ReferralCategoriesPage";
@@ -155,6 +157,16 @@ const App = () => (
               } />
               <Route path="/regions" element={<RegionsPage />} />
               <Route path="/franchises" element={<FranchisesPage />} />
+              <Route path="/franchise-applications" element={
+                <PermissionRoute module="franchise_applications" action="view">
+                  <FranchiseApplicationsPage />
+                </PermissionRoute>
+              } />
+              <Route path="/enquiries" element={
+                <PermissionRoute module="enquiries" action="view">
+                  <EnquiriesPage />
+                </PermissionRoute>
+              } />
               <Route path="/categories" element={
                 <PermissionRoute module="main_categories" action="view">
                   <CategoriesPage />
