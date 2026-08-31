@@ -19,13 +19,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 const ContributionsPage = () => {
   const navigate = useNavigate();
@@ -391,27 +385,21 @@ const ContributionsPage = () => {
                       <div className="flex items-center gap-3">
                         <div className="flex -space-x-3">
                           {/* Sender profile photo */}
-                          <Avatar className="w-8 h-8 border-2 border-background shadow-sm">
-                            <AvatarImage
-                              src={getFullUrl(c.sender?.profilePhoto)}
-                              alt={c.sender?.fullName}
-                              className="object-cover"
-                            />
-                            <AvatarFallback className="bg-primary/10 text-[10px] text-primary font-bold">
-                              {c.sender?.fullName?.charAt(0).toUpperCase() || "?"}
-                            </AvatarFallback>
-                          </Avatar>
+                          <PrivateAvatar
+                            src={c.sender?.profilePhoto}
+                            fallbackName={c.sender?.fullName}
+                            className="w-8 h-8 border-2 border-background shadow-sm"
+                            avatarImageClassName="object-cover"
+                            avatarFallbackClassName="bg-primary/10 text-[10px] text-primary font-bold"
+                          />
                           {/* Receiver profile photo */}
-                          <Avatar className="w-8 h-8 border-2 border-background shadow-sm">
-                            <AvatarImage
-                              src={getFullUrl(c.receiver?.profilePhoto)}
-                              alt={c.receiver?.fullName}
-                              className="object-cover"
-                            />
-                            <AvatarFallback className="bg-slate-100 text-[10px] text-muted-foreground font-bold">
-                              {c.receiver?.fullName?.charAt(0).toUpperCase() || "?"}
-                            </AvatarFallback>
-                          </Avatar>
+                          <PrivateAvatar
+                            src={c.receiver?.profilePhoto}
+                            fallbackName={c.receiver?.fullName}
+                            className="w-8 h-8 border-2 border-background shadow-sm"
+                            avatarImageClassName="object-cover"
+                            avatarFallbackClassName="bg-slate-100 text-[10px] text-muted-foreground font-bold"
+                          />
                         </div>
                         <div>
                           <p className="font-semibold text-sm text-foreground flex items-center gap-1.5 flex-wrap">

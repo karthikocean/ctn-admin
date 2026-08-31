@@ -30,13 +30,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-
-const getFullUrl = (path: string | null) => {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 const SpotlightRequestsPage = () => {
   const { toast } = useToast();
@@ -306,16 +300,13 @@ const SpotlightRequestsPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <Avatar className="w-9 h-9 border border-border">
-                        <AvatarImage
-                          src={getFullUrl(r.member?.profilePhoto)}
-                          alt={r.member?.fullName}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                          {r.member?.fullName?.charAt(0).toUpperCase() || "?"}
-                        </AvatarFallback>
-                      </Avatar>
+                      <PrivateAvatar
+                        src={r.member?.profilePhoto}
+                        fallbackName={r.member?.fullName}
+                        className="w-9 h-9 border border-border"
+                        avatarImageClassName="object-cover"
+                        avatarFallbackClassName="bg-primary/10 text-primary text-xs font-bold"
+                      />
                       <div>
                         <div className="text-sm font-semibold text-foreground">
                           {r.member?.fullName || "Unknown Member"}
@@ -570,3 +561,4 @@ const SpotlightRequestsPage = () => {
 };
 
 export default SpotlightRequestsPage;
+

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PrivateImage } from "@/components/common/PrivateImage";
 
 interface ProfileDialogProps {
   open: boolean;
@@ -178,7 +179,7 @@ const ProfileDialog = ({ open, onOpenChange, user }: ProfileDialogProps) => {
             <div className="relative group">
               <div className="w-16 h-16 rounded-2xl bg-card border-4 border-card shadow-xl overflow-hidden flex items-center justify-center">
                 {user.avatar ? (
-                  <img src={user.avatar} alt={profile.name} className="w-full h-full object-cover" />
+                  <PrivateImage src={user.avatar} alt={profile.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-primary/10 flex items-center justify-center">
                     <span className="text-2xl font-bold text-primary">{profile.name.charAt(0)}</span>

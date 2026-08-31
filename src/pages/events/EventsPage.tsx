@@ -14,13 +14,8 @@ import { getEvents, createEvent, updateEvent, deleteEvent, getEventDetails } fro
 import { uploadFiles } from "@/api/MediaApi";
 import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateImage } from "@/components/common/PrivateImage";
+import { PrivateVideo } from "@/components/common/PrivateVideo";
 
 const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?: string, type: 'image' | 'video', onRemove: () => void }) => {
   const [localPreview, setLocalPreview] = useState<string>("");
@@ -35,15 +30,15 @@ const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?:
     }
   }, [file]);
 
-  const displayUrl = file ? localPreview : getFullUrl(url || "");
+  const displayUrl = file ? localPreview : (url || "");
   if (!displayUrl) return null;
 
   return (
     <div className="relative mt-3 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 aspect-video flex items-center justify-center shadow-inner max-w-[300px]">
       {type === 'image' ? (
-        <img src={displayUrl} alt="preview" className="max-w-full max-h-full object-contain" />
+        <PrivateImage src={displayUrl} alt="preview" className="max-w-full max-h-full object-contain" />
       ) : (
-        <video src={displayUrl} controls className="max-w-full max-h-full" />
+        <PrivateVideo src={displayUrl} controls className="max-w-full max-h-full" />
       )}
       <button
         type="button"
@@ -329,7 +324,7 @@ const EventsPage = () => {
               >
                 <div className="h-32 bg-secondary/30 relative overflow-hidden flex items-center justify-center">
                   {e.image ? (
-                    <img src={getFullUrl(e.image)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <PrivateImage src={e.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                   ) : (
                     <Calendar size={40} className="text-primary/10" />
                   )}
@@ -559,3 +554,4 @@ const EventsPage = () => {
 };
 
 export default EventsPage;
+

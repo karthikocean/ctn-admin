@@ -8,13 +8,7 @@ import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { getConnections } from "@/api/ConnectionsApi";
-
-const getFullUrl = (path: string | null | undefined) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 const getInitials = (name: string) => {
   if (!name) return "";
@@ -168,14 +162,13 @@ const ConnectionsPage = () => {
                     <td className="px-4 py-4 text-center text-sm text-foreground font-semibold">{(page - 1) * 10 + index + 1}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-foreground">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 border border-slate-200 flex-shrink-0 shadow-sm">
-                          {c.sender?.profilePhoto && (
-                            <AvatarImage src={getFullUrl(c.sender.profilePhoto)} alt={c.sender.fullName} className="object-cover" />
-                          )}
-                          <AvatarFallback className={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(c.sender?.fullName || "?"))}>
-                            {getInitials(c.sender?.fullName || "?")}
-                          </AvatarFallback>
-                        </Avatar>
+                        <PrivateAvatar
+                          src={c.sender?.profilePhoto}
+                          fallbackName={c.sender?.fullName}
+                          className="h-9 w-9 border border-slate-200 flex-shrink-0 shadow-sm"
+                          avatarImageClassName="object-cover"
+                          avatarFallbackClassName={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(c.sender?.fullName || "?"))}
+                        />
                         <div className="flex flex-col">
                           <span className="font-semibold text-slate-900 leading-tight">{c.sender?.fullName || "Unknown"}</span>
                           <span className="text-[11px] text-muted-foreground font-medium mt-0.5 max-w-[180px] truncate" title={c.sender?.businessName || ""}>
@@ -186,14 +179,13 @@ const ConnectionsPage = () => {
                     </td>
                     <td className="px-6 py-4 text-sm text-foreground font-semibold">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 border border-slate-200 flex-shrink-0 shadow-sm">
-                          {c.receiver?.profilePhoto && (
-                            <AvatarImage src={getFullUrl(c.receiver.profilePhoto)} alt={c.receiver.fullName} className="object-cover" />
-                          )}
-                          <AvatarFallback className={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(c.receiver?.fullName || "?"))}>
-                            {getInitials(c.receiver?.fullName || "?")}
-                          </AvatarFallback>
-                        </Avatar>
+                        <PrivateAvatar
+                          src={c.receiver?.profilePhoto}
+                          fallbackName={c.receiver?.fullName}
+                          className="h-9 w-9 border border-slate-200 flex-shrink-0 shadow-sm"
+                          avatarImageClassName="object-cover"
+                          avatarFallbackClassName={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(c.receiver?.fullName || "?"))}
+                        />
                         <div className="flex flex-col">
                           <span className="font-semibold text-slate-900 leading-tight">{c.receiver?.fullName || "Unknown"}</span>
                           <span className="text-[11px] text-muted-foreground font-medium mt-0.5 max-w-[180px] truncate" title={c.receiver?.businessName || ""}>

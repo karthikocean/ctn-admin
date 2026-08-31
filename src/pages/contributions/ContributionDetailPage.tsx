@@ -9,12 +9,9 @@ import StatusBadge from "@/components/common/StatusBadge";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { format } from "date-fns";
 import { cn, formatCompactNumber } from "@/lib/utils";
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  return `${import.meta.env.VITE_MEDIA_URL || ""}${path}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
+import { PrivateImage } from "@/components/common/PrivateImage";
+import { openPrivateDocument } from "@/services/mediaService";
 
 const formatType = (type: string) => {
   switch (type) {
@@ -130,12 +127,13 @@ const ContributionDetailPage = () => {
               {/* Giver Node */}
               <div className="flex-1 min-w-0 bg-background/80 rounded-xl p-4 border border-border/60 shadow-xs space-y-3">
                 <div className="flex items-start gap-3 min-w-0">
-                  <Avatar className="w-11 h-11 border-2 border-background shadow-xs shrink-0 mt-0.5">
-                    <AvatarImage src={getFullUrl(contribution.sender?.profilePhoto)} alt={contribution.sender?.fullName} className="object-cover" />
-                    <AvatarFallback className="bg-primary/10 text-xs text-primary font-bold">
-                      {contribution.sender?.fullName?.charAt(0).toUpperCase() || "-"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <PrivateAvatar
+                    src={contribution.sender?.profilePhoto}
+                    fallbackName={contribution.sender?.fullName}
+                    className="w-11 h-11 border-2 border-background shadow-xs shrink-0 mt-0.5"
+                    avatarImageClassName="object-cover"
+                    avatarFallbackClassName="bg-primary/10 text-xs text-primary font-bold"
+                  />
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-bold text-sm text-foreground truncate" title={contribution.sender?.fullName}>
@@ -181,12 +179,13 @@ const ContributionDetailPage = () => {
               {/* Recipient Node */}
               <div className="flex-1 min-w-0 bg-background/80 rounded-xl p-4 border border-border/60 shadow-xs space-y-3">
                 <div className="flex items-start gap-3 min-w-0">
-                  <Avatar className="w-11 h-11 border-2 border-background shadow-xs shrink-0 mt-0.5">
-                    <AvatarImage src={getFullUrl(contribution.receiver?.profilePhoto)} alt={contribution.receiver?.fullName} className="object-cover" />
-                    <AvatarFallback className="bg-primary/5 text-xs text-primary/80 font-bold">
-                      {contribution.receiver?.fullName?.charAt(0).toUpperCase() || "-"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <PrivateAvatar
+                    src={contribution.receiver?.profilePhoto}
+                    fallbackName={contribution.receiver?.fullName}
+                    className="w-11 h-11 border-2 border-background shadow-xs shrink-0 mt-0.5"
+                    avatarImageClassName="object-cover"
+                    avatarFallbackClassName="bg-primary/5 text-xs text-primary/80 font-bold"
+                  />
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-bold text-sm text-foreground truncate" title={contribution.receiver?.fullName}>
@@ -252,19 +251,17 @@ const ContributionDetailPage = () => {
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {contribution.media.map((img: string, idx: number) => (
-                  <a
+                  <div
                     key={idx}
-                    href={getFullUrl(img)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-border shadow-sm bg-secondary hover:shadow-md transition-all duration-300"
+                    onClick={() => openPrivateDocument(img)}
+                    className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-border shadow-sm bg-secondary hover:shadow-md transition-all duration-300 cursor-pointer"
                   >
-                    <img
-                      src={getFullUrl(img)}
+                    <PrivateImage
+                      src={img}
                       alt={`Direct Meet Media ${idx + 1}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                  </a>
+                  </div>
                 ))}
               </div>
             </motion.div>

@@ -47,13 +47,7 @@ import PaginationBar from "@/components/common/PaginationBar";
 import { getReferrals, getReferredMembers } from "@/api/ReferralsApi";
 import { getCategories } from "@/api/CategoryApi";
 import { cn } from "@/lib/utils";
-
-const getFullUrl = (path?: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 const getAvatarGradient = (name: string = "") => {
   const charCode = name.charCodeAt(0) || 0;
@@ -644,23 +638,16 @@ const ReferralsPage = () => {
                       {/* Member Details */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 border border-border/80 flex-shrink-0 shadow-2xs">
-                            {r.profilePhoto && (
-                              <AvatarImage
-                                src={getFullUrl(r.profilePhoto)}
-                                alt={r.name}
-                                className="object-cover"
-                              />
+                          <PrivateAvatar
+                            src={r.profilePhoto}
+                            fallbackName={r.name}
+                            className="h-9 w-9 border border-border/80 flex-shrink-0 shadow-2xs"
+                            avatarImageClassName="object-cover"
+                            avatarFallbackClassName={cn(
+                              "text-[11px] font-bold flex items-center justify-center",
+                              getAvatarGradient(r.name)
                             )}
-                            <AvatarFallback
-                              className={cn(
-                                "text-[11px] font-bold flex items-center justify-center",
-                                getAvatarGradient(r.name)
-                              )}
-                            >
-                              {getInitials(r.name)}
-                            </AvatarFallback>
-                          </Avatar>
+                          />
                           <div className="flex flex-col min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate max-w-[200px]">
@@ -849,23 +836,16 @@ const ReferralsPage = () => {
                         {/* Member Name */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9 border border-border/80 flex-shrink-0 shadow-2xs">
-                              {member.profilePhoto && (
-                                <AvatarImage
-                                  src={getFullUrl(member.profilePhoto)}
-                                  alt={member.name}
-                                  className="object-cover"
-                                />
+                            <PrivateAvatar
+                              src={member.profilePhoto}
+                              fallbackName={member.name}
+                              className="h-9 w-9 border border-border/80 flex-shrink-0 shadow-2xs"
+                              avatarImageClassName="object-cover"
+                              avatarFallbackClassName={cn(
+                                "text-[11px] font-bold flex items-center justify-center",
+                                getAvatarGradient(member.name)
                               )}
-                              <AvatarFallback
-                                className={cn(
-                                  "text-[11px] font-bold flex items-center justify-center",
-                                  getAvatarGradient(member.name)
-                                )}
-                              >
-                                {getInitials(member.name)}
-                              </AvatarFallback>
-                            </Avatar>
+                            />
                             <div className="flex flex-col">
                               <span className="text-sm font-semibold text-foreground">
                                 {member.name}

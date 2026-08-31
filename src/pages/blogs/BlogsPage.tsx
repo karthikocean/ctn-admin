@@ -26,13 +26,7 @@ import { uploadFiles } from "@/api/MediaApi";
 import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import RichTextEditor from "@/components/common/RichTextEditor";
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import PrivateImage from "@/components/common/PrivateImage";
 
 const slugify = (text: string) => {
   return text
@@ -347,7 +341,7 @@ const BlogsPage = () => {
               >
                 <div className="h-32 bg-secondary/30 relative overflow-hidden flex items-center justify-center">
                   {b.images && b.images.length > 0 ? (
-                    <img src={getFullUrl(b.images[0])} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <PrivateImage src={b.images[0]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                   ) : (
                     <FileText size={40} className="text-primary/10" />
                   )}
@@ -477,7 +471,7 @@ const BlogsPage = () => {
               {/* Existing Images */}
               {formData.images.map((url, idx) => (
                 <div key={`existing-${idx}`} className="relative w-24 h-24 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center shadow-sm">
-                  <img src={getFullUrl(url)} alt="blog-existing" className="w-full h-full object-cover" />
+                  <PrivateImage src={url} alt="blog-existing" className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeExistingImage(idx)}
@@ -510,7 +504,7 @@ const BlogsPage = () => {
           {/* Meta Information Accordion/Section */}
           <div className="space-y-4 p-4 border border-slate-200 rounded-xl bg-slate-50/50">
             <h4 className="font-bold text-slate-700 text-xs uppercase tracking-wider">SEO Meta Tags</h4>
-            
+
             <div className="space-y-2">
               <Label htmlFor="metaTitle" className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Meta Title</Label>
               <Input id="metaTitle" value={formData.metaTitle} onChange={handleInputChange} placeholder="SEO Meta Title" className="h-10" />
@@ -574,3 +568,4 @@ const BlogsPage = () => {
 };
 
 export default BlogsPage;
+

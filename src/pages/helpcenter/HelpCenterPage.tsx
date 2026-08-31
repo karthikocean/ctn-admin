@@ -29,13 +29,8 @@ import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
+import { PrivateImage } from "@/components/common/PrivateImage";
 
 const getInitials = (name: string) => {
   if (!name) return "";
@@ -221,14 +216,13 @@ const DetailDrawer = ({
         <div className="flex-1 p-6 space-y-5">
           {/* Member */}
           <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 border border-slate-100">
-            <Avatar className="h-10 w-10 border border-slate-200 flex-shrink-0">
-              {(item.member?.profilePhoto || item.member?.profile) && (
-                <AvatarImage src={getFullUrl(item.member.profilePhoto || item.member.profile)} alt={item.member?.fullName} className="object-cover" />
-              )}
-              <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
-                {getInitials(item.member?.fullName || "Unknown Member")}
-              </AvatarFallback>
-            </Avatar>
+            <PrivateAvatar
+              src={item.member?.profilePhoto || item.member?.profile}
+              fallbackName={item.member?.fullName || "Unknown Member"}
+              className="h-10 w-10 border border-slate-200 flex-shrink-0"
+              avatarImageClassName="object-cover"
+              avatarFallbackClassName="bg-primary/10 text-primary text-sm font-bold"
+            />
             <div className="flex-1">
               <p className="text-sm font-bold text-slate-800">{item.member?.fullName || "Unknown Member"}</p>
               <p className="text-xs text-slate-500">{item.member?.email || item.member?.mobileNumber || "—"}</p>
@@ -254,8 +248,8 @@ const DetailDrawer = ({
           {item.image && (
             <div className="space-y-1">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Attachment</p>
-              <img
-                src={getFullUrl(item.image)}
+              <PrivateImage
+                src={item.image}
                 alt="Suggestion attachment"
                 className="w-full rounded-xl border border-slate-200 object-cover max-h-52"
               />
@@ -589,14 +583,13 @@ const HelpCenterPage = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8 border border-slate-200 flex-shrink-0">
-                        {(item.member?.profilePhoto || item.member?.profile) && (
-                          <AvatarImage src={getFullUrl(item.member.profilePhoto || item.member.profile)} alt={item.member?.fullName} className="object-cover" />
-                        )}
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                          {getInitials(item.member?.fullName || "Unknown")}
-                        </AvatarFallback>
-                      </Avatar>
+                      <PrivateAvatar
+                        src={item.member?.profilePhoto || item.member?.profile}
+                        fallbackName={item.member?.fullName || "Unknown"}
+                        className="h-8 w-8 border border-slate-200 flex-shrink-0"
+                        avatarImageClassName="object-cover"
+                        avatarFallbackClassName="bg-primary/10 text-primary text-xs font-bold"
+                      />
                       <div>
                         <p className="text-xs font-semibold text-foreground leading-tight">{item.member?.fullName || "Unknown"}</p>
                         <p className="text-[10px] text-muted-foreground">{item.member?.mobileNumber || "—"}</p>

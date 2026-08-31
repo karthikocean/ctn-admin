@@ -67,6 +67,8 @@ const PlansPage = () => {
     title: string;
     description: string;
     amount: number;
+    percentage: number | null;
+    offerPrice: number | null;
     trialDays: number | null;
     sort: number;
     modules: any[];
@@ -89,6 +91,8 @@ const PlansPage = () => {
     title: "",
     description: "",
     amount: 0,
+    percentage: null,
+    offerPrice: null,
     trialDays: null,
     sort: 0,
     modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
@@ -108,6 +112,71 @@ const PlansPage = () => {
       referralBonusMonths: 0
     }
   });
+
+  const handleAmountChange = (rawVal: string) => {
+    const val = parseInt(rawVal, 10);
+    const newAmount = val < 0 ? 0 : (isNaN(val) ? 0 : val);
+
+    let newOfferPrice = formData.offerPrice;
+    if (formData.percentage !== null && formData.percentage !== undefined && formData.percentage > 0) {
+      newOfferPrice = Math.round(newAmount - (newAmount * formData.percentage) / 100);
+    } else if (formData.percentage === 0) {
+      newOfferPrice = newAmount;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      amount: newAmount,
+      offerPrice: newOfferPrice
+    }));
+    if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }));
+  };
+
+  const handlePercentageChange = (rawVal: string) => {
+    if (rawVal === "") {
+      setFormData((prev) => ({
+        ...prev,
+        percentage: null,
+        offerPrice: prev.amount > 0 ? prev.amount : null
+      }));
+      return;
+    }
+    const pct = parseFloat(rawVal);
+    const newPct = isNaN(pct) ? 0 : Math.min(100, Math.max(0, pct));
+    const newOfferPrice = formData.amount > 0
+      ? Math.round(formData.amount - (formData.amount * newPct) / 100)
+      : 0;
+
+    setFormData((prev) => ({
+      ...prev,
+      percentage: newPct,
+      offerPrice: newOfferPrice
+    }));
+  };
+
+  const handleOfferPriceChange = (rawVal: string) => {
+    if (rawVal === "") {
+      setFormData((prev) => ({
+        ...prev,
+        offerPrice: null,
+        percentage: null
+      }));
+      return;
+    }
+    const offer = parseInt(rawVal, 10);
+    const newOffer = isNaN(offer) ? 0 : Math.max(0, offer);
+    let newPct = formData.percentage;
+
+    if (formData.amount > 0 && newOffer <= formData.amount) {
+      newPct = parseFloat((((formData.amount - newOffer) / formData.amount) * 100).toFixed(2));
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      offerPrice: newOffer,
+      percentage: newPct
+    }));
+  };
 
   const fetchPlans = async (search: string = "", pageNum: number = 1) => {
     setLoading(true);
@@ -196,12 +265,19 @@ const PlansPage = () => {
 
     setFormLoading(true);
     try {
+      const payload = {
+        ...formData,
+        amount: Number(formData.amount) || 0,
+        percentage: formData.percentage !== null && formData.percentage !== undefined ? Number(formData.percentage) : 0,
+        offerPrice: formData.offerPrice !== null && formData.offerPrice !== undefined ? Number(formData.offerPrice) : (Number(formData.amount) || 0),
+      };
+
       let response;
       if (editingId) {
-        response = await PlansApi.updatePlan(editingId, formData);
+        response = await PlansApi.updatePlan(editingId, payload);
         toast({ title: "Updated", description: response.message || "Plan updated successfully", variant: "success" });
       } else {
-        response = await PlansApi.createPlan(formData);
+        response = await PlansApi.createPlan(payload);
         toast({ title: "Created", description: response.message || "Plan created successfully", variant: "success" });
       }
       fetchPlans(searchTerm, page);
@@ -226,6 +302,8 @@ const PlansPage = () => {
       title: "",
       description: "",
       amount: 0,
+      percentage: null,
+      offerPrice: null,
       trialDays: null,
       sort: 0,
       modules: [{ moduleName: "", countLimit: 0, frequency: "monthly", frequencyValue: 1 }],
@@ -247,30 +325,47 @@ const PlansPage = () => {
     });
   };
 
-  const handleEdit = (plan: any) => {
+  const handleEdit = async (plan: any) => {
     setEditingId(plan._id);
+    setErrors({});
+    let fullPlan = plan;
+    try {
+      const res = await PlansApi.getPlanById(plan._id);
+      if (res?.data) {
+        fullPlan = res.data;
+      }
+    } catch (e) {
+      console.error("Failed to fetch fresh plan data, using table data:", e);
+    }
+
+    const amount = fullPlan.amount ?? 0;
+    const percentage = fullPlan.percentage !== undefined && fullPlan.percentage !== null && !isNaN(fullPlan.percentage) ? fullPlan.percentage : null;
+    const offerPrice = fullPlan.offerPrice !== undefined && fullPlan.offerPrice !== null && !isNaN(fullPlan.offerPrice) ? fullPlan.offerPrice : null;
+
     setFormData({
-      title: plan.title,
-      description: plan.description,
-      amount: plan.amount,
-      trialDays: plan.trialDays !== undefined && plan.trialDays !== null ? plan.trialDays : null,
-      sort: plan.sort !== undefined && plan.sort !== null ? plan.sort : 0,
-      modules: plan.modules.map((m: any) => ({
+      title: fullPlan.title || "",
+      description: fullPlan.description || "",
+      amount,
+      percentage,
+      offerPrice,
+      trialDays: fullPlan.trialDays !== undefined && fullPlan.trialDays !== null ? fullPlan.trialDays : null,
+      sort: fullPlan.sort !== undefined && fullPlan.sort !== null ? fullPlan.sort : 0,
+      modules: (fullPlan.modules || []).map((m: any) => ({
         moduleName: m.moduleName,
         countLimit: m.countLimit,
         frequency: m.frequency || "monthly",
         frequencyValue: m.frequencyValue !== undefined ? m.frequencyValue : 1
       })),
-      status: plan.status || "active",
-      billingType: plan.billingType || "basic",
-      billingCycle: plan.billingCycle || "monthly",
-      features: plan.features || {
+      status: fullPlan.status || "active",
+      billingType: fullPlan.billingType || "basic",
+      billingCycle: fullPlan.billingCycle || "monthly",
+      features: fullPlan.features || {
         monthlyMeeting: false,
         eventVisitor: false,
         eventStall: false,
         spotlights: false
       },
-      benefits: plan.benefits || {
+      benefits: fullPlan.benefits || {
         requirementResponseLimit: 0,
         pointMultiplier: 1,
         trainingDiscountPercentage: 0,
@@ -431,7 +526,19 @@ const PlansPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-bold text-foreground">₹{plan.amount}</span>
+                      {plan.offerPrice !== undefined && plan.offerPrice !== null && plan.offerPrice < plan.amount ? (
+                        <div className="flex flex-col items-center">
+                          <span className="text-sm font-bold text-foreground">₹{plan.offerPrice}</span>
+                          <span className="text-[11px] text-muted-foreground line-through">₹{plan.amount}</span>
+                          {plan.percentage ? (
+                            <span className="text-[10px] font-bold text-emerald-600">
+                              {plan.percentage}% OFF
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-foreground">₹{plan.amount}</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-sm font-semibold text-foreground">{plan.memberCount ?? 0}</span>
@@ -549,10 +656,10 @@ const PlansPage = () => {
               />
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
               <div>
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Amount <span className="text-red-500">*</span>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground h-5 flex items-center whitespace-nowrap">
+                  Actual Price <span className="text-red-500 ml-1">*</span>
                 </Label>
                 <div className="relative mt-1.5">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">₹</span>
@@ -560,17 +667,14 @@ const PlansPage = () => {
                     type="number"
                     min={1}
                     step={1}
-                    value={formData.amount}
+                    placeholder="8000"
+                    value={formData.amount || ""}
                     onKeyDown={(e) => {
                       if (e.key === "." || e.key === "," || e.key === "e" || e.key === "E" || e.key === "+" || e.key === "-") {
                         e.preventDefault();
                       }
                     }}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      setFormData({ ...formData, amount: val < 0 ? 0 : (isNaN(val) ? 0 : val) });
-                      if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }));
-                    }}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     className={`h-11 pl-7 rounded-xl bg-secondary/30 focus:ring-primary/20 border ${errors.amount ? "border-red-500" : "border-border"
                       }`}
                   />
@@ -579,11 +683,63 @@ const PlansPage = () => {
                   <p className="text-[11px] text-red-500 mt-1 font-semibold">{errors.amount}</p>
                 )}
               </div>
+
               <div>
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Trial Days</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground h-5 flex items-center whitespace-nowrap">
+                  Discount %
+                </Label>
+                <div className="relative mt-1.5">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="any"
+                    placeholder="37.5"
+                    value={formData.percentage !== null && formData.percentage !== undefined ? formData.percentage : ""}
+                    onChange={(e) => handlePercentageChange(e.target.value)}
+                    className="h-11 pr-8 rounded-xl bg-secondary/30 focus:ring-primary/20 border border-border"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">%</span>
+                </div>
+                {formData.percentage !== null && formData.percentage > 0 && (
+                  <p className="text-[10px] text-emerald-600 font-semibold mt-1">
+                    {formData.percentage}% OFF applied
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground h-5 flex items-center whitespace-nowrap">
+                  Offer Price
+                </Label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-sm">₹</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="4999"
+                    value={formData.offerPrice !== null && formData.offerPrice !== undefined ? formData.offerPrice : ""}
+                    onChange={(e) => handleOfferPriceChange(e.target.value)}
+                    className="h-11 pl-7 rounded-xl bg-secondary/30 focus:ring-primary/20 border border-border font-semibold text-primary"
+                  />
+                </div>
+                {formData.amount > 0 && formData.offerPrice !== null && formData.offerPrice < formData.amount && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Saves ₹{formData.amount - formData.offerPrice}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
+              <div>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground h-5 flex items-center whitespace-nowrap">
+                  Trial Days
+                </Label>
                 <Input
                   type="number"
                   min={0}
+                  placeholder="0"
                   value={formData.trialDays ?? ""}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -596,7 +752,9 @@ const PlansPage = () => {
                 />
               </div>
               <div>
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sort Order</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground h-5 flex items-center whitespace-nowrap">
+                  Sort Order
+                </Label>
                 <Input
                   type="number"
                   min={0}
@@ -612,7 +770,9 @@ const PlansPage = () => {
                 />
               </div>
               <div>
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground h-5 flex items-center whitespace-nowrap">
+                  Status
+                </Label>
                 <select
                   className="w-full mt-1.5 h-11 px-3 rounded-xl border border-border bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   value={formData.status}
@@ -995,7 +1155,21 @@ const PlansPage = () => {
                 <div className="grid grid-cols-4 border-b border-border divide-x divide-border bg-secondary/10">
                   <div className="p-4 text-center">
                     <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Plan Amount</span>
-                    <span className="text-xl font-extrabold text-primary">₹{viewingPlan.amount}</span>
+                    {viewingPlan.offerPrice !== undefined && viewingPlan.offerPrice !== null && viewingPlan.offerPrice < viewingPlan.amount ? (
+                      <div>
+                        <span className="text-xl font-extrabold text-primary">₹{viewingPlan.offerPrice}</span>
+                        <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                          <span className="text-xs text-muted-foreground line-through">₹{viewingPlan.amount}</span>
+                          {viewingPlan.percentage ? (
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
+                              {viewingPlan.percentage}% OFF
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-xl font-extrabold text-primary">₹{viewingPlan.amount}</span>
+                    )}
                   </div>
                   <div className="p-4 text-center">
                     <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest block mb-1">Trial Days</span>

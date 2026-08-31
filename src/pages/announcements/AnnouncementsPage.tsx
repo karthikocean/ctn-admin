@@ -25,13 +25,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateImage } from "@/components/common/PrivateImage";
+import { PrivateVideo } from "@/components/common/PrivateVideo";
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?: string, type: 'image' | 'video', onRemove: () => void }) => {
   const [localPreview, setLocalPreview] = useState<string>("");
@@ -46,15 +42,15 @@ const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?:
     }
   }, [file]);
 
-  const displayUrl = file ? localPreview : getFullUrl(url || "");
+  const displayUrl = file ? localPreview : (url || "");
   if (!displayUrl) return null;
 
   return (
     <div className="relative mt-3 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 aspect-video flex items-center justify-center shadow-inner max-w-[300px]">
       {type === 'image' ? (
-        <img src={displayUrl} alt="preview" className="max-w-full max-h-full object-contain" />
+        <PrivateImage src={displayUrl} alt="preview" className="max-w-full max-h-full object-contain" />
       ) : (
-        <video src={displayUrl} controls className="max-w-full max-h-full" />
+        <PrivateVideo src={displayUrl} controls className="max-w-full max-h-full" />
       )}
       <button
         type="button"
@@ -840,7 +836,7 @@ const AnnouncementsPage = () => {
               <motion.div key={a._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: i * 0.05 }} className="glass-card overflow-hidden flex flex-col">
                 <div className="h-32 bg-secondary/50 relative overflow-hidden flex items-center justify-center">
                   {a.image ? (
-                    <img src={getFullUrl(a.image)} className="w-full h-full object-cover" />
+                    <PrivateImage src={a.image} className="w-full h-full object-cover" />
                   ) : (
                     <Megaphone size={40} className="text-primary/20" />
                   )}
@@ -1676,7 +1672,7 @@ const AnnouncementsPage = () => {
                 <div className="border border-border rounded-2xl overflow-hidden bg-white shadow-sm flex flex-col">
                   <div className="h-44 bg-slate-100 relative overflow-hidden flex items-center justify-center">
                     {previewData.image ? (
-                      <img src={getFullUrl(previewData.image)} className="w-full h-full object-cover" />
+                      <PrivateImage src={previewData.image} className="w-full h-full object-cover" />
                     ) : (
                       <Megaphone size={48} className="text-primary/20" />
                     )}
@@ -1781,12 +1777,12 @@ const AnnouncementsPage = () => {
                             previewData.eventBookings?.map((booking: any) => (
                               <TableRow key={booking.bookingId} className="hover:bg-slate-50">
                                 <TableCell className="flex items-center gap-2 py-2.5">
-                                  <Avatar className="h-7 w-7">
-                                    <AvatarImage src={getFullUrl(booking.member?.profilePhoto)} />
-                                    <AvatarFallback className="text-[10px] font-bold">
-                                      {booking.member?.fullName?.slice(0, 2).toUpperCase()}
-                                    </AvatarFallback>
-                                  </Avatar>
+                                  <PrivateAvatar
+                                    src={booking.member?.profilePhoto}
+                                    fallbackName={booking.member?.fullName}
+                                    className="h-7 w-7"
+                                    avatarFallbackClassName="text-[10px] font-bold"
+                                  />
                                   <div>
                                     <p className="text-sm text-foreground font-semibold">{booking.member?.fullName}</p>
                                     <p className="text-sm text-foreground font-semibold block mt-0.5">{booking.member?.email}</p>
@@ -1839,12 +1835,12 @@ const AnnouncementsPage = () => {
                                     )}
                                   </TableCell>
                                   <TableCell className="flex items-center gap-2 py-2.5">
-                                    <Avatar className="h-7 w-7">
-                                      <AvatarImage src={getFullUrl(booking.member?.profilePhoto)} />
-                                      <AvatarFallback className="text-[10px] font-bold">
-                                        {booking.member?.fullName?.slice(0, 2).toUpperCase()}
-                                      </AvatarFallback>
-                                    </Avatar>
+                                    <PrivateAvatar
+                                      src={booking.member?.profilePhoto}
+                                      fallbackName={booking.member?.fullName}
+                                      className="h-7 w-7"
+                                      avatarFallbackClassName="text-[10px] font-bold"
+                                    />
                                     <div>
                                       <p className="text-sm text-foreground font-semibold">{booking.member?.fullName}</p>
                                     </div>
