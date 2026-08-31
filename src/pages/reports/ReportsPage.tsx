@@ -64,15 +64,9 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 const COLORS = ["hsl(210,97%,23%)", "hsl(0,72%,50%)", "hsl(142,71%,45%)", "hsl(38,92%,50%)", "hsl(262,83%,58%)", "hsl(210,60%,50%)"];
-
-const getFullUrl = (path: string | null | undefined) => {
-  if (!path) return undefined;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
 
 const getAvatarGradient = (name: string) => {
   const gradients = [
@@ -822,16 +816,13 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
                         {/* Member Details */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="w-10 h-10 border border-slate-200/80 flex-shrink-0 shadow-xs">
-                              <AvatarImage
-                                src={getFullUrl(row.profilePhoto)}
-                                alt={row.fullName}
-                                className="object-cover"
-                              />
-                              <AvatarFallback className={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(row.fullName || "?"))}>
-                                {row.fullName?.charAt(0).toUpperCase() || "?"}
-                              </AvatarFallback>
-                            </Avatar>
+                            <PrivateAvatar
+                              src={row.profilePhoto}
+                              fallbackName={row.fullName}
+                              className="w-10 h-10 border border-slate-200/80 flex-shrink-0 shadow-xs"
+                              avatarImageClassName="object-cover"
+                              avatarFallbackClassName={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(row.fullName || "?"))}
+                            />
                             <div className="flex flex-col">
                               <span className="text-sm font-semibold text-slate-900 leading-snug tracking-tight">{row.fullName}</span>
                               <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
@@ -1230,16 +1221,13 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
                         {/* Member Details */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <Avatar className="w-10 h-10 border border-slate-200/80 flex-shrink-0 shadow-xs">
-                              <AvatarImage
-                                src={getFullUrl(row.profilePhoto)}
-                                alt={row.fullName}
-                                className="object-cover"
-                              />
-                              <AvatarFallback className={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(row.fullName || "?"))}>
-                                {row.fullName?.charAt(0).toUpperCase() || "?"}
-                              </AvatarFallback>
-                            </Avatar>
+                            <PrivateAvatar
+                              src={row.profilePhoto}
+                              fallbackName={row.fullName}
+                              className="w-10 h-10 border border-slate-200/80 flex-shrink-0 shadow-xs"
+                              avatarImageClassName="object-cover"
+                              avatarFallbackClassName={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(row.fullName || "?"))}
+                            />
                             <div className="flex flex-col">
                               <span className="text-sm font-semibold text-slate-900 leading-snug tracking-tight">{row.fullName}</span>
                               <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 mt-0.5">

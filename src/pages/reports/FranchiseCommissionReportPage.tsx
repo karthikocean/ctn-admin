@@ -36,13 +36,8 @@ import PaginationBar from "@/components/common/PaginationBar";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { TableSkeleton } from "@/components/common/TableLoader";
 import { getCommissionReport, settleCommission, uploadReceipt, getCommissionReportDetails } from "@/api/FranchiseApi";
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateImage } from "@/components/common/PrivateImage";
+import { openPrivateDocument } from "@/services/mediaService";
 
 interface CommissionRecord {
   franchiseId: string;
@@ -613,7 +608,7 @@ const FranchiseCommissionReportPage = () => {
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           type="button"
-                          onClick={() => setImageLightboxUrl(getFullUrl(selectedRecord.paymentReceiptUrl!))}
+                          onClick={() => setImageLightboxUrl(selectedRecord.paymentReceiptUrl!)}
                           className="text-xs font-bold text-emerald-800 hover:underline flex items-center gap-1"
                         >
                           <Eye size={13} /> Preview
@@ -861,21 +856,14 @@ const FranchiseCommissionReportPage = () => {
                         <Paperclip size={12} />
                         Settlement Receipt
                       </h3>
-                      <a
-                        href={getFullUrl(viewDetails.paymentReceiptUrl)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block rounded-xl overflow-hidden border border-emerald-500/30 bg-emerald-500/5 hover:opacity-90 transition-opacity group"
+                      <div
+                        onClick={() => openPrivateDocument(viewDetails.paymentReceiptUrl)}
+                        className="block rounded-xl overflow-hidden border border-emerald-500/30 bg-emerald-500/5 hover:opacity-90 transition-opacity group cursor-pointer"
                       >
-                        <img
-                          src={getFullUrl(viewDetails.paymentReceiptUrl)}
+                        <PrivateImage
+                          src={viewDetails.paymentReceiptUrl}
                           alt="Settlement Receipt"
                           className="w-full object-contain max-h-72"
-                          onError={(e) => {
-                            // fallback to link card if image fails
-                            const el = e.currentTarget.parentElement;
-                            if (el) el.innerHTML = `<div class="flex items-center gap-3 p-3.5"><span class="text-xs font-bold text-emerald-700 truncate">${viewDetails.paymentReceiptUrl!.split("/").pop()}</span><span class="text-[10px] text-muted-foreground">Click to open</span></div>`;
-                          }}
                         />
                         <div className="flex items-center justify-between px-3 py-2 border-t border-emerald-500/20 bg-emerald-500/5">
                           <span className="text-[10px] text-emerald-700 font-semibold truncate">
@@ -883,7 +871,7 @@ const FranchiseCommissionReportPage = () => {
                           </span>
                           <ExternalLink size={11} className="text-emerald-600 flex-shrink-0 ml-2" />
                         </div>
-                      </a>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -920,7 +908,7 @@ const FranchiseCommissionReportPage = () => {
           </div>
           <div className="p-4 flex items-center justify-center max-h-[75vh] overflow-auto">
             {imageLightboxUrl && (
-              <img
+              <PrivateImage
                 src={imageLightboxUrl}
                 alt="Receipt Preview"
                 className="max-h-[70vh] w-auto object-contain rounded-lg shadow-2xl"

@@ -31,3 +31,5 @@ export function formatCompactNumber(value: number | string): string {
 
   return `${sign}${abs.toLocaleString("en-IN")}`;
 }
+
+export { getPrivateMediaUrl, openPrivateDocument } from "@/services/mediaService";

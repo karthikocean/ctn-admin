@@ -27,13 +27,8 @@ import {
 import { getTrainingCategories } from "@/api/TrainingCategoryApi";
 import { uploadFiles } from "@/api/MediaApi";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
-
-const getFullUrl = (path: string | null) => {
-  if (!path) return "";
-  if (path.startsWith("http") || path.startsWith("blob:") || path.startsWith("data:")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateImage } from "@/components/common/PrivateImage";
+import { PrivateVideo } from "@/components/common/PrivateVideo";
 
 // --- Types ---
 interface Lesson {
@@ -550,7 +545,7 @@ const TrainingsPage = () => {
             {trainings.map((t, i) => (
               <motion.div key={t._id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="glass-card overflow-hidden group hover:shadow-xl hover:shadow-primary/5 transition-all duration-300">
                 <div className="aspect-video relative overflow-hidden bg-secondary">
-                  <img src={getFullUrl(t.thumbnail)} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <PrivateImage src={t.thumbnail} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
                   <div className="absolute top-3 right-3">
                     <StatusBadge status={t.status} />
@@ -575,7 +570,7 @@ const TrainingsPage = () => {
                   </div>
                   <div className="flex items-center gap-2 mt-2">
                     <div className="w-6 h-6 rounded-full bg-secondary border border-border overflow-hidden">
-                      <img src={getFullUrl(t.authorImage)} alt={t.authorName} className="w-full h-full object-cover" />
+                      <PrivateImage src={t.authorImage} alt={t.authorName} className="w-full h-full object-cover" />
                     </div>
                     <p className="text-xs text-muted-foreground font-medium">by <span className="text-foreground">{t.authorName}</span></p>
                   </div>
@@ -692,7 +687,7 @@ const TrainingsPage = () => {
                     <div className={cn("relative group aspect-video rounded-2xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex flex-col items-center justify-center", errors.thumbnail && "border-red-500 bg-red-50")}>
                       {form.thumbnail ? (
                         <div className="relative w-full h-full">
-                          <img src={getFullUrl(form.thumbnail)} className="w-full h-full object-cover" />
+                          <PrivateImage src={form.thumbnail} className="w-full h-full object-cover" />
                           <button
                             onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, thumbnail: null, thumbnailFile: null })); }}
                             className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
@@ -714,7 +709,7 @@ const TrainingsPage = () => {
                     <div className={cn("relative group aspect-video rounded-2xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex flex-col items-center justify-center", errors.banner && "border-red-500 bg-red-50")}>
                       {form.banner ? (
                         <div className="relative w-full h-full">
-                          <img src={getFullUrl(form.banner)} className="w-full h-full object-cover" />
+                          <PrivateImage src={form.banner} className="w-full h-full object-cover" />
                           <button
                             onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, banner: null, bannerFile: null })); }}
                             className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
@@ -777,7 +772,7 @@ const TrainingsPage = () => {
                     <div className={cn("relative group w-32 h-32 rounded-3xl border-2 border-dashed border-slate-200 bg-white overflow-hidden flex items-center justify-center", errors.authorImage && "border-red-500 bg-red-50")}>
                       {form.authorImage ? (
                         <div className="relative w-full h-full">
-                          <img src={getFullUrl(form.authorImage)} className="w-full h-full object-cover" />
+                          <PrivateImage src={form.authorImage} className="w-full h-full object-cover" />
                           <button
                             onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, authorImage: null, authorImageFile: null })); }}
                             className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
@@ -860,7 +855,7 @@ const TrainingsPage = () => {
                           <div className={cn("relative group/vid aspect-video rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden", errors[`lesson_${lesson.id}_video`] && "border-red-500 bg-red-50")}>
                             {lesson.videoUrl ? (
                               <div className="relative w-full h-full group">
-                                <video src={getFullUrl(lesson.videoUrl)} className="w-full h-full object-cover" controls={false} muted />
+                                <PrivateVideo src={lesson.videoUrl} className="w-full h-full object-cover" controls={false} muted />
                                 <button
                                   onClick={(e) => { e.stopPropagation(); updateLesson(lesson.id, "videoUrl", null); updateLesson(lesson.id, "videoFile", null); }}
                                   className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"
@@ -883,7 +878,7 @@ const TrainingsPage = () => {
                           <div className={cn("relative group/thumb aspect-video rounded-xl border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden", errors[`lesson_${lesson.id}_thumbnail`] && "border-red-500 bg-red-50")}>
                             {lesson.thumbnail ? (
                               <div className="relative w-full h-full">
-                                <img src={getFullUrl(lesson.thumbnail)} className="w-full h-full object-cover" />
+                                <PrivateImage src={lesson.thumbnail} className="w-full h-full object-cover" />
                                 <button
                                   onClick={(e) => { e.stopPropagation(); updateLesson(lesson.id, "thumbnail", null); updateLesson(lesson.id, "thumbnailFile", null); }}
                                   className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-all z-20"

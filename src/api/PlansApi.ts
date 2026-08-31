@@ -5,6 +5,11 @@ export const getPlans = async (params: any) => {
   return response.data;
 };
 
+export const getPlanById = async (id: string) => {
+  const response = await api.get(`/plans/${id}`);
+  return response.data;
+};
+
 export const createPlan = async (data: any) => {
   const response = await api.post("/plans", data);
   return response.data;

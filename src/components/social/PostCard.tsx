@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
-import { MessageCircle, MoreHorizontal, MapPin, Clock, AlertTriangle, Eye } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MessageCircle, MoreHorizontal, MapPin, Clock, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
+import { PrivateImage } from "@/components/common/PrivateImage";
 import type { Post } from "@/types";
 
 interface PostCardProps {
@@ -13,25 +14,7 @@ interface PostCardProps {
   onView?: (post: Post) => void;
 }
 
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
-
-const PostCard = ({ post, onReport, onView }: PostCardProps) => {
-  const getInitials = (name: string) => {
-    if (!name) return "";
-    return name
-      .split(" ")
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
+const PostCard = ({ post, onView }: PostCardProps) => {
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
@@ -61,8 +44,7 @@ const PostCard = ({ post, onReport, onView }: PostCardProps) => {
 
   const memberName = post.member?.fullName || "Anonymous";
   const businessName = post.member?.businessName;
-  const profilePhotoUrl = post.member?.profilePhoto ? getFullUrl(post.member.profilePhoto) : undefined;
-  const postImageUrl = post.media && post.media.length > 0 ? getFullUrl(post.media[0]) : undefined;
+  const postImagePath = post.media && post.media.length > 0 ? post.media[0] : null;
 
   return (
     <motion.div
@@ -78,12 +60,12 @@ const PostCard = ({ post, onReport, onView }: PostCardProps) => {
             className="flex items-start gap-3 min-w-0 pr-2 cursor-pointer flex-1" 
             onClick={() => onView && onView(post)}
           >
-            <Avatar className="h-11 w-11 border-0 bg-slate-200 flex-shrink-0">
-              {profilePhotoUrl && <AvatarImage src={profilePhotoUrl} alt={memberName} className="object-cover" />}
-              <AvatarFallback className="bg-slate-200 text-slate-600 text-base font-medium">
-                {getInitials(memberName)}
-              </AvatarFallback>
-            </Avatar>
+            <PrivateAvatar
+              src={post.member?.profilePhoto}
+              fallbackName={memberName}
+              className="h-11 w-11 border-0 bg-slate-200 flex-shrink-0"
+              avatarFallbackClassName="bg-slate-200 text-slate-600 text-base font-medium"
+            />
             <div className="min-w-0 flex-1 pt-0.5">
               <h3 className="text-[15px] font-semibold text-slate-900 leading-tight break-words">{memberName}</h3>
               {businessName && (
@@ -110,15 +92,6 @@ const PostCard = ({ post, onReport, onView }: PostCardProps) => {
                 <Eye size={14} className="text-blue-500" />
                 <span>View Details</span>
               </DropdownMenuItem>
-              {onReport && post.status !== "reported" && (
-                <DropdownMenuItem 
-                  onClick={() => onReport(post)} 
-                  className="cursor-pointer gap-2 text-red-600 focus:text-red-700 focus:bg-red-50"
-                >
-                  <AlertTriangle size={14} />
-                  <span>Report</span>
-                </DropdownMenuItem>
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -174,15 +147,26 @@ const PostCard = ({ post, onReport, onView }: PostCardProps) => {
         <div className="px-5 pb-5 mt-auto cursor-pointer" onClick={() => onView && onView(post)}>
           <div className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
             <AspectRatio ratio={16 / 9}>
-              <img
-                src={postImageUrl || "/placeholder.png"}
-                alt="Post content"
-                className={postImageUrl ? "w-full h-full object-cover" : "w-full h-full object-contain p-10 opacity-60"}
-                onError={(e) => {
-                  e.currentTarget.src = "/placeholder.png";
-                  e.currentTarget.className = "w-full h-full object-contain p-10 opacity-60";
-                }}
-              />
+              {postImagePath ? (
+                <PrivateImage
+                  src={postImagePath}
+                  alt="Post content"
+                  className="w-full h-full object-cover"
+                  fallback={
+                    <img
+                      src="/placeholder.png"
+                      alt="Placeholder"
+                      className="w-full h-full object-contain p-10 opacity-60"
+                    />
+                  }
+                />
+              ) : (
+                <img
+                  src="/placeholder.png"
+                  alt="Placeholder"
+                  className="w-full h-full object-contain p-10 opacity-60"
+                />
+              )}
             </AspectRatio>
           </div>
         </div>

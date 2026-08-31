@@ -74,14 +74,8 @@ import { uploadFiles } from "@/api/MediaApi";
 import { getCategories } from "@/api/CategoryApi";
 import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
-
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
+import { PrivateImage } from "@/components/common/PrivateImage";
 
 const getMemberLeftBorder = (name: string = "") => {
   const charCode = name.charCodeAt(0) || 0;
@@ -158,8 +152,8 @@ const UrlPreview = ({ url, onRemove }: { url: string, onRemove: () => void }) =>
   return (
     <div className="relative w-16 h-16">
       <div className="w-full h-full rounded-lg overflow-hidden border border-border shadow-sm">
-        <img
-          src={getFullUrl(url)}
+        <PrivateImage
+          src={url}
           alt="existing"
           className="w-full h-full object-cover"
         />
@@ -1251,16 +1245,13 @@ const MembersPage = () => {
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10 border border-border/80 flex-shrink-0 shadow-sm">
-                          <AvatarImage
-                            src={getFullUrl(member.profilePhoto)}
-                            alt={member.fullName}
-                            className="object-cover"
-                          />
-                          <AvatarFallback className={cn("text-xs font-bold shadow-inner flex items-center justify-center border", getAvatarGradient(member.fullName || "?"))}>
-                            {member.fullName?.charAt(0).toUpperCase() || "?"}
-                          </AvatarFallback>
-                        </Avatar>
+                        <PrivateAvatar
+                          src={member.profilePhoto}
+                          fallbackName={member.fullName}
+                          className="w-10 h-10 border border-border/80 flex-shrink-0 shadow-sm"
+                          avatarImageClassName="object-cover"
+                          avatarFallbackClassName={cn("text-xs font-bold shadow-inner flex items-center justify-center border", getAvatarGradient(member.fullName || "?"))}
+                        />
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{member.fullName}</span>
                           <span className="text-xs text-muted-foreground font-medium">{member.mobileNumber}</span>

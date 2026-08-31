@@ -28,20 +28,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from "@/components/ui/avatar";
 import { getPointsHistory } from "@/api/PointsApi";
-
-const getFullUrl = (path?: string | null) => {
-  if (!path) return "";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  const mediaUrl = (import.meta.env.VITE_MEDIA_URL || "").replace(/\/+$/, "");
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${mediaUrl}${cleanPath}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 interface ExtendedPointEntry extends PointEntry {
   companyName?: string;
@@ -299,12 +287,13 @@ const PointsPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage src={getFullUrl(p.profilePhoto)} alt={p.memberName} className="object-cover" />
-                          <AvatarFallback className="text-xs font-bold bg-primary/10 text-primary">
-                            {p.memberName?.slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <PrivateAvatar
+                          src={p.profilePhoto}
+                          fallbackName={p.memberName}
+                          className="h-9 w-9"
+                          avatarImageClassName="object-cover"
+                          avatarFallbackClassName="text-xs font-bold bg-primary/10 text-primary"
+                        />
                         <div>
                           <p className="text-sm font-bold text-foreground">{p.memberName.toUpperCase()}</p>
                           <p className="text-xs text-muted-foreground font-semibold mt-0.5">

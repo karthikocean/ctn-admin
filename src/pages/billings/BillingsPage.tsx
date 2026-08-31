@@ -32,13 +32,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-
-const getFullUrl = (path: string | null) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 const getPlanLeftBorder = (title: string = "") => {
   const lower = title.toLowerCase();
@@ -539,16 +533,13 @@ const BillingsPage = () => {
                     </TableCell>
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="w-10 h-10 border border-border/80 flex-shrink-0 shadow-sm">
-                          <AvatarImage
-                            src={getFullUrl(b.member?.profilePhoto)}
-                            alt={b.member?.fullName}
-                            className="object-cover"
-                          />
-                          <AvatarFallback className={cn("text-[10px] font-extrabold flex items-center justify-center border shadow-inner", getAvatarGradient(b.member?.fullName || "?"))}>
-                            {b.member?.fullName ? b.member.fullName.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() : "?"}
-                          </AvatarFallback>
-                        </Avatar>
+                        <PrivateAvatar
+                          src={b.member?.profilePhoto}
+                          fallbackName={b.member?.fullName}
+                          className="w-10 h-10 border border-border/80 flex-shrink-0 shadow-sm"
+                          avatarImageClassName="object-cover"
+                          avatarFallbackClassName={cn("text-[10px] font-extrabold flex items-center justify-center border shadow-inner", getAvatarGradient(b.member?.fullName || "?"))}
+                        />
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{b.member?.fullName || "Unknown Member"}</span>
                           <span className="text-xs text-muted-foreground font-medium">{b.member?.email}</span>

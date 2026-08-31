@@ -15,13 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getPosts, updatePostStatus, getReportedActivities } from "@/api/PostApi";
 import type { Post } from "@/types";
-
-const getFullUrl = (path: string) => {
-  if (!path) return "";
-  if (path.startsWith("http")) return path;
-  const baseUrl = import.meta.env.VITE_MEDIA_URL || "http://localhost:5001";
-  return `${baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
-};
+import { PrivateImage } from "@/components/common/PrivateImage";
+import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 
 const getInitials = (name: string) => {
   if (!name) return "";
@@ -85,14 +80,13 @@ const ActivityDetailModal = ({
         {/* Modal Header: Author Info & Status Pill */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-100">
           <div className="flex items-center gap-3.5 min-w-0">
-            <Avatar className="h-12 w-12 border-2 border-white shadow-sm ring-1 ring-slate-200/80 flex-shrink-0">
-              {selectedPost.member?.profilePhoto && (
-                <AvatarImage src={getFullUrl(selectedPost.member.profilePhoto)} className="object-cover" />
-              )}
-              <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
-                {getInitials(selectedPost.member?.fullName || "Anonymous")}
-              </AvatarFallback>
-            </Avatar>
+            <PrivateAvatar
+              src={selectedPost.member?.profilePhoto}
+              fallbackName={selectedPost.member?.fullName || "Anonymous"}
+              className="h-12 w-12 border-2 border-white shadow-sm ring-1 ring-slate-200/80 flex-shrink-0"
+              avatarImageClassName="object-cover"
+              avatarFallbackClassName="bg-primary/10 text-primary text-sm font-bold"
+            />
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h4 className="font-bold text-base text-slate-900 leading-tight">
@@ -178,14 +172,17 @@ const ActivityDetailModal = ({
             {/* Media Attachment */}
             {selectedPost.media && selectedPost.media.length > 0 && (
               <div className="rounded-xl border border-slate-200/80 overflow-hidden bg-slate-900/5 max-h-[260px] flex justify-center items-center p-2 mb-1">
-                <img
-                  src={getFullUrl(selectedPost.media[0])}
+                <PrivateImage
+                  src={selectedPost.media[0]}
                   alt="Post media"
                   className="max-h-[240px] max-w-full w-auto h-auto object-contain rounded-lg shadow-sm"
-                  onError={(e) => {
-                    e.currentTarget.src = "/placeholder.png";
-                    e.currentTarget.className = "max-h-[100px] max-w-[100px] object-contain opacity-50";
-                  }}
+                  fallback={
+                    <img
+                      src="/placeholder.png"
+                      alt="Post media"
+                      className="max-h-[100px] max-w-[100px] object-contain opacity-50"
+                    />
+                  }
                 />
               </div>
             )}
@@ -776,14 +773,13 @@ const GenericActivityTablePage = ({
                   <td className="px-6 py-4 whitespace-nowrap text-slate-500 font-medium">{(page - 1) * pageSize + index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap font-semibold text-slate-900">
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9 border border-slate-200/80 flex-shrink-0 shadow-sm">
-                        {post.member?.profilePhoto && (
-                          <AvatarImage src={getFullUrl(post.member.profilePhoto)} alt={post.member.fullName} className="object-cover" />
-                        )}
-                        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                          {getInitials(post.member?.fullName || "Anonymous")}
-                        </AvatarFallback>
-                      </Avatar>
+                      <PrivateAvatar
+                        src={post.member?.profilePhoto}
+                        fallbackName={post.member?.fullName || "Anonymous"}
+                        className="h-9 w-9 border border-slate-200/80 flex-shrink-0 shadow-sm"
+                        avatarImageClassName="object-cover"
+                        avatarFallbackClassName="bg-primary/10 text-primary text-xs font-bold"
+                      />
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold leading-tight">{post.member?.fullName || "Anonymous"}</span>
                         {post.member?.businessName && (
