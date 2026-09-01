@@ -72,3 +72,8 @@ export const getCities = async (params?: { stateIds?: string; search?: string })
     }
   }
 };
+
+export const sendMemberWhatsAppPdf = async (memberId: string) => {
+  const response = await api.post(`/members/${memberId}/whatsapp`);
+  return response.data;
+};

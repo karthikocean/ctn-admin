@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, Star, Plus, Calendar as CalendarIcon, CheckCircle2, Users, Loader2, X, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import StatusBadge from "@/components/common/StatusBadge";
 import ActionMenu from "@/components/common/ActionMenu";
 import { useToast } from "@/hooks/use-toast";
 import { getMembers } from "@/api/MembersApi";
-import { getSpotlights, createSpotlight, updateSpotlight, deleteSpotlight } from "@/api/SpotlightApi";
+import { getSpotlights, createSpotlight, updateSpotlight, deleteSpotlight, getBookedDates } from "@/api/SpotlightApi";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import PaginationBar from "@/components/common/PaginationBar";
 import { useAuth } from "@/context/AuthContext";
@@ -25,7 +25,7 @@ const SpotlightPage = () => {
   const { toast } = useToast();
   const { hasPermission, user } = useAuth();
   const isFranchise = user?.roleCode?.toUpperCase() === "FRANCHIES";
-  const maxLimit = isFranchise ? 4 : 2;
+  const maxLimit = isFranchise ? 4 : undefined;
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -39,6 +39,7 @@ const SpotlightPage = () => {
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [members, setMembers] = useState<any[]>([]);
+  const [bookedDates, setBookedDates] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalSpotlights, setTotalSpotlights] = useState(0);
@@ -47,13 +48,48 @@ const SpotlightPage = () => {
   const canEdit = hasPermission("spotlight", "edit");
   const canDelete = hasPermission("spotlight", "delete");
 
-  const [formData, setFormData] = useState({
-    selectedMembers: [] as any[],
-    status: "active",
-    scheduleDate: new Date()
+  const [formData, setFormData] = useState<{
+    selectedMembers: any[];
+    status: string;
+    scheduleDate: Date | undefined;
+  }>({
+    selectedMembers: [],
+    status: "schedule",
+    scheduleDate: undefined
   });
 
   const [spotlights, setSpotlights] = useState<any[]>([]);
+
+  const fetchBookedDates = async () => {
+    try {
+      const [bookedRes, allSpotlightsRes] = await Promise.allSettled([
+        getBookedDates(),
+        getSpotlights({ page: 0, limit: 1000 })
+      ]);
+
+      const dateSet = new Set<string>();
+
+      if (bookedRes.status === "fulfilled" && bookedRes.value?.data && Array.isArray(bookedRes.value.data)) {
+        bookedRes.value.data.forEach((d: string) => {
+          if (d) dateSet.add(d);
+        });
+      }
+
+      if (allSpotlightsRes.status === "fulfilled" && allSpotlightsRes.value?.data && Array.isArray(allSpotlightsRes.value.data)) {
+        allSpotlightsRes.value.data.forEach((s: any) => {
+          if (s.scheduleDate && !s.isDeleted) {
+            try {
+              dateSet.add(format(new Date(s.scheduleDate), "yyyy-MM-dd"));
+            } catch (e) {}
+          }
+        });
+      }
+
+      setBookedDates(Array.from(dateSet));
+    } catch (err) {
+      console.error("Failed to fetch booked dates:", err);
+    }
+  };
 
   const fetchSpotlights = async () => {
     try {
@@ -89,6 +125,7 @@ const SpotlightPage = () => {
 
   useEffect(() => {
     fetchMembers();
+    fetchBookedDates();
   }, []);
 
   useEffect(() => {
@@ -109,18 +146,55 @@ const SpotlightPage = () => {
   const resetForm = () => {
     setFormData({
       selectedMembers: [],
-      status: "active",
-      scheduleDate: new Date()
+      status: "schedule",
+      scheduleDate: undefined
     });
     setEditingSpotlightId(null);
     setMemberSearchQuery("");
   };
 
   const handleSave = async () => {
-    if (formData.selectedMembers.length !== maxLimit) {
+    if (formData.selectedMembers.length === 0) {
       toast({
         title: "Validation Error",
-        description: `Please select exactly ${maxLimit} members`,
+        description: "Please select at least 1 member",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (maxLimit && formData.selectedMembers.length > maxLimit) {
+      toast({
+        title: "Validation Error",
+        description: `You can select a maximum of ${maxLimit} members`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.scheduleDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please pick a schedule date",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedDateStr = format(formData.scheduleDate, "yyyy-MM-dd");
+    const currentEditSpotlight = editingSpotlightId ? spotlights.find(s => s._id === editingSpotlightId) : null;
+    let isCurrentEditDate = false;
+    if (currentEditSpotlight && currentEditSpotlight.scheduleDate) {
+      const editD = new Date(currentEditSpotlight.scheduleDate);
+      if (selectedDateStr === format(editD, "yyyy-MM-dd")) {
+        isCurrentEditDate = true;
+      }
+    }
+
+    if (!isCurrentEditDate && bookedDates.includes(selectedDateStr)) {
+      toast({
+        title: "Date Conflict",
+        description: "A spotlight is already scheduled for this date. Only one spotlight is allowed per date.",
         variant: "destructive"
       });
       return;
@@ -144,6 +218,7 @@ const SpotlightPage = () => {
       setDrawerOpen(false);
       resetForm();
       fetchSpotlights();
+      fetchBookedDates();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -162,6 +237,7 @@ const SpotlightPage = () => {
       status: spotlight.status,
       scheduleDate: new Date(spotlight.scheduleDate)
     });
+    fetchBookedDates();
     setDrawerOpen(true);
   };
 
@@ -179,6 +255,7 @@ const SpotlightPage = () => {
       setDeleteConfirmOpen(false);
       setSpotlightToDelete(null);
       fetchSpotlights();
+      fetchBookedDates();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -199,7 +276,7 @@ const SpotlightPage = () => {
           selectedMembers: prev.selectedMembers.filter(m => m._id !== member._id)
         };
       } else {
-        if (prev.selectedMembers.length >= maxLimit) {
+        if (maxLimit && prev.selectedMembers.length >= maxLimit) {
           setTimeout(() => {
             toast({
               title: "Selection Limit",
@@ -351,14 +428,16 @@ const SpotlightPage = () => {
         <div className="flex flex-col h-full bg-slate-50/50 p-6 space-y-6">
 
           <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Select Members (Select {maxLimit} members)</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Select Members {maxLimit ? `(Max ${maxLimit} members)` : `(${formData.selectedMembers.length} selected)`}
+            </Label>
             <Popover modal={true}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full h-11 justify-start font-normal rounded-xl border-slate-200">
                   <Users className="mr-2 h-4 w-4 opacity-50" />
                   {formData.selectedMembers.length > 0
-                    ? `${formData.selectedMembers.length} of ${maxLimit} member(s) selected`
-                    : `Choose ${maxLimit} members`}
+                    ? `${formData.selectedMembers.length} member${formData.selectedMembers.length > 1 ? "s" : ""} selected${maxLimit ? ` (max ${maxLimit})` : ""}`
+                    : maxLimit ? `Choose up to ${maxLimit} members` : "Choose members"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[320px] p-0 shadow-xl rounded-2xl border border-slate-200 overflow-hidden" align="start" style={{ pointerEvents: "auto" }}>
@@ -459,14 +538,49 @@ const SpotlightPage = () => {
                 <Calendar
                   mode="single"
                   selected={formData.scheduleDate}
-                  disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                  disabled={(date) => {
+                    const dateStr = format(date, "yyyy-MM-dd");
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    const currentEditSpotlight = editingSpotlightId ? spotlights.find(s => s._id === editingSpotlightId) : null;
+                    let isCurrentEditDate = false;
+                    if (currentEditSpotlight && currentEditSpotlight.scheduleDate) {
+                      const editD = new Date(currentEditSpotlight.scheduleDate);
+                      if (dateStr === format(editD, "yyyy-MM-dd")) {
+                        isCurrentEditDate = true;
+                      }
+                    }
+
+                    const isBooked = bookedDates.includes(dateStr) && !isCurrentEditDate;
+                    return isBooked || date < today;
+                  }}
                   onSelect={(date) => {
                     if (!date) return;
+                    const dateStr = format(date, "yyyy-MM-dd");
+                    const currentEditSpotlight = editingSpotlightId ? spotlights.find(s => s._id === editingSpotlightId) : null;
+                    let isCurrentEditDate = false;
+                    if (currentEditSpotlight && currentEditSpotlight.scheduleDate) {
+                      const editD = new Date(currentEditSpotlight.scheduleDate);
+                      if (dateStr === format(editD, "yyyy-MM-dd")) {
+                        isCurrentEditDate = true;
+                      }
+                    }
+
+                    if (!isCurrentEditDate && bookedDates.includes(dateStr)) {
+                      toast({
+                        title: "Date Already Booked",
+                        description: "A spotlight is already scheduled for this date. Please select another date.",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+
                     const dateIsToday = isToday(date);
                     setFormData(prev => ({
                       ...prev,
                       scheduleDate: date,
-                      status: dateIsToday ? prev.status : "schedule"
+                      status: dateIsToday ? (prev.status === "schedule" ? "active" : prev.status) : "schedule"
                     }));
                   }}
                   initialFocus
@@ -480,13 +594,13 @@ const SpotlightPage = () => {
             <Select
               value={formData.status}
               onValueChange={(val) => setFormData(prev => ({ ...prev, status: val }))}
-              disabled={!isToday(formData.scheduleDate)}
+              disabled={!formData.scheduleDate || !isToday(formData.scheduleDate)}
             >
               <SelectTrigger className="h-11 rounded-xl border-slate-200">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {isToday(formData.scheduleDate) ? (
+                {formData.scheduleDate && isToday(formData.scheduleDate) ? (
                   <>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>

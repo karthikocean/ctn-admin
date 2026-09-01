@@ -48,6 +48,18 @@ import {
 } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -67,7 +79,8 @@ import {
   updateMemberStatus,
   getBusinessRegion,
   getStates,
-  getCities
+  getCities,
+  sendMemberWhatsAppPdf
 } from "@/api/MembersApi";
 import { getRegions } from "@/api/RegionApi";
 import { uploadFiles } from "@/api/MediaApi";
@@ -76,6 +89,20 @@ import { useAuth } from "@/context/AuthContext";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import { PrivateAvatar } from "@/components/common/PrivateAvatar";
 import { PrivateImage } from "@/components/common/PrivateImage";
+
+const WhatsAppIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width="16"
+    height="16"
+    stroke="currentColor"
+    strokeWidth="0"
+    fill="currentColor"
+    className={className}
+  >
+    <path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.979-.276-.1-.476-.15-.677.15-.2.3-.777.979-.953 1.18-.175.2-.351.226-.652.076-.301-.15-1.27-.468-2.42-1.493-.894-.798-1.498-1.783-1.674-2.083-.176-.3-.019-.462.132-.612.136-.135.301-.35.451-.525.15-.175.2-.3.301-.5.1-.2.05-.375-.025-.525-.075-.15-.677-1.632-.928-2.238-.244-.59-.492-.51-.676-.519-.176-.008-.376-.01-.577-.01-.2 0-.526.075-.802.375-.276.3-1.053 1.03-1.053 2.511 0 1.482 1.078 2.912 1.228 3.113.15.2 2.122 3.24 5.141 4.542.718.31 1.279.495 1.716.634.721.23 1.378.197 1.897.12.578-.087 1.78-.727 2.03-1.43.25-.703.25-1.305.175-1.43-.075-.126-.276-.201-.577-.351zM12.042 2c-5.522 0-10 4.477-10 10 0 1.77.461 3.498 1.336 5.02L2 22l5.148-1.35C8.625 21.497 10.306 22 12.042 22c5.522 0 10-4.477 10-10s-4.478-10-10-10zm0 18.25c-1.558 0-3.08-.42-4.406-1.215l-.316-.188-3.27.858.873-3.187-.206-.328A8.198 8.198 0 013.842 12c0-4.521 3.679-8.2 8.2-8.2 4.522 0 8.2 3.679 8.2 8.2 0 4.521-3.678 8.25-8.2 8.25z" />
+  </svg>
+);
 
 const getMemberLeftBorder = (name: string = "") => {
   const charCode = name.charCodeAt(0) || 0;
@@ -194,6 +221,10 @@ const MembersPage = () => {
   const [statusConfirmOpen, setStatusConfirmOpen] = useState(false);
   const [memberToToggle, setMemberToToggle] = useState<any>(null);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [memberToSendWhatsapp, setMemberToSendWhatsapp] = useState<any>(null);
+  const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
+  const [sendingMemberId, setSendingMemberId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -950,6 +981,55 @@ const MembersPage = () => {
     return [];
   };
 
+  const handleWhatsAppClick = (member: any) => {
+    if (!member.mobileNumber || !member.mobileNumber.toString().trim()) {
+      toast({
+        title: "Missing Mobile Number",
+        description: "Mobile number is not available for this member.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const cleanNumber = member.mobileNumber.toString().replace(/[^0-9]/g, "");
+    if (cleanNumber.length < 10) {
+      toast({
+        title: "Invalid Mobile Number",
+        description: "Please ensure the member has a valid mobile number.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setMemberToSendWhatsapp(member);
+    setWhatsappModalOpen(true);
+  };
+
+  const handleConfirmSendWhatsApp = async () => {
+    if (!memberToSendWhatsapp) return;
+    setIsSendingWhatsapp(true);
+    setSendingMemberId(memberToSendWhatsapp._id);
+    try {
+      const res = await sendMemberWhatsAppPdf(memberToSendWhatsapp._id);
+      toast({
+        title: "Success",
+        description: res?.message || "PDF sent successfully via WhatsApp.",
+        variant: "success"
+      });
+      setWhatsappModalOpen(false);
+      setMemberToSendWhatsapp(null);
+    } catch (error: any) {
+      toast({
+        title: "Failed to Send",
+        description: error.response?.data?.message || "Failed to send PDF via WhatsApp.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingWhatsapp(false);
+      setSendingMemberId(null);
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -1303,10 +1383,35 @@ const MembersPage = () => {
                       </Badge>
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
-                      <ActionMenu
-                        onEdit={canEdit ? () => handleEdit(member) : undefined}
-                        onDelete={canDelete ? () => handleDeleteClick(member) : undefined}
-                      />
+                      <div className="flex items-center justify-end gap-1.5">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleWhatsAppClick(member)}
+                                disabled={sendingMemberId === member._id}
+                                className="h-8 w-8 p-0 rounded-xl border border-emerald-500/20 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all duration-300 shadow-sm disabled:opacity-40 disabled:pointer-events-none"
+                              >
+                                {sendingMemberId === member._id ? (
+                                  <Loader2 size={15} className="animate-spin" />
+                                ) : (
+                                  <WhatsAppIcon className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-xs">Send via WhatsApp</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <ActionMenu
+                          onEdit={canEdit ? () => handleEdit(member) : undefined}
+                          onDelete={canDelete ? () => handleDeleteClick(member) : undefined}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -2517,6 +2622,69 @@ const MembersPage = () => {
         onConfirm={handleConfirmStatusToggle}
         isLoading={isTogglingStatus}
       />
+
+      <Dialog open={whatsappModalOpen} onOpenChange={(open) => { if (!isSendingWhatsapp) setWhatsappModalOpen(open); }}>
+        <DialogContent className="sm:max-w-[420px] rounded-[24px] border-none shadow-2xl p-0 overflow-hidden bg-card/95 backdrop-blur-xl">
+          <div className="p-8 flex flex-col items-center text-center gap-6">
+            {/* WhatsApp Icon Section */}
+            <div className="w-20 h-20 rounded-full flex items-center justify-center relative bg-emerald-50">
+              <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-emerald-200" />
+              <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <WhatsAppIcon className="w-6 h-6 fill-white" />
+              </div>
+            </div>
+
+            {/* Content Section */}
+            <div className="space-y-2">
+              <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                Send PDF via WhatsApp?
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground text-sm leading-relaxed px-2">
+                Send member document to <span className="font-semibold text-foreground">{memberToSendWhatsapp?.fullName}</span> on WhatsApp?
+              </DialogDescription>
+              {memberToSendWhatsapp?.mobileNumber && (
+                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary text-xs font-semibold text-foreground border border-border">
+                  <Phone size={13} className="text-emerald-600" />
+                  <span>
+                    +{memberToSendWhatsapp.mobileNumber.toString().replace(/[^0-9]/g, "").startsWith("91") && memberToSendWhatsapp.mobileNumber.toString().replace(/[^0-9]/g, "").length === 12
+                      ? memberToSendWhatsapp.mobileNumber.toString().replace(/[^0-9]/g, "")
+                      : `91 ${memberToSendWhatsapp.mobileNumber.toString().replace(/[^0-9]/g, "")}`}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Section */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+              <Button
+                variant="outline"
+                className="flex-1 h-12 rounded-2xl border-border bg-background hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition-all font-semibold order-2 sm:order-1"
+                onClick={() => setWhatsappModalOpen(false)}
+                disabled={isSendingWhatsapp}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 h-12 rounded-2xl font-bold shadow-lg transition-all order-1 sm:order-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 text-white"
+                onClick={handleConfirmSendWhatsApp}
+                disabled={isSendingWhatsapp}
+              >
+                {isSendingWhatsapp ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={18} />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <WhatsAppIcon className="w-4 h-4 mr-2 fill-white" />
+                    Send
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
