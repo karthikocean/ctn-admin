@@ -508,7 +508,7 @@ const BillingsPage = () => {
                 <TableHead className="px-6 py-4 text-center">Amount</TableHead>
                 <TableHead className="px-6 py-4">Payment Type</TableHead>
                 <TableHead className="px-6 py-4 text-center">Status</TableHead>
-                <TableHead className="px-6 py-4">Date</TableHead>
+                <TableHead className="px-6 py-4 whitespace-nowrap min-w-[130px]">Date</TableHead>
                 <TableHead className="px-6 py-4 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -568,8 +568,8 @@ const BillingsPage = () => {
                     <TableCell className="px-6 py-4 text-center">
                       {getPaymentStatusBadge(b.status || b.paymentStatus || "PAID")}
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <div className="flex flex-col gap-0.5">
+                    <TableCell className="px-6 py-4 whitespace-nowrap min-w-[130px]">
+                      <div className="flex flex-col gap-0.5 whitespace-nowrap">
                         <span className="text-sm font-semibold text-foreground">
                           {new Date(b.createdAt).toLocaleDateString("en-IN", {
                             day: "2-digit",
