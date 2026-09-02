@@ -347,7 +347,7 @@ const PointsPage = () => {
 
                               <DropdownMenuItem asChild>
                                 <a
-                                  href={`https://wa.me/${p.mobileNumber.replace(/[^0-9]/g, "")}`}
+                                  href={`https://web.whatsapp.com/send?phone=${p.mobileNumber.replace(/[^0-9]/g, "").length === 10 ? `91${p.mobileNumber.replace(/[^0-9]/g, "")}` : p.mobileNumber.replace(/[^0-9]/g, "")}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-100 cursor-pointer"

@@ -79,8 +79,7 @@ import {
   updateMemberStatus,
   getBusinessRegion,
   getStates,
-  getCities,
-  sendMemberWhatsAppPdf
+  getCities
 } from "@/api/MembersApi";
 import { getRegions } from "@/api/RegionApi";
 import { uploadFiles } from "@/api/MediaApi";
@@ -221,10 +220,6 @@ const MembersPage = () => {
   const [statusConfirmOpen, setStatusConfirmOpen] = useState(false);
   const [memberToToggle, setMemberToToggle] = useState<any>(null);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
-  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
-  const [memberToSendWhatsapp, setMemberToSendWhatsapp] = useState<any>(null);
-  const [isSendingWhatsapp, setIsSendingWhatsapp] = useState(false);
-  const [sendingMemberId, setSendingMemberId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -1001,33 +996,8 @@ const MembersPage = () => {
       return;
     }
 
-    setMemberToSendWhatsapp(member);
-    setWhatsappModalOpen(true);
-  };
-
-  const handleConfirmSendWhatsApp = async () => {
-    if (!memberToSendWhatsapp) return;
-    setIsSendingWhatsapp(true);
-    setSendingMemberId(memberToSendWhatsapp._id);
-    try {
-      const res = await sendMemberWhatsAppPdf(memberToSendWhatsapp._id);
-      toast({
-        title: "Success",
-        description: res?.message || "PDF sent successfully via WhatsApp.",
-        variant: "success"
-      });
-      setWhatsappModalOpen(false);
-      setMemberToSendWhatsapp(null);
-    } catch (error: any) {
-      toast({
-        title: "Failed to Send",
-        description: error.response?.data?.message || "Failed to send PDF via WhatsApp.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSendingWhatsapp(false);
-      setSendingMemberId(null);
-    }
+    const formattedNumber = cleanNumber.length === 10 ? `91${cleanNumber}` : cleanNumber;
+    window.open(`https://web.whatsapp.com/send?phone=${formattedNumber}`, "_blank", "noopener,noreferrer");
   };
 
   const validateForm = () => {
@@ -1391,18 +1361,13 @@ const MembersPage = () => {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleWhatsAppClick(member)}
-                                disabled={sendingMemberId === member._id}
-                                className="h-8 w-8 p-0 rounded-xl border border-emerald-500/20 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all duration-300 shadow-sm disabled:opacity-40 disabled:pointer-events-none"
+                                className="h-8 w-8 p-0 rounded-xl border border-emerald-500/20 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all duration-300 shadow-sm"
                               >
-                                {sendingMemberId === member._id ? (
-                                  <Loader2 size={15} className="animate-spin" />
-                                ) : (
-                                  <WhatsAppIcon className="w-4 h-4" />
-                                )}
+                                <WhatsAppIcon className="w-4 h-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top">
-                              <p className="text-xs">Send via WhatsApp</p>
+                              <p className="text-xs">Chat on WhatsApp</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -2622,69 +2587,6 @@ const MembersPage = () => {
         onConfirm={handleConfirmStatusToggle}
         isLoading={isTogglingStatus}
       />
-
-      <Dialog open={whatsappModalOpen} onOpenChange={(open) => { if (!isSendingWhatsapp) setWhatsappModalOpen(open); }}>
-        <DialogContent className="sm:max-w-[420px] rounded-[24px] border-none shadow-2xl p-0 overflow-hidden bg-card/95 backdrop-blur-xl">
-          <div className="p-8 flex flex-col items-center text-center gap-6">
-            {/* WhatsApp Icon Section */}
-            <div className="w-20 h-20 rounded-full flex items-center justify-center relative bg-emerald-50">
-              <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-emerald-200" />
-              <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                <WhatsAppIcon className="w-6 h-6 fill-white" />
-              </div>
-            </div>
-
-            {/* Content Section */}
-            <div className="space-y-2">
-              <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
-                Send PDF via WhatsApp?
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-sm leading-relaxed px-2">
-                Send member document to <span className="font-semibold text-foreground">{memberToSendWhatsapp?.fullName}</span> on WhatsApp?
-              </DialogDescription>
-              {memberToSendWhatsapp?.mobileNumber && (
-                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary text-xs font-semibold text-foreground border border-border">
-                  <Phone size={13} className="text-emerald-600" />
-                  <span>
-                    +{memberToSendWhatsapp.mobileNumber.toString().replace(/[^0-9]/g, "").startsWith("91") && memberToSendWhatsapp.mobileNumber.toString().replace(/[^0-9]/g, "").length === 12
-                      ? memberToSendWhatsapp.mobileNumber.toString().replace(/[^0-9]/g, "")
-                      : `91 ${memberToSendWhatsapp.mobileNumber.toString().replace(/[^0-9]/g, "")}`}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Footer Section */}
-            <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-              <Button
-                variant="outline"
-                className="flex-1 h-12 rounded-2xl border-border bg-background hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition-all font-semibold order-2 sm:order-1"
-                onClick={() => setWhatsappModalOpen(false)}
-                disabled={isSendingWhatsapp}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 h-12 rounded-2xl font-bold shadow-lg transition-all order-1 sm:order-2 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 text-white"
-                onClick={handleConfirmSendWhatsApp}
-                disabled={isSendingWhatsapp}
-              >
-                {isSendingWhatsapp ? (
-                  <>
-                    <Loader2 className="animate-spin mr-2" size={18} />
-                    Sending...
-                  </>
-                ) : (
-                  <>
-                    <WhatsAppIcon className="w-4 h-4 mr-2 fill-white" />
-                    Send
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
