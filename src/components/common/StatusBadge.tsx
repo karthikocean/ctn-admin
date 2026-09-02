@@ -31,9 +31,10 @@ const statusStyles: Record<string, string> = {
   reported: "bg-red-50 text-red-700 border-red-200",
 };
 
-const StatusBadge = ({ status, className, onClick }: StatusBadgeProps) => {
-  const style = statusStyles[status.toLowerCase()] || statusStyles.active;
-  const label = status.replace(/_/g, " ");
+const StatusBadge = ({ status = "", className, onClick }: StatusBadgeProps) => {
+  const normalizedStatus = (status || "").toLowerCase();
+  const style = statusStyles[normalizedStatus] || statusStyles.active;
+  const label = (status || "").replace(/_/g, " ");
 
   return (
     <span 

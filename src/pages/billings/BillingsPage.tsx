@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, CreditCard, Eye, Loader2, IndianRupee, Plus, Banknote, Landmark, CheckSquare, Globe, HelpCircle, Copy, Check, User, ChevronDown } from "lucide-react";
+import { Search, Filter, CreditCard, Eye, Loader2, IndianRupee, Plus, Banknote, Landmark, CheckSquare, Globe, HelpCircle, Copy, Check, User, ChevronDown, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -300,9 +300,46 @@ const BillingsPage = () => {
     fetchBillings(searchTerm, p);
   };
 
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   const handlePreview = (billing: any) => {
     setSelectedBilling(billing);
     setPreviewOpen(true);
+  };
+
+  const handleDownloadInvoice = async (billing: any) => {
+    if (!billing?._id) return;
+    try {
+      setDownloadingId(billing._id);
+      toast({
+        title: "Downloading Invoice",
+        description: "Preparing PDF invoice...",
+      });
+      const blob = await BillingsApi.downloadInvoice(billing._id);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      const invoiceNo = `OSINV-${billing._id.toString().slice(-6).toUpperCase()}.pdf`;
+      link.setAttribute("download", invoiceNo);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast({
+        title: "Success",
+        description: `Invoice ${invoiceNo} downloaded successfully`,
+        variant: "success",
+      });
+    } catch (error: any) {
+      console.error("Error downloading invoice:", error);
+      toast({
+        title: "Download Failed",
+        description: error.response?.data?.message || "Failed to download invoice PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const resetForm = () => {
@@ -589,6 +626,8 @@ const BillingsPage = () => {
                     <TableCell className="px-6 py-4 text-right">
                       <ActionMenu
                         onView={() => handlePreview(b)}
+                        onDownload={() => handleDownloadInvoice(b)}
+                        downloadLabel="Download Invoice"
                         onEdit={canEdit ? () => handleEdit(b) : undefined}
                         onDelete={canDelete ? () => confirmDelete(b._id) : undefined}
                       />
@@ -1003,7 +1042,21 @@ const BillingsPage = () => {
               </div>
 
               {/* Footer */}
-              <div className="flex justify-end p-4 bg-secondary/15 border-t border-border/80">
+              <div className="flex justify-between items-center p-4 bg-secondary/15 border-t border-border/80">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-xl px-4 text-xs font-bold gap-1.5 border border-primary/30 text-primary hover:bg-primary hover:text-white transition-all active:scale-95"
+                  disabled={downloadingId === selectedBilling._id}
+                  onClick={() => handleDownloadInvoice(selectedBilling)}
+                >
+                  {downloadingId === selectedBilling._id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Download size={14} />
+                  )}
+                  Download Invoice
+                </Button>
                 <Button
                   variant="outline"
                   className="h-9 rounded-xl px-6 text-xs font-bold border-2 hover:bg-primary hover:text-white hover:border-primary transition-all active:scale-95"
