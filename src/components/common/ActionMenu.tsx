@@ -1,4 +1,4 @@
-import { MoreHorizontal, Eye, Pencil, Trash2, UserPlus, CheckCircle2, X } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Trash2, UserPlus, CheckCircle2, X, Download } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,14 +11,16 @@ interface ActionMenuProps {
   onView?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onDownload?: () => void;
+  downloadLabel?: string;
   onAddUser?: () => void;
   onAssign?: () => void;
   onToggleStatus?: () => void;
   statusLabel?: string;
 }
 
-const ActionMenu = ({ onView, onEdit, onDelete, onAddUser, onAssign, onToggleStatus, statusLabel }: ActionMenuProps) => {
-  const hasAnyAction = !!(onView || onEdit || onDelete || onAddUser || onAssign || onToggleStatus);
+const ActionMenu = ({ onView, onEdit, onDelete, onDownload, downloadLabel = "Download", onAddUser, onAssign, onToggleStatus, statusLabel }: ActionMenuProps) => {
+  const hasAnyAction = !!(onView || onEdit || onDelete || onDownload || onAddUser || onAssign || onToggleStatus);
 
   return (
     <DropdownMenu>
@@ -33,10 +35,15 @@ const ActionMenu = ({ onView, onEdit, onDelete, onAddUser, onAssign, onToggleSta
         </Button>
       </DropdownMenuTrigger>
       {hasAnyAction && (
-        <DropdownMenuContent align="end" className="w-40" onCloseAutoFocus={(e) => e.preventDefault()}>
+        <DropdownMenuContent align="end" className="w-44" onCloseAutoFocus={(e) => e.preventDefault()}>
+          {onView && <DropdownMenuItem onClick={onView} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Eye size={14} className="mr-2" /> View</DropdownMenuItem>}
+          {onDownload && (
+            <DropdownMenuItem onClick={onDownload} className="focus:bg-primary/5 focus:text-primary cursor-pointer">
+              <Download size={14} className="mr-2 text-primary" /> {downloadLabel}
+            </DropdownMenuItem>
+          )}
           {onAddUser && <DropdownMenuItem onClick={onAddUser} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Add User</DropdownMenuItem>}
           {onAssign && <DropdownMenuItem onClick={onAssign} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Assign Member</DropdownMenuItem>}
-          {onView && <DropdownMenuItem onClick={onView} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Eye size={14} className="mr-2" /> View</DropdownMenuItem>}
           {onEdit && <DropdownMenuItem onClick={onEdit} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Pencil size={14} className="mr-2" /> Edit</DropdownMenuItem>}
           {onToggleStatus && (
             <DropdownMenuItem onClick={onToggleStatus} className="focus:bg-primary/5 focus:text-primary cursor-pointer">

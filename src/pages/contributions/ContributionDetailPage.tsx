@@ -57,7 +57,11 @@ const ContributionDetailPage = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <GlobalNetworkLoader />
+        <GlobalNetworkLoader
+          fullScreen={false}
+          title="Loading Contribution Details..."
+          subtitle="Fetching contribution transaction details"
+        />
       </div>
     );
   }

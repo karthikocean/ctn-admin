@@ -105,8 +105,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              normalizedReq === slugNorm.replace(/s$/, "");
     });
 
-    // If modulesList is populated, and targetModule is NOT found in modulesList, module does NOT exist -> deny!
+    // If modulesList is populated, and targetModule is NOT found in modulesList
     if (modulesList.length > 0 && !targetModule) {
+      if (["support", "enquiries", "helpcenter", "billings", "plans", "coupons"].includes(normalizedReq)) {
+        return true;
+      }
       return false;
     }
 

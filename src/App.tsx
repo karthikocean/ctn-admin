@@ -45,6 +45,7 @@ import CouponsPage from "@/pages/coupons/CouponsPage";
 // import MarketplaceCategoryPage from "@/pages/marketplace/MarketplaceCategoryPage";
 import ModulesPage from "@/pages/modules/ModulesPage";
 import HelpCenterPage from "@/pages/helpcenter/HelpCenterPage";
+import SupportPage from "@/pages/support/SupportPage";
 import NotFound from "@/pages/NotFound";
 import { sidebarNavItems } from "@/config/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -242,6 +243,11 @@ const App = () => (
               <Route path="/help-center" element={
                 <PermissionRoute module="help_center" action="view">
                   <HelpCenterPage />
+                </PermissionRoute>
+              } />
+              <Route path="/support" element={
+                <PermissionRoute module="support" action="view">
+                  <SupportPage />
                 </PermissionRoute>
               } />
             </Route>

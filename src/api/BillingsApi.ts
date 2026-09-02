@@ -24,3 +24,10 @@ export const getBillingDetails = async (id: string) => {
   const response = await api.get(`/billings/${id}`);
   return response.data;
 };
+
+export const downloadInvoice = async (id: string) => {
+  const response = await api.get(`/billings/${id}/invoice`, {
+    responseType: "blob",
+  });
+  return response.data;
+};

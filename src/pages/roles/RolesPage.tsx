@@ -857,8 +857,8 @@ const RolesPage = () => {
       {isInitialLoad && loading && (
         <GlobalNetworkLoader
           fullScreen={false}
-          title="CTN Admin Network Data..."
-          subtitle="Establishing secure connection to global nodes"
+          title="Loading Roles & Permissions..."
+          subtitle="Synchronizing role permissions and user assignments"
         />
       )}
 
@@ -866,8 +866,8 @@ const RolesPage = () => {
         <div className="page-container relative min-h-[600px]">
           <GlobalNetworkLoader
             fullScreen={false}
-            title="CTN Admin Network Data..."
-            subtitle="Establishing secure connection to global nodes"
+            title="Loading Roles & Permissions..."
+            subtitle="Synchronizing role permissions and user assignments"
           />
         </div>
       ) : (
