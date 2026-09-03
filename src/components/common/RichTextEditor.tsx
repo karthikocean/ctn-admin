@@ -1,12 +1,19 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import Underline from "@tiptap/extension-underline";
+import Placeholder from "@tiptap/extension-placeholder";
+
 import {
   Bold,
   Italic,
-  Underline,
+  Underline as UnderlineIcon,
   Strikethrough,
   List,
   ListOrdered,
-  Link,
+  Link as LinkIcon,
   Image as ImageIcon,
   RemoveFormatting
 } from "lucide-react";
@@ -27,56 +34,103 @@ const RichTextEditor = ({
   className = "",
   editorClassName = ""
 }: RichTextEditorProps) => {
-  const editorRef = useRef<HTMLDivElement>(null);
-  const [isFocused, setIsFocused] = useState(false);
-
-  // Sync initial or external value changes without losing cursor position
-  useEffect(() => {
-    if (editorRef.current) {
-      if (editorRef.current.innerHTML !== value) {
-        editorRef.current.innerHTML = value || "";
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3]
+        }
+      }),
+      Underline,
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-primary underline cursor-pointer"
+        }
+      }),
+      Image.configure({
+        HTMLAttributes: {
+          class: "max-w-full h-auto rounded-lg my-2"
+        }
+      }),
+      Placeholder.configure({
+        placeholder
+      })
+    ],
+    content: value || "",
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      onChange(html === "<p></p>" ? "" : html);
+    },
+    editorProps: {
+      attributes: {
+        class: `focus:outline-none min-h-[180px] p-4 text-sm text-slate-700 cursor-text ${editorClassName}`
       }
     }
-  }, [value]);
+  });
 
-  const handleInput = () => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+  // Sync external value changes (e.g. initial load or form reset)
+  useEffect(() => {
+    if (editor && value !== undefined) {
+      const currentHTML = editor.getHTML();
+      if (currentHTML !== value && !(currentHTML === "<p></p>" && value === "")) {
+        editor.commands.setContent(value || "");
+      }
+    }
+  }, [value, editor]);
+
+  if (!editor) {
+    return null;
+  }
+
+  const setHeading = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === "p") {
+      editor.chain().focus().setParagraph().run();
+    } else if (val === "h1") {
+      editor.chain().focus().toggleHeading({ level: 1 }).run();
+    } else if (val === "h2") {
+      editor.chain().focus().toggleHeading({ level: 2 }).run();
+    } else if (val === "h3") {
+      editor.chain().focus().toggleHeading({ level: 3 }).run();
     }
   };
 
-  const executeCommand = (command: string, arg: string = "") => {
-    document.execCommand(command, false, arg);
-    handleInput();
+  const getCurrentHeadingValue = () => {
+    if (editor.isActive("heading", { level: 1 })) return "h1";
+    if (editor.isActive("heading", { level: 2 })) return "h2";
+    if (editor.isActive("heading", { level: 3 })) return "h3";
+    return "p";
   };
 
   const handleLink = () => {
-    const url = prompt("Enter the URL:");
-    if (url) {
-      executeCommand("createLink", url);
+    const previousUrl = editor.getAttributes("link").href;
+    const url = window.prompt("Enter URL:", previousUrl);
+
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
     }
+
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
 
   const handleImage = () => {
-    const url = prompt("Enter the Image URL:");
+    const url = window.prompt("Enter Image URL:");
     if (url) {
-      executeCommand("insertImage", url);
+      editor.chain().focus().setImage({ src: url }).run();
     }
   };
 
-  const handleHeadingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const format = e.target.value;
-    executeCommand("formatBlock", format);
-  };
-
   return (
-    <div className={`w-full rounded-xl border ${isFocused ? "border-primary ring-2 ring-primary/10" : "border-slate-200"} bg-white transition-all overflow-hidden flex flex-col`}>
+    <div className={`w-full rounded-xl border border-slate-200 bg-white transition-all overflow-hidden flex flex-col focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 ${className}`}>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-1.5 p-2 bg-slate-50 border-b border-slate-200">
+      <div className="flex flex-wrap items-center gap-1 p-2 bg-slate-50 border-b border-slate-200">
         <select
-          onChange={handleHeadingChange}
-          defaultValue="p"
-          className="h-8 px-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer hover:bg-slate-50 transition-colors mr-2"
+          value={getCurrentHeadingValue()}
+          onChange={setHeading}
+          className="h-8 px-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer hover:bg-slate-50 transition-colors mr-1"
         >
           <option value="p">Normal</option>
           <option value="h1">Heading 1</option>
@@ -84,14 +138,14 @@ const RichTextEditor = ({
           <option value="h3">Heading 3</option>
         </select>
 
-        <div className="h-6 w-[1px] bg-slate-200 mx-1" />
+        <div className="h-5 w-[1px] bg-slate-200 mx-1" />
 
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
-          onClick={() => executeCommand("bold")}
+          className={`h-8 w-8 rounded-lg transition-colors ${editor.isActive("bold") ? "bg-slate-200 text-slate-900 font-bold" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}
+          onClick={() => editor.chain().focus().toggleBold().run()}
           title="Bold"
         >
           <Bold size={15} />
@@ -101,8 +155,8 @@ const RichTextEditor = ({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
-          onClick={() => executeCommand("italic")}
+          className={`h-8 w-8 rounded-lg transition-colors ${editor.isActive("italic") ? "bg-slate-200 text-slate-900" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
           title="Italic"
         >
           <Italic size={15} />
@@ -112,59 +166,59 @@ const RichTextEditor = ({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
-          onClick={() => executeCommand("underline")}
+          className={`h-8 w-8 rounded-lg transition-colors ${editor.isActive("underline") ? "bg-slate-200 text-slate-900" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
           title="Underline"
         >
-          <Underline size={15} />
+          <UnderlineIcon size={15} />
         </Button>
 
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
-          onClick={() => executeCommand("strikeThrough")}
+          className={`h-8 w-8 rounded-lg transition-colors ${editor.isActive("strike") ? "bg-slate-200 text-slate-900" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
           title="Strikethrough"
         >
           <Strikethrough size={15} />
         </Button>
 
-        <div className="h-6 w-[1px] bg-slate-200 mx-1" />
+        <div className="h-5 w-[1px] bg-slate-200 mx-1" />
 
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
-          onClick={() => executeCommand("insertOrderedList")}
-          title="Ordered List"
-        >
-          <ListOrdered size={15} />
-        </Button>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
-          onClick={() => executeCommand("insertUnorderedList")}
-          title="Unordered List"
+          className={`h-8 w-8 rounded-lg transition-colors ${editor.isActive("bulletList") ? "bg-slate-200 text-slate-900" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          title="Bullet List"
         >
           <List size={15} />
         </Button>
 
-        <div className="h-6 w-[1px] bg-slate-200 mx-1" />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={`h-8 w-8 rounded-lg transition-colors ${editor.isActive("orderedList") ? "bg-slate-200 text-slate-900" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          title="Numbered List"
+        >
+          <ListOrdered size={15} />
+        </Button>
+
+        <div className="h-5 w-[1px] bg-slate-200 mx-1" />
 
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
+          className={`h-8 w-8 rounded-lg transition-colors ${editor.isActive("link") ? "bg-slate-200 text-slate-900" : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"}`}
           onClick={handleLink}
           title="Insert Link"
         >
-          <Link size={15} />
+          <LinkIcon size={15} />
         </Button>
 
         <Button
@@ -183,7 +237,7 @@ const RichTextEditor = ({
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg"
-          onClick={() => executeCommand("removeFormat")}
+          onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
           title="Clear Formatting"
         >
           <RemoveFormatting size={15} />
@@ -191,18 +245,12 @@ const RichTextEditor = ({
       </div>
 
       {/* Editor Content Area */}
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={handleInput}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-        className={`h-[200px] p-4 text-sm text-slate-700 focus:outline-none overflow-y-auto cursor-text prose prose-sm max-w-none rich-editor ${editorClassName}`}
-        data-placeholder={placeholder}
-        style={{ outline: "none" }}
-      />
+      <div className="max-h-[300px] overflow-y-auto flex-1 bg-white">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 };
 
 export default RichTextEditor;
+
