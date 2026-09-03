@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Star, Plus, Calendar as CalendarIcon, CheckCircle2, Users, Loader2, X, User } from "lucide-react";
+import { Search, Star, Plus, Calendar as CalendarIcon, CheckCircle2, Users, Loader2, X, User, Building2, MapPin, Layers, Briefcase } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isToday } from "date-fns";
 import FormDrawer from "@/components/common/FormDrawer";
@@ -14,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getMembers } from "@/api/MembersApi";
 import { getSpotlights, createSpotlight, updateSpotlight, deleteSpotlight, getBookedDates } from "@/api/SpotlightApi";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import PaginationBar from "@/components/common/PaginationBar";
 import { useAuth } from "@/context/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +35,26 @@ const SpotlightPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [spotlightToDelete, setSpotlightToDelete] = useState<any>(null);
+  const [membersModalOpen, setMembersModalOpen] = useState(false);
+  const [selectedSpotlightMembers, setSelectedSpotlightMembers] = useState<{ scheduleDate?: string; members: any[]; }>({ members: [] });
+
+  const resolveMemberInfo = (m: any) => {
+    const full = members.find(item => (item._id || item) === (m._id || m)) || {};
+    const fullName = m.fullName || full.fullName || m.name || full.name || "-";
+    const companyName = m.companyName || m.businessName || full.companyName || full.businessName || "-";
+    const rawCat = m.categoryName || full.categoryName || (full.businessCategory && (full.businessCategory.name || full.businessCategory)) || full.industry || "-";
+    const rawReg = m.regionName || full.regionName || (full.businessRegion && (full.businessRegion.name || full.businessRegion)) || (full.city ? `${full.city}${full.state ? `, ${full.state}` : ""}` : full.state) || "-";
+
+    return {
+      _id: m._id || m,
+      fullName,
+      businessName: companyName,
+      companyName: companyName,
+      categoryName: typeof rawCat === "object" ? rawCat?.name || "-" : rawCat,
+      regionName: typeof rawReg === "object" ? rawReg?.name || "-" : rawReg
+    };
+  };
+
   const [editingSpotlightId, setEditingSpotlightId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -116,7 +138,7 @@ const SpotlightPage = () => {
 
   const fetchMembers = async () => {
     try {
-      const result = await getMembers({ page: 0, limit: 100 });
+      const result = await getMembers({ page: 0, limit: 1000 });
       setMembers(result.data || []);
     } catch (error) {
       console.error("Error fetching members:", error);
@@ -184,14 +206,15 @@ const SpotlightPage = () => {
     const selectedDateStr = format(formData.scheduleDate, "yyyy-MM-dd");
     const currentEditSpotlight = editingSpotlightId ? spotlights.find(s => s._id === editingSpotlightId) : null;
     let isCurrentEditDate = false;
+
     if (currentEditSpotlight && currentEditSpotlight.scheduleDate) {
-      const editD = new Date(currentEditSpotlight.scheduleDate);
-      if (selectedDateStr === format(editD, "yyyy-MM-dd")) {
+      const editDateStr = format(new Date(currentEditSpotlight.scheduleDate), "yyyy-MM-dd");
+      if (editDateStr === selectedDateStr) {
         isCurrentEditDate = true;
       }
     }
 
-    if (!isCurrentEditDate && bookedDates.includes(selectedDateStr)) {
+    if (bookedDates.includes(selectedDateStr) && !isCurrentEditDate) {
       toast({
         title: "Date Conflict",
         description: "A spotlight is already scheduled for this date. Only one spotlight is allowed per date.",
@@ -200,21 +223,28 @@ const SpotlightPage = () => {
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      const apiData = {
+      setIsSubmitting(true);
+      const payload = {
         members: formData.selectedMembers.map(m => m._id),
         scheduleDate: formData.scheduleDate.toISOString(),
         status: formData.status
       };
 
       if (editingSpotlightId) {
-        await updateSpotlight(editingSpotlightId, apiData);
-        toast({ title: "Success", description: "Spotlight updated successfully", variant: "success" });
+        await updateSpotlight(editingSpotlightId, payload);
+        toast({
+          title: "Success",
+          description: "Spotlight updated successfully"
+        });
       } else {
-        await createSpotlight(apiData);
-        toast({ title: "Success", description: "Spotlight scheduled successfully", variant: "success" });
+        await createSpotlight(payload);
+        toast({
+          title: "Success",
+          description: "Spotlight created successfully"
+        });
       }
+
       setDrawerOpen(false);
       resetForm();
       fetchSpotlights();
@@ -237,7 +267,6 @@ const SpotlightPage = () => {
       status: spotlight.status,
       scheduleDate: new Date(spotlight.scheduleDate)
     });
-    fetchBookedDates();
     setDrawerOpen(true);
   };
 
@@ -248,10 +277,13 @@ const SpotlightPage = () => {
 
   const handleConfirmDelete = async () => {
     if (!spotlightToDelete) return;
-    setIsDeleting(true);
     try {
+      setIsDeleting(true);
       await deleteSpotlight(spotlightToDelete._id);
-      toast({ title: "Deleted", description: "Spotlight removed successfully", variant: "success" });
+      toast({
+        title: "Success",
+        description: "Spotlight deleted successfully"
+      });
       setDeleteConfirmOpen(false);
       setSpotlightToDelete(null);
       fetchSpotlights();
@@ -268,72 +300,66 @@ const SpotlightPage = () => {
   };
 
   const toggleMember = (member: any) => {
-    setFormData(prev => {
-      const exists = prev.selectedMembers.some(m => m._id === member._id);
-      if (exists) {
-        return {
-          ...prev,
-          selectedMembers: prev.selectedMembers.filter(m => m._id !== member._id)
-        };
-      } else {
-        if (maxLimit && prev.selectedMembers.length >= maxLimit) {
-          setTimeout(() => {
-            toast({
-              title: "Selection Limit",
-              description: `You can select a maximum of ${maxLimit} members`,
-              variant: "destructive"
-            });
-          }, 0);
-          return prev;
-        }
-        return {
-          ...prev,
-          selectedMembers: [...prev.selectedMembers, { _id: member._id, fullName: member.fullName, businessName: member.businessName }]
-        };
+    const isSelected = formData.selectedMembers.some(m => m._id === member._id);
+    if (isSelected) {
+      setFormData(prev => ({
+        ...prev,
+        selectedMembers: prev.selectedMembers.filter(m => m._id !== member._id)
+      }));
+    } else {
+      if (maxLimit && formData.selectedMembers.length >= maxLimit) {
+        toast({
+          title: "Limit Reached",
+          description: `You can only select up to ${maxLimit} members`,
+          variant: "destructive"
+        });
+        return;
       }
-    });
+      setFormData(prev => ({
+        ...prev,
+        selectedMembers: [...prev.selectedMembers, member]
+      }));
+    }
+  };
+
+  const isDateBooked = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return bookedDates.includes(dateStr);
   };
 
   return (
-    <div className="page-container relative min-h-[600px]">
-      {isLoading && spotlights.length === 0 && (
-        <GlobalNetworkLoader
-          fullScreen={false}
-          title="Synchronizing Spotlight Nodes..."
-          subtitle="Establishing connection to member highlights"
-        />
-      )}
+    <div className="space-y-6">
+      {isLoading && <GlobalNetworkLoader />}
 
-      <div className="flex flex-wrap items-center gap-3 mb-6 pb-4 border-b border-border">
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Star size={16} className="text-primary" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Star size={20} />
           </div>
           <div>
-            <h1 className="text-base font-semibold text-foreground">Spotlight Creation  </h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Spotlight Creation</h1>
+            <p className="text-xs text-muted-foreground">Manage and schedule member spotlights</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/70" />
-            <input
-              type="text"
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
               placeholder="Search spotlight..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 pl-8 pr-3 w-48 rounded-lg border border-border bg-secondary/50 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-muted-foreground/60"
+              className="pl-9 w-[200px] h-9 text-xs rounded-lg"
             />
           </div>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-9 w-32 rounded-lg border-slate-200 text-xs">
-              <SelectValue placeholder="Status" />
+            <SelectTrigger className="w-[130px] h-9 text-xs rounded-lg">
+              <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="schedule">Schedule</SelectItem>
             </SelectContent>
@@ -357,7 +383,7 @@ const SpotlightPage = () => {
           <TableHeader>
             <TableRow className="bg-secondary/30">
               <TableHead className="w-[80px]">S.No</TableHead>
-              <TableHead className="w-[300px]">Members</TableHead>
+              <TableHead className="w-[320px]">Members</TableHead>
               <TableHead>Schedule Date</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -377,12 +403,113 @@ const SpotlightPage = () => {
                     {page * 10 + index + 1}
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {s.members?.map((m: any) => (
-                        <Badge key={m._id} variant="secondary" className="text-sm text-foreground bg-slate-100 border-none font-semibold">
-                          {m.fullName}
-                        </Badge>
-                      ))}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {/* First 3 members */}
+                      {s.members?.slice(0, 3).map((m: any) => {
+                        const resolved = resolveMemberInfo(m);
+                        return (
+                          <HoverCard key={resolved._id || m._id} openDelay={100} closeDelay={150}>
+                            <HoverCardTrigger asChild>
+                              <Badge
+                                variant="secondary"
+                                className="text-xs text-foreground bg-slate-100 hover:bg-slate-200 border border-transparent hover:border-slate-300 font-semibold cursor-pointer transition-all py-1 px-2.5 rounded-md shadow-none"
+                              >
+                                {resolved.fullName}
+                              </Badge>
+                            </HoverCardTrigger>
+                            <HoverCardContent
+                              side="top"
+                              align="start"
+                              className="w-72 p-3.5 shadow-xl rounded-xl border border-slate-200 bg-white z-50 text-left"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0 font-bold text-xs uppercase border border-primary/20">
+                                  {resolved.fullName.charAt(0) || "U"}
+                                </div>
+                                <div className="flex-1 min-w-0 space-y-1.5">
+                                  <h4 className="text-sm font-bold text-slate-900 leading-tight truncate">
+                                    {resolved.fullName}
+                                  </h4>
+                                  <div className="space-y-1 text-xs text-slate-600">
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <Building2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                      <span className="truncate font-medium">{resolved.companyName}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <Layers className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                      <span className="truncate text-slate-500">{resolved.categoryName}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 truncate">
+                                      <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                      <span className="truncate text-slate-500">{resolved.regionName}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
+                        );
+                      })}
+
+                      {/* Remaining count badge +N */}
+                      {s.members?.length > 3 && (
+                        <HoverCard openDelay={100} closeDelay={150}>
+                          <HoverCardTrigger asChild>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 border border-primary/20 cursor-pointer transition-all py-1 px-2 rounded-md"
+                            >
+                              +{s.members.length - 3}
+                            </Badge>
+                          </HoverCardTrigger>
+                          <HoverCardContent
+                            side="top"
+                            align="start"
+                            className="w-80 p-3.5 shadow-xl rounded-xl border border-slate-200 bg-white z-50 text-left"
+                          >
+                            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
+                              <span className="text-xs font-bold text-slate-800">
+                                Remaining Members ({s.members.length - 3})
+                              </span>
+                              <span className="text-[11px] font-semibold text-muted-foreground bg-slate-100 px-2 py-0.5 rounded-full">
+                                Total: {s.members.length}
+                              </span>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto space-y-2.5 pr-1 divide-y divide-slate-100">
+                              {s.members.slice(3).map((remM: any, idx: number) => {
+                                const remResolved = resolveMemberInfo(remM);
+                                return (
+                                  <div key={remResolved._id || idx} className={cn("flex items-start gap-2.5", idx > 0 && "pt-2.5")}>
+                                    <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center flex-shrink-0 font-bold text-[11px] uppercase border border-slate-200 mt-0.5">
+                                      {remResolved.fullName.charAt(0) || "U"}
+                                    </div>
+                                    <div className="flex-1 min-w-0 space-y-0.5">
+                                      <div className="text-xs font-bold text-slate-800 truncate">
+                                        {remResolved.fullName}
+                                      </div>
+                                      <div className="flex items-center gap-1.5 text-[11px] text-slate-600 truncate">
+                                        <Building2 className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                        <span className="truncate font-medium">{remResolved.companyName}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-[10px] text-slate-500 truncate">
+                                        <span className="flex items-center gap-1 truncate">
+                                          <Layers className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                          <span className="truncate">{remResolved.categoryName}</span>
+                                        </span>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1 truncate">
+                                          <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                          <span className="truncate">{remResolved.regionName}</span>
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-foreground font-semibold">
@@ -481,7 +608,7 @@ const SpotlightPage = () => {
                         <div className="flex flex-col flex-1 min-w-0">
                           <span className="text-xs font-semibold text-slate-800 truncate">{member.fullName}</span>
                           <span className="text-[10px] text-slate-400 truncate">
-                            {member.businessName || "\u2014"}
+                            {member.businessName || "—"}
                           </span>
                         </div>
                         {/* Selection indicator */}
@@ -496,94 +623,102 @@ const SpotlightPage = () => {
                       </div>
                     );
                   })}
-                  {members.filter(member => {
-                    const q = memberSearchQuery.toLowerCase();
-                    return (
-                      member.fullName?.toLowerCase().includes(q) ||
-                      member.businessName?.toLowerCase().includes(q) ||
-                      member.mobileNumber?.toLowerCase().includes(q)
-                    );
-                  }).length === 0 && (
-                    <p className="text-center py-6 text-xs text-slate-400">No members found</p>
-                  )}
                 </div>
               </PopoverContent>
             </Popover>
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {formData.selectedMembers.map(m => (
-                <Badge key={m._id} variant="default" className="bg-primary/10 text-primary border-primary/20 text-[10px] py-0 px-2 flex items-center gap-1">
-                  {m.fullName}{m.businessName ? ` (${m.businessName})` : ""}
-                  <X size={10} className="cursor-pointer" onClick={() => toggleMember(m)} />
-                </Badge>
-              ))}
-            </div>
+
+            {/* Selected Member Chips */}
+            {formData.selectedMembers.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-2">
+                {formData.selectedMembers.map((member) => (
+                  <Badge
+                    key={member._id}
+                    variant="secondary"
+                    className="pl-2.5 pr-1 py-1 text-xs bg-slate-100 text-slate-800 rounded-lg flex items-center gap-1.5 hover:bg-slate-200 transition-colors"
+                  >
+                    <span>{member.fullName}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleMember(member)}
+                      className="p-0.5 hover:bg-slate-300 rounded-full transition-colors"
+                    >
+                      <X className="h-3 w-3 text-slate-500" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">Schedule Date</Label>
-            <Popover modal={true}>
+            <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  variant={"outline"}
+                  variant="outline"
                   className={cn(
                     "w-full h-11 justify-start text-left font-normal rounded-xl border-slate-200",
                     !formData.scheduleDate && "text-muted-foreground"
                   )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                  <CalendarIcon className="mr-2 h-4 w-4" />
                   {formData.scheduleDate ? format(formData.scheduleDate, "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start" style={{ pointerEvents: "auto" }}>
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={formData.scheduleDate}
-                  disabled={(date) => {
-                    const dateStr = format(date, "yyyy-MM-dd");
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-
-                    const currentEditSpotlight = editingSpotlightId ? spotlights.find(s => s._id === editingSpotlightId) : null;
-                    let isCurrentEditDate = false;
-                    if (currentEditSpotlight && currentEditSpotlight.scheduleDate) {
-                      const editD = new Date(currentEditSpotlight.scheduleDate);
-                      if (dateStr === format(editD, "yyyy-MM-dd")) {
-                        isCurrentEditDate = true;
-                      }
-                    }
-
-                    const isBooked = bookedDates.includes(dateStr) && !isCurrentEditDate;
-                    return isBooked || date < today;
-                  }}
                   onSelect={(date) => {
-                    if (!date) return;
-                    const dateStr = format(date, "yyyy-MM-dd");
-                    const currentEditSpotlight = editingSpotlightId ? spotlights.find(s => s._id === editingSpotlightId) : null;
-                    let isCurrentEditDate = false;
-                    if (currentEditSpotlight && currentEditSpotlight.scheduleDate) {
-                      const editD = new Date(currentEditSpotlight.scheduleDate);
-                      if (dateStr === format(editD, "yyyy-MM-dd")) {
-                        isCurrentEditDate = true;
+                    if (date) {
+                      const dateStr = format(date, "yyyy-MM-dd");
+                      const currentEditSpotlight = editingSpotlightId ? spotlights.find(s => s._id === editingSpotlightId) : null;
+                      let isCurrentEditDate = false;
+
+                      if (currentEditSpotlight && currentEditSpotlight.scheduleDate) {
+                        const editDateStr = format(new Date(currentEditSpotlight.scheduleDate), "yyyy-MM-dd");
+                        if (editDateStr === dateStr) {
+                          isCurrentEditDate = true;
+                        }
                       }
-                    }
 
-                    if (!isCurrentEditDate && bookedDates.includes(dateStr)) {
-                      toast({
-                        title: "Date Already Booked",
-                        description: "A spotlight is already scheduled for this date. Please select another date.",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
+                      if (bookedDates.includes(dateStr) && !isCurrentEditDate) {
+                        toast({
+                          title: "Date Booked",
+                          description: "A spotlight is already scheduled for this date. Please select another date.",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
 
-                    const dateIsToday = isToday(date);
-                    setFormData(prev => ({
-                      ...prev,
-                      scheduleDate: date,
-                      status: dateIsToday ? (prev.status === "schedule" ? "active" : prev.status) : "schedule"
-                    }));
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const isUpcoming = date > today;
+                      setFormData(prev => ({
+                        ...prev,
+                        scheduleDate: date,
+                        status: isUpcoming ? "schedule" : "active"
+                      }));
+                    } else {
+                      setFormData(prev => ({ ...prev, scheduleDate: undefined }));
+                    }
+                  }}
+                  modifiers={{
+                    booked: (date) => {
+                      const currentEditSpotlight = editingSpotlightId ? spotlights.find(s => s._id === editingSpotlightId) : null;
+                      if (currentEditSpotlight && currentEditSpotlight.scheduleDate) {
+                        const editDateStr = format(new Date(currentEditSpotlight.scheduleDate), "yyyy-MM-dd");
+                        const dateStr = format(date, "yyyy-MM-dd");
+                        if (editDateStr === dateStr) return false;
+                      }
+                      return isDateBooked(date);
+                    }
+                  }}
+                  modifiersClassNames={{
+                    booked: "opacity-40 line-through bg-red-50 text-red-500 cursor-not-allowed"
                   }}
                   initialFocus
+                  className="rounded-xl border shadow-sm p-3"
                 />
               </PopoverContent>
             </Popover>
@@ -594,31 +729,41 @@ const SpotlightPage = () => {
             <Select
               value={formData.status}
               onValueChange={(val) => setFormData(prev => ({ ...prev, status: val }))}
-              disabled={!formData.scheduleDate || !isToday(formData.scheduleDate)}
             >
               <SelectTrigger className="h-11 rounded-xl border-slate-200">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                {formData.scheduleDate && isToday(formData.scheduleDate) ? (
-                  <>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="schedule">Schedule</SelectItem>
-                  </>
-                ) : (
-                  <SelectItem value="schedule">Schedule</SelectItem>
-                )}
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="schedule">Schedule</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="pt-6 flex gap-3 mt-auto">
-            <Button variant="outline" className="flex-1 h-12 rounded-xl font-bold" onClick={() => setDrawerOpen(false)}>Cancel</Button>
-            <Button className="flex-1 h-12 rounded-xl font-bold shadow-lg shadow-primary/20" onClick={handleSave} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <CheckCircle2 className="mr-2" size={18} />}
-              {editingSpotlightId ? "Update Schedule" : "Schedule Spotlight"}
+          <div className="pt-4 flex gap-3 mt-auto">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1 h-11 rounded-xl"
+              onClick={() => { setDrawerOpen(false); resetForm(); }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 h-11 rounded-xl bg-primary hover:bg-primary/90 font-bold"
+              onClick={handleSave}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                editingSpotlightId ? "Update Spotlight" : "Create Spotlight"
+              )}
             </Button>
           </div>
         </div>
@@ -627,12 +772,13 @@ const SpotlightPage = () => {
       <ConfirmDialog
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="Delete Spotlight Creation?"
-        description="Are you sure you want to delete this spotlight creation? This action cannot be undone."
         onConfirm={handleConfirmDelete}
-        isLoading={isDeleting}
+        title="Delete Spotlight"
+        description="Are you sure you want to delete this spotlight creation? This action cannot be undone."
         confirmLabel="Delete"
+        cancelLabel="Cancel"
         variant="destructive"
+        isLoading={isDeleting}
       />
     </div>
   );

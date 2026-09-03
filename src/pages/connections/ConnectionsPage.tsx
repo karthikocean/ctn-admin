@@ -7,7 +7,11 @@ import {
   Building2,
   Loader2,
   Calendar,
-  X
+  X,
+  AlertTriangle,
+  FileText,
+  DollarSign,
+  Phone
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,11 +43,15 @@ const getAvatarGradient = (name: string = "") => {
 };
 
 type DrilldownType =
+  | "total_req_given"
   | "sent_accepted"
   | "sent_rejected"
+  | "direct_meet"
+  | "give_recommendations"
+  | "received_business_done"
+  | "reported"
   | "received_accepted"
   | "received_rejected"
-  | "direct_meet"
   | "recommendation_received"
   | "business_done";
 
@@ -67,13 +75,17 @@ const formatCompactAmount = (amount: number | string) => {
 };
 
 const metricTitles: Record<DrilldownType, string> = {
-  sent_accepted: "Connection Accepted (Requested)",
-  sent_rejected: "Connection Rejected (Requested)",
-  received_accepted: "Connection Accepted (Received)",
-  received_rejected: "Connection Rejected (Received)",
+  total_req_given: "Total Connection Requests Given",
+  sent_accepted: "Connection Requests Accepted (Sent)",
+  sent_rejected: "Connection Requests Rejected (Sent)",
   direct_meet: "Direct 1-to-1 Meets",
+  give_recommendations: "Recommendations Given",
+  received_business_done: "Received Business Done (Thank You Slips)",
+  reported: "Reports Filed Against Member",
+  received_accepted: "Connection Requests Accepted (Received)",
+  received_rejected: "Connection Requests Rejected (Received)",
   recommendation_received: "Recommendations Received",
-  business_done: "Business Done (Thank You Slips)",
+  business_done: "Business Done (Thank You Slips)"
 };
 
 const ConnectionsPage = () => {
@@ -89,7 +101,7 @@ const ConnectionsPage = () => {
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [drilldownLoading, setDrilldownLoading] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
-  const [selectedMetric, setSelectedMetric] = useState<DrilldownType>("sent_accepted");
+  const [selectedMetric, setSelectedMetric] = useState<DrilldownType>("total_req_given");
   const [drilldownList, setDrilldownList] = useState<any[]>([]);
   const [drilldownPage, setDrilldownPage] = useState(1);
   const [drilldownTotalPages, setDrilldownTotalPages] = useState(1);
@@ -214,36 +226,36 @@ const ConnectionsPage = () => {
 
       {/* Table Card */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[1100px]">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-16">
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider w-14">
                   S.No
                 </th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[220px]">
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider min-w-[190px]">
                   Member
                 </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  Sent Accepted
+                <th className="text-center px-3 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                  Total Req Given
                 </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  Sent Rejected
+                <th className="text-center px-3 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                  Req Accepted
                 </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  Received Accepted
+                <th className="text-center px-3 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                  Req Rejected
                 </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  Received Rejected
-                </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                <th className="text-center px-3 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                   Direct Meet
                 </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  Recommendations
+                <th className="text-center px-3 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                  Give Recommendations
                 </th>
-                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  Business Done
+                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[160px]">
+                  Received Business Done
+                </th>
+                <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap min-w-[90px]">
+                  Reported
                 </th>
               </tr>
             </thead>
@@ -255,150 +267,164 @@ const ConnectionsPage = () => {
                   </td>
                 </tr>
               ) : (
-                connections.map((c, index) => (
-                  <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
-                    {/* S.No */}
-                    <td className="px-6 py-4 text-sm text-foreground font-semibold">
-                      {(page - 1) * 10 + index + 1}
-                    </td>
+                connections.map((c, index) => {
+                  const totalReqGiven = c.totalReqGivenCount ?? (c.sentAcceptedCount || 0) + (c.sentRejectedCount || 0);
+                  const sentAccepted = c.sentAcceptedCount || 0;
+                  const sentRejected = c.sentRejectedCount || 0;
+                  const directMeet = c.directMeetCount || 0;
+                  const giveRecs = c.giveRecommendationsCount ?? (c.recommendationReceivedCount || 0);
+                  const rcvdBusinessAmt = c.receivedBusinessDoneAmount ?? (c.businessDoneAmount || 0);
+                  const rcvdBusinessCount = c.receivedBusinessDoneCount ?? (c.businessDoneCount || 0);
+                  const reportedCount = c.reportedCount || 0;
 
-                    {/* Member */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <PrivateAvatar
-                          src={c.profilePhoto}
-                          fallbackName={c.fullName}
-                          className="h-9 w-9 border border-slate-200 flex-shrink-0 shadow-sm"
-                          avatarImageClassName="object-cover"
-                          avatarFallbackClassName={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(c.fullName || "?"))}
-                        />
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-slate-900 leading-tight">
-                            {c.fullName || "Unknown"}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground font-medium mt-0.5 max-w-[180px] truncate" title={c.businessName || ""}>
-                            {c.businessName || ""}
-                          </span>
+                  return (
+                    <tr key={c._id} className="hover:bg-secondary/30 transition-colors">
+                      {/* S.No */}
+                      <td className="px-4 py-4 text-sm text-foreground font-semibold">
+                        {(page - 1) * 10 + index + 1}
+                      </td>
+
+                      {/* Member */}
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <PrivateAvatar
+                            src={c.profilePhoto}
+                            fallbackName={c.fullName}
+                            className="h-9 w-9 border border-slate-200 flex-shrink-0 shadow-sm"
+                            avatarImageClassName="object-cover"
+                            avatarFallbackClassName={cn("text-xs font-bold flex items-center justify-center border", getAvatarGradient(c.fullName || "?"))}
+                          />
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-900 leading-tight">
+                              {c.fullName || "Unknown"}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground font-medium mt-0.5 max-w-[180px] truncate" title={c.businessName || ""}>
+                              {c.businessName || ""}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Sent Accepted (he requested) */}
-                    <td className="px-4 py-4 text-center">
-                      {c.sentAcceptedCount > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDrilldown(c, "sent_accepted", c.sentAcceptedCount)}
-                          className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
-                        >
-                          {c.sentAcceptedCount}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-muted-foreground font-semibold">0</span>
-                      )}
-                    </td>
-
-                    {/* Sent Rejected (he requested) */}
-                    <td className="px-4 py-4 text-center">
-                      {c.sentRejectedCount > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDrilldown(c, "sent_rejected", c.sentRejectedCount)}
-                          className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
-                        >
-                          {c.sentRejectedCount}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-muted-foreground font-semibold">0</span>
-                      )}
-                    </td>
-
-                    {/* Received Accepted (he received) */}
-                    <td className="px-4 py-4 text-center">
-                      {c.receivedAcceptedCount > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDrilldown(c, "received_accepted", c.receivedAcceptedCount)}
-                          className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
-                        >
-                          {c.receivedAcceptedCount}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-muted-foreground font-semibold">0</span>
-                      )}
-                    </td>
-
-                    {/* Received Rejected (he received) */}
-                    <td className="px-4 py-4 text-center">
-                      {c.receivedRejectedCount > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDrilldown(c, "received_rejected", c.receivedRejectedCount)}
-                          className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
-                        >
-                          {c.receivedRejectedCount}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-muted-foreground font-semibold">0</span>
-                      )}
-                    </td>
-
-                    {/* Total Direct Meet Count */}
-                    <td className="px-4 py-4 text-center">
-                      {c.directMeetCount > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDrilldown(c, "direct_meet", c.directMeetCount)}
-                          className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
-                        >
-                          {c.directMeetCount}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-muted-foreground font-semibold">0</span>
-                      )}
-                    </td>
-
-                    {/* Recommendation Received Count */}
-                    <td className="px-4 py-4 text-center">
-                      {c.recommendationReceivedCount > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleOpenDrilldown(c, "recommendation_received", c.recommendationReceivedCount)}
-                          className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
-                        >
-                          {c.recommendationReceivedCount}
-                        </button>
-                      ) : (
-                        <span className="text-sm text-muted-foreground font-semibold">0</span>
-                      )}
-                    </td>
-
-                    {/* Business Done Count */}
-                    <td className="px-4 py-4 text-center">
-                      {c.businessDoneCount > 0 ? (
-                        <div className="flex flex-col items-center">
+                      {/* 1. Total Req Given */}
+                      <td className="px-3 py-4 text-center">
+                        {totalReqGiven > 0 ? (
                           <button
                             type="button"
-                            onClick={() => handleOpenDrilldown(c, "business_done", c.businessDoneCount)}
+                            onClick={() => handleOpenDrilldown(c, "total_req_given", totalReqGiven)}
                             className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
                           >
-                            {c.businessDoneCount}
+                            {totalReqGiven}
                           </button>
-                          {c.businessDoneAmount > 0 && (
+                        ) : (
+                          <span className="text-sm text-muted-foreground font-semibold">0</span>
+                        )}
+                      </td>
+
+                      {/* 2. Req Accepted (he sent) */}
+                      <td className="px-3 py-4 text-center">
+                        {sentAccepted > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDrilldown(c, "sent_accepted", sentAccepted)}
+                            className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                          >
+                            {sentAccepted}
+                          </button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground font-semibold">0</span>
+                        )}
+                      </td>
+
+                      {/* 3. Req Rejected (he sent) */}
+                      <td className="px-3 py-4 text-center">
+                        {sentRejected > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDrilldown(c, "sent_rejected", sentRejected)}
+                            className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                          >
+                            {sentRejected}
+                          </button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground font-semibold">0</span>
+                        )}
+                      </td>
+
+                      {/* 4. Direct Meet */}
+                      <td className="px-3 py-4 text-center">
+                        {directMeet > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDrilldown(c, "direct_meet", directMeet)}
+                            className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                          >
+                            {directMeet}
+                          </button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground font-semibold">0</span>
+                        )}
+                      </td>
+
+                      {/* 5. Give Recommendations */}
+                      <td className="px-3 py-4 text-center">
+                        {giveRecs > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDrilldown(c, "give_recommendations", giveRecs)}
+                            className="inline-flex items-center justify-center text-sm font-bold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors cursor-pointer"
+                          >
+                            {giveRecs}
+                          </button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground font-semibold">0</span>
+                        )}
+                      </td>
+
+                      {/* 6. Received Business Done (Value) */}
+                      <td className="px-4 py-4 text-center whitespace-nowrap">
+                        {rcvdBusinessAmt > 0 || rcvdBusinessCount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDrilldown(c, "received_business_done", rcvdBusinessCount || 1)}
+                            className="inline-flex flex-col items-center justify-center mx-auto hover:opacity-80 transition-opacity cursor-pointer group"
+                          >
                             <span
-                              className="text-[10px] font-semibold text-emerald-600"
-                              title={`₹${Number(c.businessDoneAmount).toLocaleString("en-IN")}`}
+                              className="text-sm font-bold text-emerald-600 group-hover:underline underline-offset-2"
+                              title={`₹${Number(rcvdBusinessAmt).toLocaleString("en-IN")}`}
                             >
-                              {formatCompactAmount(c.businessDoneAmount)}
+                              {formatCompactAmount(rcvdBusinessAmt)}
                             </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground font-semibold">0</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                            {rcvdBusinessCount > 0 && (
+                              <span className="text-[10px] text-muted-foreground font-semibold">
+                                ({rcvdBusinessCount} {rcvdBusinessCount === 1 ? "slip" : "slips"})
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="inline-block text-sm text-muted-foreground font-semibold">
+                            ₹0
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 7. Reported */}
+                      <td className="px-4 py-4 text-center">
+                        {reportedCount > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDrilldown(c, "reported", reportedCount)}
+                            className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-full transition-colors cursor-pointer shadow-sm"
+                          >
+                            <AlertTriangle size={11} className="mr-1 text-rose-500" />
+                            {reportedCount}
+                          </button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground font-semibold">0</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -417,7 +443,7 @@ const ConnectionsPage = () => {
         )}
       </motion.div>
 
-      {/* Member List Popup Dialog (Styled exactly like Regions Page Member Dialog) */}
+      {/* Member List Popup Dialog */}
       <Dialog
         open={drilldownOpen}
         onOpenChange={(open) => {
@@ -429,16 +455,23 @@ const ConnectionsPage = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[560px] border-border rounded-2xl shadow-2xl">
+        <DialogContent className="sm:max-w-[580px] border-border rounded-2xl shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Users className="text-primary w-4 h-4" />
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center",
+                selectedMetric === "reported" ? "bg-rose-100 text-rose-600" : "bg-primary/10 text-primary"
+              )}>
+                {selectedMetric === "reported" ? (
+                  <AlertTriangle className="w-4 h-4" />
+                ) : (
+                  <Users className="w-4 h-4" />
+                )}
               </div>
               {metricTitles[selectedMetric]}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground pt-1">
-              {drilldownTotalRecords} member{drilldownTotalRecords !== 1 ? "s" : ""} associated with{" "}
+              {drilldownTotalRecords} record{drilldownTotalRecords !== 1 ? "s" : ""} associated with{" "}
               <span className="font-semibold text-foreground">{selectedMember?.fullName}</span>
             </DialogDescription>
           </DialogHeader>
@@ -505,18 +538,42 @@ const ConnectionsPage = () => {
                           </>
                         )}
                       </p>
+
+                      {/* Extra details based on metric type */}
+                      {selectedMetric === "give_recommendations" && item.details?.referralName && (
+                        <p className="text-[11px] text-slate-600 font-medium mt-1 truncate flex items-center gap-1">
+                          <span className="text-slate-400">Referred:</span> {item.details.referralName}
+                          {item.details.referralMobile && ` (${item.details.referralMobile})`}
+                        </p>
+                      )}
+
+                      {selectedMetric === "reported" && item.details?.reason && (
+                        <p className="text-[11px] text-rose-600 font-medium mt-1 truncate">
+                          <span className="text-slate-500">Reason:</span> {item.details.reason}
+                        </p>
+                      )}
+
+                      {(selectedMetric === "received_business_done" || selectedMetric === "business_done") && item.details?.businessDetails && (
+                        <p className="text-[11px] text-slate-600 font-medium mt-1 truncate">
+                          <span className="text-slate-400">Details:</span> {item.details.businessDetails}
+                        </p>
+                      )}
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      {selectedMetric === "business_done" && item.details?.amount ? (
+                      {(selectedMetric === "received_business_done" || selectedMetric === "business_done") && item.details?.amount ? (
                         <span
                           className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full"
                           title={`₹${Number(item.details.amount).toLocaleString("en-IN")}`}
                         >
                           {formatCompactAmount(item.details.amount)}
                         </span>
+                      ) : selectedMetric === "reported" ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                          {item.details?.moduleName || item.status || "Reported"}
+                        </span>
                       ) : (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                           {item.status || "Active"}
                         </span>
                       )}
@@ -536,7 +593,7 @@ const ConnectionsPage = () => {
               </ul>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">
-                {drilldownSearch ? "No matching members found in this list." : "No records found."}
+                {drilldownSearch ? "No matching records found in this list." : "No records found."}
               </p>
             )}
           </div>
