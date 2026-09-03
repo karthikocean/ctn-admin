@@ -102,7 +102,7 @@ const SpotlightPage = () => {
           if (s.scheduleDate && !s.isDeleted) {
             try {
               dateSet.add(format(new Date(s.scheduleDate), "yyyy-MM-dd"));
-            } catch (e) {}
+            } catch (e) { }
           }
         });
       }
@@ -783,5 +783,4 @@ const SpotlightPage = () => {
     </div>
   );
 };
-
 export default SpotlightPage;
