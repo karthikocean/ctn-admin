@@ -35,30 +35,30 @@ const ActionMenu = ({ onView, onEdit, onDelete, onDownload, downloadLabel = "Dow
         </Button>
       </DropdownMenuTrigger>
       {hasAnyAction && (
-        <DropdownMenuContent align="end" className="w-44" onCloseAutoFocus={(e) => e.preventDefault()}>
-          {onView && <DropdownMenuItem onClick={onView} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Eye size={14} className="mr-2" /> View</DropdownMenuItem>}
+        <DropdownMenuContent align="end" className="w-48" onCloseAutoFocus={(e) => e.preventDefault()}>
+          {onView && <DropdownMenuItem onClick={onView} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap"><Eye size={14} className="mr-2 shrink-0" /> View</DropdownMenuItem>}
           {onDownload && (
-            <DropdownMenuItem onClick={onDownload} className="focus:bg-primary/5 focus:text-primary cursor-pointer">
-              <Download size={14} className="mr-2 text-primary" /> {downloadLabel}
+            <DropdownMenuItem onClick={onDownload} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap">
+              <Download size={14} className="mr-2 text-primary shrink-0" /> {downloadLabel}
             </DropdownMenuItem>
           )}
-          {onAddUser && <DropdownMenuItem onClick={onAddUser} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Add User</DropdownMenuItem>}
-          {onAssign && <DropdownMenuItem onClick={onAssign} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><UserPlus size={14} className="mr-2" /> Assign Member</DropdownMenuItem>}
-          {onEdit && <DropdownMenuItem onClick={onEdit} className="focus:bg-primary/5 focus:text-primary cursor-pointer"><Pencil size={14} className="mr-2" /> Edit</DropdownMenuItem>}
+          {onAddUser && <DropdownMenuItem onClick={onAddUser} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap"><UserPlus size={14} className="mr-2 shrink-0" /> Add User</DropdownMenuItem>}
+          {onAssign && <DropdownMenuItem onClick={onAssign} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap"><UserPlus size={14} className="mr-2 shrink-0" /> Assign Member</DropdownMenuItem>}
+          {onEdit && <DropdownMenuItem onClick={onEdit} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap"><Pencil size={14} className="mr-2 shrink-0" /> Edit</DropdownMenuItem>}
           {onToggleStatus && (
-            <DropdownMenuItem onClick={onToggleStatus} className="focus:bg-primary/5 focus:text-primary cursor-pointer">
+            <DropdownMenuItem onClick={onToggleStatus} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap">
               {statusLabel?.toLowerCase() === "active" ? (
                 <>
-                  <X size={14} className="mr-2" /> Deactivate
+                  <X size={14} className="mr-2 shrink-0" /> Deactivate
                 </>
               ) : (
                 <>
-                  <CheckCircle2 size={14} className="mr-2" /> Activate
+                  <CheckCircle2 size={14} className="mr-2 shrink-0" /> Activate
                 </>
               )}
             </DropdownMenuItem>
           )}
-          {onDelete && <DropdownMenuItem onClick={onDelete} className="focus:bg-red-50 focus:text-red-600 cursor-pointer text-red-600"><Trash2 size={14} className="mr-2" /> Delete</DropdownMenuItem>}
+          {onDelete && <DropdownMenuItem onClick={onDelete} className="focus:bg-red-50 focus:text-red-600 cursor-pointer text-red-600 whitespace-nowrap"><Trash2 size={14} className="mr-2 shrink-0" /> Delete</DropdownMenuItem>}
         </DropdownMenuContent>
       )}
     </DropdownMenu>
