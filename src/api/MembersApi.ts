@@ -20,6 +20,13 @@ export const getMemberDetails = async (id: string) => {
   return response.data;
 };
 
+export const downloadWelcomeCard = async (id: string) => {
+  const response = await api.get(`/members/${id}/welcome-card`, {
+    responseType: "blob",
+  });
+  return response.data;
+};
+
 export const updateMember = async (id: string, data: any) => {
   const response = await api.put(`/members/${id}`, data);
   return response.data;

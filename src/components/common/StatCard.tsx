@@ -19,7 +19,8 @@ import {
   UserPlus,
   Receipt,
   IndianRupee,
-  ChevronRight
+  ChevronRight,
+  Briefcase
 } from "lucide-react";
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -41,6 +42,7 @@ const iconMap: Record<string, ReactNode> = {
   Handshake: <Handshake size={22} />,
   UserPlus: <UserPlus size={22} />,
   Receipt: <Receipt size={22} />,
+  Briefcase: <Briefcase size={22} />,
   IndianRupee: <IndianRupee size={22} />,
 };
 

@@ -75,6 +75,7 @@ import {
   getMembers,
   updateMember,
   getMemberDetails,
+  downloadWelcomeCard,
   deleteMember,
   updateMemberStatus,
   getBusinessRegion,
@@ -853,6 +854,38 @@ const MembersPage = () => {
     }
   };
 
+  const handleDownloadWelcomeCard = async (member: any) => {
+    try {
+      toast({
+        title: "Generating Welcome Card",
+        description: `Preparing welcome card flyer for ${member.fullName || "member"}...`,
+      });
+      const blob = await downloadWelcomeCard(member._id);
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      const safeName = (member.fullName || "Member").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const filename = `Welcome_Card_${safeName}.pdf`;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast({
+        title: "Download Complete",
+        description: `Welcome card downloaded successfully`,
+        variant: "success",
+      });
+    } catch (error: any) {
+      console.error("Error downloading welcome card:", error);
+      toast({
+        title: "Download Failed",
+        description: error.response?.data?.message || "Failed to download welcome card PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleToggleStatus = (member: any) => {
     setMemberToToggle(member);
     setStatusConfirmOpen(true);
@@ -1268,6 +1301,7 @@ const MembersPage = () => {
                 <TableHead className="px-6 py-4">Business Name</TableHead>
                 <TableHead className="px-6 py-4 min-w-[220px]">Category</TableHead>
                 <TableHead className="px-6 py-4">Location</TableHead>
+                <TableHead className="px-6 py-4 whitespace-nowrap">Registered Date</TableHead>
                 <TableHead className="px-6 py-4">Status</TableHead>
                 <TableHead className="px-6 py-4 text-right">Actions</TableHead>
               </TableRow>
@@ -1276,14 +1310,14 @@ const MembersPage = () => {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
-                    <TableCell colSpan={7} className="px-6 py-6">
+                    <TableCell colSpan={8} className="px-6 py-6">
                       <div className="w-full h-12 bg-muted/60 animate-pulse rounded-lg"></div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : members.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
                     No members found
                   </TableCell>
                 </TableRow>
@@ -1305,11 +1339,18 @@ const MembersPage = () => {
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{member.fullName}</span>
                           <span className="text-xs text-muted-foreground font-medium">{member.mobileNumber}</span>
-                          {member.dob && (
-                            <span className="text-[11px] text-slate-500 font-normal">
-                              DOB: {new Date(member.dob).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                            </span>
-                          )}
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                            {member.dob && (
+                              <span className="text-[11px] text-slate-500 font-normal">
+                                DOB: {new Date(member.dob).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                              </span>
+                            )}
+                            {member.createdAt && (
+                              <span className="text-[11px] text-slate-500 font-normal">
+                                Reg: {new Date(member.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
@@ -1335,6 +1376,28 @@ const MembersPage = () => {
                       <div className="flex items-start gap-1.5 text-sm text-foreground font-semibold">
                         <MapPin size={14} className="text-muted-foreground shrink-0 mt-0.5" />
                         <span>{member.city}{member.state ? `, ${member.state}` : ""}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-foreground">
+                          {member.createdAt
+                            ? new Date(member.createdAt).toLocaleDateString("en-GB", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "-"}
+                        </span>
+                        {member.createdAt && (
+                          <span className="text-[11px] text-muted-foreground font-normal">
+                            {new Date(member.createdAt).toLocaleTimeString("en-GB", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: true,
+                            })}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="px-6 py-4">
@@ -1373,6 +1436,8 @@ const MembersPage = () => {
                         </TooltipProvider>
 
                         <ActionMenu
+                          onDownload={() => handleDownloadWelcomeCard(member)}
+                          downloadLabel="Welcome Card"
                           onEdit={canEdit ? () => handleEdit(member) : undefined}
                           onDelete={canDelete ? () => handleDeleteClick(member) : undefined}
                         />

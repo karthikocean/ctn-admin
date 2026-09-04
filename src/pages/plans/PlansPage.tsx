@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Receipt, Layers, Eye, Calendar, Store, ShoppingBag, Shield } from "lucide-react";
+import { Search, Filter, CreditCard, Plus, Trash2, CreditCard as PlanIcon, Loader2, AlertCircle, HelpCircle, Gift, ClipboardList, Send, Trophy, GraduationCap, Users, Share2, Briefcase, Layers, Eye, Calendar, Store, ShoppingBag, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1205,7 +1205,7 @@ const PlansPage = () => {
                         "Trainings": GraduationCap,
                         "Direct Meet": Users,
                         "Recommendations": Share2,
-                        "Business Done": Receipt,
+                        "Business Done": Briefcase,
                         "Event": Calendar,
                         "Online Stall": Store,
                         "Offline Stall": Store,
