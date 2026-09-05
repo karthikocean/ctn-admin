@@ -861,11 +861,11 @@ const MembersPage = () => {
         description: `Preparing welcome card flyer for ${member.fullName || "member"}...`,
       });
       const blob = await downloadWelcomeCard(member._id);
-      const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
+      const url = window.URL.createObjectURL(new Blob([blob], { type: "image/png" }));
       const link = document.createElement("a");
       link.href = url;
       const safeName = (member.fullName || "Member").replace(/[^a-zA-Z0-9_-]/g, "_");
-      const filename = `Welcome_Card_${safeName}.pdf`;
+      const filename = `Welcome_Card_${safeName}.png`;
       link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
@@ -880,7 +880,7 @@ const MembersPage = () => {
       console.error("Error downloading welcome card:", error);
       toast({
         title: "Download Failed",
-        description: error.response?.data?.message || "Failed to download welcome card PDF",
+        description: error.response?.data?.message || "Failed to download welcome card",
         variant: "destructive",
       });
     }
@@ -1302,7 +1302,6 @@ const MembersPage = () => {
                 <TableHead className="px-6 py-4 min-w-[220px]">Category</TableHead>
                 <TableHead className="px-6 py-4">Location</TableHead>
                 <TableHead className="px-6 py-4 whitespace-nowrap">Registered Date</TableHead>
-                <TableHead className="px-6 py-4">Status</TableHead>
                 <TableHead className="px-6 py-4 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -1310,14 +1309,14 @@ const MembersPage = () => {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
-                    <TableCell colSpan={8} className="px-6 py-6">
+                    <TableCell colSpan={7} className="px-6 py-6">
                       <div className="w-full h-12 bg-muted/60 animate-pulse rounded-lg"></div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : members.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="px-6 py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                     No members found
                   </TableCell>
                 </TableRow>
@@ -1339,18 +1338,11 @@ const MembersPage = () => {
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{member.fullName}</span>
                           <span className="text-xs text-muted-foreground font-medium">{member.mobileNumber}</span>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                            {member.dob && (
-                              <span className="text-[11px] text-slate-500 font-normal">
-                                DOB: {new Date(member.dob).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                              </span>
-                            )}
-                            {member.createdAt && (
-                              <span className="text-[11px] text-slate-500 font-normal">
-                                Reg: {new Date(member.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                              </span>
-                            )}
-                          </div>
+                          {member.dob && (
+                            <span className="text-[11px] text-slate-500 font-normal mt-0.5">
+                              DOB: {new Date(member.dob).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </TableCell>
@@ -1379,7 +1371,7 @@ const MembersPage = () => {
                       </div>
                     </TableCell>
                     <TableCell className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col items-start gap-1.5">
                         <span className="text-sm font-semibold text-foreground">
                           {member.createdAt
                             ? new Date(member.createdAt).toLocaleDateString("en-GB", {
@@ -1389,31 +1381,22 @@ const MembersPage = () => {
                               })
                             : "-"}
                         </span>
-                        {member.createdAt && (
-                          <span className="text-[11px] text-muted-foreground font-normal">
-                            {new Date(member.createdAt).toLocaleTimeString("en-GB", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: true,
-                            })}
-                          </span>
+                        {member.status && (
+                          <Badge
+                            variant="outline"
+                            onClick={canEdit ? () => handleToggleStatus(member) : undefined}
+                            className={
+                              `cursor-pointer select-none transition-all hover:opacity-80 active:scale-95 ${
+                                member.status === 'active'
+                                  ? 'bg-green-500/10 text-green-600 border-green-200'
+                                  : 'bg-amber-500/10 text-amber-600 border-amber-200'
+                              }`
+                            }
+                          >
+                            {member.status.toUpperCase()}
+                          </Badge>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <Badge
-                        variant="outline"
-                        onClick={canEdit ? () => handleToggleStatus(member) : undefined}
-                        className={
-                          `cursor-pointer select-none transition-all hover:opacity-80 active:scale-95 ${
-                            member.status === 'active'
-                              ? 'bg-green-500/10 text-green-600 border-green-200'
-                              : 'bg-amber-500/10 text-amber-600 border-amber-200'
-                          }`
-                        }
-                      >
-                        {member.status.toUpperCase()}
-                      </Badge>
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">

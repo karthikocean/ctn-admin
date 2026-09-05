@@ -197,6 +197,11 @@ const TransactionIdBadge = ({ id }: { id: string }) => {
   );
 };
 
+const isPaymentPaid = (billing: any) => {
+  const upper = (billing?.status || billing?.paymentStatus || "").toUpperCase();
+  return upper === "PAID" || upper === "SUCCESS" || upper === "COMPLETED";
+};
+
 const BillingsPage = () => {
   const { toast } = useToast();
   const { hasPermission } = useAuth();
@@ -309,6 +314,14 @@ const BillingsPage = () => {
 
   const handleDownloadInvoice = async (billing: any) => {
     if (!billing?._id) return;
+    if (!isPaymentPaid(billing)) {
+      toast({
+        title: "Download Not Allowed",
+        description: "Invoice can only be downloaded for paid billing records.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       setDownloadingId(billing._id);
       toast({
@@ -626,7 +639,7 @@ const BillingsPage = () => {
                     <TableCell className="px-6 py-4 text-right">
                       <ActionMenu
                         onView={() => handlePreview(b)}
-                        onDownload={() => handleDownloadInvoice(b)}
+                        onDownload={isPaymentPaid(b) ? () => handleDownloadInvoice(b) : undefined}
                         downloadLabel="Download Invoice"
                         onEdit={canEdit ? () => handleEdit(b) : undefined}
                         onDelete={canDelete ? () => confirmDelete(b._id) : undefined}
@@ -1043,23 +1056,25 @@ const BillingsPage = () => {
 
               {/* Footer */}
               <div className="flex justify-between items-center p-4 bg-secondary/15 border-t border-border/80">
+                {isPaymentPaid(selectedBilling) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 rounded-xl px-4 text-xs font-bold gap-1.5 border border-primary/30 text-primary hover:bg-primary hover:text-white transition-all active:scale-95"
+                    disabled={downloadingId === selectedBilling._id}
+                    onClick={() => handleDownloadInvoice(selectedBilling)}
+                  >
+                    {downloadingId === selectedBilling._id ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Download size={14} />
+                    )}
+                    Download Invoice
+                  </Button>
+                )}
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="h-9 rounded-xl px-4 text-xs font-bold gap-1.5 border border-primary/30 text-primary hover:bg-primary hover:text-white transition-all active:scale-95"
-                  disabled={downloadingId === selectedBilling._id}
-                  onClick={() => handleDownloadInvoice(selectedBilling)}
-                >
-                  {downloadingId === selectedBilling._id ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Download size={14} />
-                  )}
-                  Download Invoice
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-9 rounded-xl px-6 text-xs font-bold border-2 hover:bg-primary hover:text-white hover:border-primary transition-all active:scale-95"
+                  className="h-9 rounded-xl px-6 text-xs font-bold border-2 hover:bg-primary hover:text-white hover:border-primary transition-all active:scale-95 ml-auto"
                   onClick={() => setPreviewOpen(false)}
                 >
                   Close Receipt
