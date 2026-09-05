@@ -592,7 +592,7 @@ const BillingsPage = () => {
                         />
                         <div className="flex flex-col">
                           <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{b.member?.fullName || "Unknown Member"}</span>
-                          <span className="text-xs text-muted-foreground font-medium">{b.member?.email}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{b.member?.mobileNumber || b.member?.phone || "-"}</span>
                         </div>
                       </div>
                     </TableCell>
@@ -982,7 +982,7 @@ const BillingsPage = () => {
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block leading-none">Member</span>
                     <span className="text-sm font-bold text-foreground truncate block mt-1">{selectedBilling.member?.fullName || "Unknown Member"}</span>
-                    <span className="text-xs text-muted-foreground truncate block">{selectedBilling.member?.email}</span>
+                    <span className="text-xs text-muted-foreground truncate block">{selectedBilling.member?.mobileNumber || selectedBilling.member?.phone || selectedBilling.member?.email}</span>
                   </div>
                 </div>
 

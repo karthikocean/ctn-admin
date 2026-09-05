@@ -492,6 +492,26 @@ const MembersPage = () => {
     }
   };
 
+  const getMemberRegionName = (member: any) => {
+    if (!member?.businessRegion) return "";
+    if (typeof member.businessRegion === "object" && member.businessRegion.name) {
+      return member.businessRegion.name;
+    }
+    if (typeof member.businessRegion === "string" && !/^[0-9a-fA-F]{24}$/.test(member.businessRegion)) {
+      return member.businessRegion;
+    }
+    const regionId = (typeof member.businessRegion === "object" ? member.businessRegion._id : member.businessRegion)?.toString();
+    if (!regionId) return "";
+    for (const r of businessRegions) {
+      if (r._id?.toString() === regionId) return r.name;
+      if (Array.isArray(r.areas)) {
+        const matchedArea = r.areas.find((a: any) => a._id?.toString() === regionId);
+        if (matchedArea?.name) return matchedArea.name;
+      }
+    }
+    return "";
+  };
+
   const fetchAreas = async (state: string, city: string) => {
     if (!state || !city) {
       setAreasOptions([]);
@@ -1168,7 +1188,7 @@ const MembersPage = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] mx-auto relative min-h-[600px]">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto relative min-h-[600px]">
       {isLoading && members.length === 0 && (
         <GlobalNetworkLoader
           fullScreen={false}
@@ -1240,7 +1260,7 @@ const MembersPage = () => {
       )}
 
       {activityFilter && (
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20 text-sm mt-2">
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20 text-sm">
           <Activity size={15} className="text-primary flex-shrink-0" />
           <span className="text-foreground font-medium flex-1">
             Showing members filtered by Activity: <span className="font-bold text-primary">
@@ -1266,7 +1286,7 @@ const MembersPage = () => {
       )}
 
       {statusFilter && (
-        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20 text-sm mt-2">
+        <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-primary/5 border border-primary/20 text-sm">
           <CheckCircle2 size={15} className="text-primary flex-shrink-0" />
           <span className="text-foreground font-medium flex-1">
             Showing members filtered by Status: <span className="font-bold text-primary uppercase">{statusFilter}</span>
@@ -1295,38 +1315,38 @@ const MembersPage = () => {
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-secondary/30">
-              <TableRow>
-                <TableHead className="px-6 py-4 w-16 text-center">S.No</TableHead>
-                <TableHead className="px-6 py-4">Member Details</TableHead>
-                <TableHead className="px-6 py-4">Business Name</TableHead>
-                <TableHead className="px-6 py-4 min-w-[220px]">Category</TableHead>
-                <TableHead className="px-6 py-4">Location</TableHead>
-                <TableHead className="px-6 py-4 whitespace-nowrap">Registered Date</TableHead>
-                <TableHead className="px-6 py-4 text-right">Actions</TableHead>
+              <TableRow className="border-b border-border/80">
+                <TableHead className="px-4 py-3.5 w-12 text-center text-xs font-bold text-muted-foreground">S.No</TableHead>
+                <TableHead className="px-4 py-3.5 min-w-[190px] text-xs font-bold text-muted-foreground">Member Details</TableHead>
+                <TableHead className="px-4 py-3.5 min-w-[190px] text-xs font-bold text-muted-foreground">Business Name</TableHead>
+                <TableHead className="px-4 py-3.5 min-w-[180px] text-xs font-bold text-muted-foreground">Category</TableHead>
+                <TableHead className="px-4 py-3.5 min-w-[160px] text-xs font-bold text-muted-foreground">Location</TableHead>
+                <TableHead className="px-4 py-3.5 min-w-[130px] whitespace-nowrap text-xs font-bold text-muted-foreground">Registered Date</TableHead>
+                <TableHead className="px-4 py-3.5 min-w-[90px] text-right text-xs font-bold text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={`skeleton-${i}`}>
-                    <TableCell colSpan={7} className="px-6 py-6">
+                    <TableCell colSpan={7} className="px-4 py-6">
                       <div className="w-full h-12 bg-muted/60 animate-pulse rounded-lg"></div>
                     </TableCell>
                   </TableRow>
                 ))
               ) : members.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
                     No members found
                   </TableCell>
                 </TableRow>
               ) : (
                 members.map((member, index) => (
                   <TableRow key={member._id} className="hover:bg-secondary/10 transition-colors">
-                    <TableCell className="px-6 py-4 text-center text-sm font-semibold text-foreground">
+                    <TableCell className="px-4 py-3.5 text-center text-sm font-semibold text-foreground">
                       {((page - 1) * 10) + index + 1}
                     </TableCell>
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="px-4 py-3.5 min-w-[190px]">
                       <div className="flex items-center gap-3">
                         <PrivateAvatar
                           src={member.profilePhoto}
@@ -1335,27 +1355,27 @@ const MembersPage = () => {
                           avatarImageClassName="object-cover"
                           avatarFallbackClassName={cn("text-xs font-bold shadow-inner flex items-center justify-center border", getAvatarGradient(member.fullName || "?"))}
                         />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-foreground leading-snug tracking-tight">{member.fullName}</span>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-sm font-semibold text-foreground leading-snug tracking-tight whitespace-nowrap">{member.fullName}</span>
                           <span className="text-xs text-muted-foreground font-medium">{member.mobileNumber}</span>
-                          {member.dob && (
-                            <span className="text-[11px] text-slate-500 font-normal mt-0.5">
-                              DOB: {new Date(member.dob).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                          {getMemberRegionName(member) && (
+                            <span className="text-[11px] text-slate-500 font-normal mt-0.5 whitespace-nowrap">
+                              Region: {getMemberRegionName(member)}
                             </span>
                           )}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <p className="text-sm text-foreground font-semibold">{member.businessName}</p>
+                    <TableCell className="px-4 py-3.5 min-w-[190px]">
+                      <p className="text-sm text-foreground font-semibold leading-snug">{member.businessName}</p>
                       {member.gstNumber && (
-                        <span className="text-xs text-muted-foreground font-medium block mt-0.5">
+                        <span className="text-xs text-muted-foreground font-medium block mt-0.5 whitespace-nowrap">
                           GST: {member.gstNumber}
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="px-6 py-4 min-w-[220px]">
-                      <p className="text-sm text-foreground font-semibold">
+                    <TableCell className="px-4 py-3.5 min-w-[180px]">
+                      <p className="text-sm text-foreground font-semibold leading-snug">
                         {member.businessCategory?.name || "N/A"}
                       </p>
                       {member.subCategory?.name && (
@@ -1364,14 +1384,14 @@ const MembersPage = () => {
                         </p>
                       )}
                     </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <div className="flex items-start gap-1.5 text-sm text-foreground font-semibold">
-                        <MapPin size={14} className="text-muted-foreground shrink-0 mt-0.5" />
-                        <span>{member.city}{member.state ? `, ${member.state}` : ""}</span>
+                    <TableCell className="px-4 py-3.5 min-w-[160px]">
+                      <div className="flex items-center gap-1.5 text-sm text-foreground font-semibold">
+                        <MapPin size={14} className="text-muted-foreground shrink-0" />
+                        <span className="whitespace-nowrap">{member.city}{member.state ? `, ${member.state}` : ""}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col items-start gap-1.5">
+                    <TableCell className="px-4 py-3.5 min-w-[130px] whitespace-nowrap">
+                      <div className="flex flex-col items-start gap-1">
                         <span className="text-sm font-semibold text-foreground">
                           {member.createdAt
                             ? new Date(member.createdAt).toLocaleDateString("en-GB", {
@@ -1386,7 +1406,7 @@ const MembersPage = () => {
                             variant="outline"
                             onClick={canEdit ? () => handleToggleStatus(member) : undefined}
                             className={
-                              `cursor-pointer select-none transition-all hover:opacity-80 active:scale-95 ${
+                              `cursor-pointer select-none transition-all hover:opacity-80 active:scale-95 text-[10px] px-2 py-0 h-5 font-bold ${
                                 member.status === 'active'
                                   ? 'bg-green-500/10 text-green-600 border-green-200'
                                   : 'bg-amber-500/10 text-amber-600 border-amber-200'
@@ -1398,7 +1418,7 @@ const MembersPage = () => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="px-6 py-4 text-right">
+                    <TableCell className="px-4 py-3.5 text-right whitespace-nowrap min-w-[90px]">
                       <div className="flex items-center justify-end gap-1.5">
                         <TooltipProvider>
                           <Tooltip>
