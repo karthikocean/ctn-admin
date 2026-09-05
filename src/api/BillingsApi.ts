@@ -29,5 +29,20 @@ export const downloadInvoice = async (id: string) => {
   const response = await api.get(`/billings/${id}/invoice`, {
     responseType: "blob",
   });
-  return response.data;
+  const contentDisposition = response.headers?.["content-disposition"] || response.headers?.["Content-Disposition"];
+  const xInvoiceNumber = response.headers?.["x-invoice-number"] || response.headers?.["X-Invoice-Number"];
+  let filename = "";
+  if (xInvoiceNumber) {
+    filename = `${xInvoiceNumber}.pdf`;
+  } else if (contentDisposition) {
+    const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i);
+    if (match && match[1]) {
+      filename = match[1].replace(/['"]/g, "").trim();
+    }
+  }
+  const blob = response.data;
+  if (blob && typeof blob === "object") {
+    (blob as any).filename = filename;
+  }
+  return blob;
 };
