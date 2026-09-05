@@ -329,10 +329,21 @@ const BillingsPage = () => {
         description: "Preparing PDF invoice...",
       });
       const blob = await BillingsApi.downloadInvoice(billing._id);
+      
+      let invoiceNo = (blob as any)?.filename;
+      if (!invoiceNo && billing.invoiceNumber) {
+        invoiceNo = `${billing.invoiceNumber}.pdf`;
+      }
+      if (!invoiceNo) {
+        invoiceNo = `OSINV-${billing._id.toString().slice(-6).toUpperCase()}.pdf`;
+      }
+      if (!invoiceNo.toLowerCase().endsWith(".pdf")) {
+        invoiceNo += ".pdf";
+      }
+
       const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
       const link = document.createElement("a");
       link.href = url;
-      const invoiceNo = `OSINV-${billing._id.toString().slice(-6).toUpperCase()}.pdf`;
       link.setAttribute("download", invoiceNo);
       document.body.appendChild(link);
       link.click();
@@ -965,9 +976,11 @@ const BillingsPage = () => {
                   </div>
                   <div>
                     <h2 className="text-base font-extrabold text-foreground tracking-tight">Receipt Details</h2>
-                    {/* <p className="text-[11px] text-muted-foreground mt-0.5 font-medium uppercase tracking-wider"> */}
-                    {/* Reference: <span className="font-bold text-foreground">#{selectedBilling._id?.toString().slice(-8).toUpperCase()}</span> */}
-                    {/* </p> */}
+                    {(selectedBilling.invoiceNumber || selectedBilling._id) && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">
+                        Invoice: <span className="font-bold text-foreground">#{selectedBilling.invoiceNumber || `OSINV-${selectedBilling._id?.toString().slice(-6).toUpperCase()}`}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
