@@ -11,6 +11,7 @@ import { getDashboardStats, DashboardQueryParams } from "@/api/DashboardApi";
 import { getRegions } from "@/api/RegionApi";
 import { getCategories } from "@/api/CategoryApi";
 import { formatCompactNumber } from "@/lib/utils";
+import ActivityReminderModal, { ActivityGapType } from "@/components/dashboard/ActivityReminderModal";
 
 const COLORS = ["hsl(210,97%,23%)", "hsl(0,72%,50%)", "hsl(142,71%,45%)", "hsl(38,92%,50%)", "hsl(262,83%,58%)", "hsl(210,60%,50%)"];
 const TRAINING_BAR_COLOR = "#1d4ed8";
@@ -63,6 +64,28 @@ const DashboardPage = () => {
   // Dropdowns options
   const [regions, setRegions] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+
+  // Activity Gap Reminder Modal state
+  const [reminderModal, setReminderModal] = useState<{
+    isOpen: boolean;
+    activityType: ActivityGapType;
+    cardTitle: string;
+    count: number;
+  }>({
+    isOpen: false,
+    activityType: "notPosted",
+    cardTitle: "Not Posted",
+    count: 0,
+  });
+
+  const openReminderModal = (activityType: ActivityGapType, cardTitle: string, count: number) => {
+    setReminderModal({
+      isOpen: true,
+      activityType,
+      cardTitle,
+      count,
+    });
+  };
 
   // Analytics Stats state
   const [stats, setStats] = useState({
@@ -260,10 +283,54 @@ const DashboardPage = () => {
 
       {/* Gap Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <StatCard title="Not Posted" value={stats.notPosted.toLocaleString('en-IN')} icon="FileX" iconColor="bg-muted text-muted-foreground" delay={0.4} path="/members?activityFilter=notPosted&status=active" />
-        <StatCard title="Not Asked" value={stats.notAsked.toLocaleString('en-IN')} icon="MessageSquareOff" iconColor="bg-muted text-muted-foreground" delay={0.45} path="/members?activityFilter=notAsked&status=active" />
-        <StatCard title="Not Given" value={stats.notGiven.toLocaleString('en-IN')} icon="HeartOff" iconColor="bg-muted text-muted-foreground" delay={0.5} path="/members?activityFilter=notGiven&status=active" />
-        <StatCard title="No Requirements" value={stats.notRequirements.toLocaleString('en-IN')} icon="ClipboardX" iconColor="bg-muted text-muted-foreground" delay={0.55} path="/members?activityFilter=notRequirements&status=active" />
+        <StatCard
+          title="Not Posted"
+          value={stats.notPosted.toLocaleString('en-IN')}
+          icon="FileX"
+          iconColor="bg-muted text-muted-foreground"
+          delay={0.4}
+          path="/members?activityFilter=notPosted&status=active"
+          actionButton={{
+            tooltip: "Send Reminder to members who haven't posted today",
+            onClick: () => openReminderModal("notPosted", "Not Posted", stats.notPosted),
+          }}
+        />
+        <StatCard
+          title="Not Asked"
+          value={stats.notAsked.toLocaleString('en-IN')}
+          icon="MessageSquareOff"
+          iconColor="bg-muted text-muted-foreground"
+          delay={0.45}
+          path="/members?activityFilter=notAsked&status=active"
+          actionButton={{
+            tooltip: "Send Reminder to members who haven't asked today",
+            onClick: () => openReminderModal("notAsked", "Not Asked", stats.notAsked),
+          }}
+        />
+        <StatCard
+          title="Not Given"
+          value={stats.notGiven.toLocaleString('en-IN')}
+          icon="HeartOff"
+          iconColor="bg-muted text-muted-foreground"
+          delay={0.5}
+          path="/members?activityFilter=notGiven&status=active"
+          actionButton={{
+            tooltip: "Send Reminder to members who haven't given today",
+            onClick: () => openReminderModal("notGiven", "Not Given", stats.notGiven),
+          }}
+        />
+        <StatCard
+          title="No Requirements"
+          value={stats.notRequirements.toLocaleString('en-IN')}
+          icon="ClipboardX"
+          iconColor="bg-muted text-muted-foreground"
+          delay={0.55}
+          path="/members?activityFilter=notRequirements&status=active"
+          actionButton={{
+            tooltip: "Send Reminder to members without requirements today",
+            onClick: () => openReminderModal("notRequirements", "No Requirements", stats.notRequirements),
+          }}
+        />
       </div>
 
       {/* Network Interactions Stats */}
@@ -593,6 +660,18 @@ const DashboardPage = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Activity Gap Reminder Push Notification Modal */}
+      <ActivityReminderModal
+        isOpen={reminderModal.isOpen}
+        onClose={() => setReminderModal(prev => ({ ...prev, isOpen: false }))}
+        activityType={reminderModal.activityType}
+        cardTitle={reminderModal.cardTitle}
+        count={reminderModal.count}
+        regionId={filters.regionId || undefined}
+        categoryId={filters.categoryId || undefined}
+        regionName={filters.regionId ? regions.find(r => (r._id || r.id) === filters.regionId)?.name : undefined}
+      />
     </div>
   );
 };
