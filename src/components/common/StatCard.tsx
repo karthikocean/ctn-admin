@@ -20,7 +20,8 @@ import {
   Receipt,
   IndianRupee,
   ChevronRight,
-  Briefcase
+  Briefcase,
+  BellRing
 } from "lucide-react";
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +45,7 @@ const iconMap: Record<string, ReactNode> = {
   Receipt: <Receipt size={22} />,
   Briefcase: <Briefcase size={22} />,
   IndianRupee: <IndianRupee size={22} />,
+  BellRing: <BellRing size={22} />,
 };
 
 interface StatCardProps {
@@ -56,9 +58,14 @@ interface StatCardProps {
   delay?: number;
   path?: string;
   onClick?: () => void;
+  actionButton?: {
+    icon?: ReactNode;
+    tooltip?: string;
+    onClick: (e: React.MouseEvent) => void;
+  };
 }
 
-const StatCard = ({ title, value, change, changeType = "neutral", icon, iconColor, delay = 0, path, onClick }: StatCardProps) => {
+const StatCard = ({ title, value, change, changeType = "neutral", icon, iconColor, delay = 0, path, onClick, actionButton }: StatCardProps) => {
   const navigate = useNavigate();
   const iconElement = iconMap[icon] || <Activity size={22} />;
 
@@ -106,8 +113,24 @@ const StatCard = ({ title, value, change, changeType = "neutral", icon, iconColo
             </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl transition-transform group-hover:scale-105 ${iconColor || "bg-primary/10 text-primary"}`}>
-          {iconElement}
+        <div className="flex items-center gap-2">
+          {actionButton && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                actionButton.onClick(e);
+              }}
+              title={actionButton.tooltip || "Send Notification"}
+              aria-label={actionButton.tooltip || "Send Notification"}
+              className="p-2.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-all duration-200 hover:scale-105 active:scale-95 border border-primary/20 shadow-xs cursor-pointer focus:outline-hidden"
+            >
+              {actionButton.icon || <BellRing size={18} />}
+            </button>
+          )}
+          <div className={`p-3 rounded-xl transition-transform group-hover:scale-105 ${iconColor || "bg-primary/10 text-primary"}`}>
+            {iconElement}
+          </div>
         </div>
       </div>
     </motion.div>
