@@ -43,8 +43,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
+import { useSearchParams, useLocation } from "react-router-dom";
 import {
   getEnquiries,
+  getEnquiryById,
   updateEnquiryStatus,
   deleteEnquiry,
   EnquiryItem,
@@ -79,6 +81,44 @@ export const EnquiriesPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [itemToDelete, setItemToDelete] = useState<EnquiryItem | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
+
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const targetId = searchParams.get("id");
+  const stateItem = (location.state as any)?.item;
+
+  useEffect(() => {
+    if (stateItem) {
+      setSelectedEnquiry({
+        _id: stateItem.moduleId || stateItem._id,
+        name: stateItem.name || stateItem.sender?.fullName || "Visitor",
+        email: stateItem.email || "",
+        phoneNumber: stateItem.phone || stateItem.sender?.mobileNumber || "",
+        comment: stateItem.msg || "",
+        status: stateItem.status || "PENDING",
+        isDeleted: false,
+        createdAt: stateItem.createdAt || new Date().toISOString(),
+        updatedAt: stateItem.updatedAt || new Date().toISOString(),
+        ...stateItem,
+      });
+      setViewDialogOpen(true);
+    }
+
+    if (!targetId) return;
+    const fetchTarget = async () => {
+      try {
+        const res = await getEnquiryById(targetId);
+        const item = res.data || res;
+        if (item && item._id) {
+          setSelectedEnquiry(item);
+          setViewDialogOpen(true);
+        }
+      } catch (err) {
+        console.error("Failed to load enquiry by id:", err);
+      }
+    };
+    fetchTarget();
+  }, [targetId, stateItem]);
 
   const fetchEnquiries = async () => {
     try {
@@ -229,7 +269,7 @@ export const EnquiriesPage: React.FC = () => {
 
   return (
     <div className="page-container relative min-h-[600px]">
-      {loading && enquiries.length === 0 && (
+      {loading && enquiries.length === 0 && !targetId && !stateItem && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="Loading Enquiries..."

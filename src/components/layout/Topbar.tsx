@@ -25,6 +25,7 @@ interface NotificationItem {
   isRead: boolean;
   createdAt: string;
   moduleName?: string;
+  moduleId?: string;
 }
 
 const Topbar = ({ onMobileMenuToggle }: TopbarProps) => {
@@ -48,9 +49,17 @@ const Topbar = ({ onMobileMenuToggle }: TopbarProps) => {
       }
 
       if (listRes.status === "fulfilled" && listRes.value.data?.data) {
-        const items = Array.isArray(listRes.value.data.data) 
+        const rawItems = Array.isArray(listRes.value.data.data) 
           ? listRes.value.data.data 
           : listRes.value.data.data.data || [];
+        
+        const seen = new Set<string>();
+        const items = rawItems.filter((item: any) => {
+          const key = item.moduleId ? `${item.moduleName}_${item.moduleId}` : item._id;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
         setNotifications(items);
       }
     } catch (err) {
@@ -68,24 +77,35 @@ const Topbar = ({ onMobileMenuToggle }: TopbarProps) => {
 
     fetchUnreadCountAndNotifications();
 
-    // Socket Event: New suggestion submitted by member
-    const handleNewSuggestion = (data: any) => {
-      console.log("🔔 [Topbar Socket] New suggestion received:", data);
-      setIsRinging(true);
-      setTimeout(() => setIsRinging(false), 2000);
+    // Socket Event: Incoming admin notification
+    const handleIncomingNotification = (data: any) => {
+      console.log("🔔 [Topbar Socket] Incoming notification:", data);
 
-      setUnreadCount((prev) => prev + 1);
-
+      const moduleName = data.moduleName || (data.title ? "SUGGESTION" : "GENERAL");
       const newItem: NotificationItem = {
-        _id: data.suggestionId || String(Date.now()),
-        sub: `New Suggestion: ${data.title || "Feedback"}`,
-        msg: data.description || "Member submitted a new suggestion",
+        _id: data._id || data.suggestionId || String(Date.now()),
+        sub: data.sub || (data.title ? `New Suggestion: ${data.title}` : `New ${moduleName}`),
+        msg: data.msg || data.description || data.content || "",
         isRead: false,
         createdAt: new Date().toISOString(),
-        moduleName: "SUGGESTION"
+        moduleName,
+        moduleId: data.moduleId || data.suggestionId,
       };
 
-      setNotifications((prev) => [newItem, ...prev.slice(0, 4)]);
+      setNotifications((prev) => {
+        const isDuplicate = prev.some(
+          (n) =>
+            n._id === newItem._id ||
+            (newItem.moduleId && n.moduleId === newItem.moduleId && n.moduleName === newItem.moduleName)
+        );
+        if (isDuplicate) return prev;
+
+        setIsRinging(true);
+        setTimeout(() => setIsRinging(false), 2000);
+        setUnreadCount((c) => c + 1);
+
+        return [newItem, ...prev.slice(0, 4)];
+      });
     };
 
     // Socket Event: Unread count update from backend
@@ -95,13 +115,17 @@ const Topbar = ({ onMobileMenuToggle }: TopbarProps) => {
       }
     };
 
-    socketService.on("new_suggestion", handleNewSuggestion);
+    socketService.on("new_admin_notification", handleIncomingNotification);
+    socketService.on("admin_unread_count", handleUnreadCount);
     socketService.on("unread_count", handleUnreadCount);
+    socketService.on("unread_count_update", handleUnreadCount);
 
     return () => {
       socketService.onStatusChange = null;
-      socketService.off("new_suggestion", handleNewSuggestion);
+      socketService.off("new_admin_notification", handleIncomingNotification);
+      socketService.off("admin_unread_count", handleUnreadCount);
       socketService.off("unread_count", handleUnreadCount);
+      socketService.off("unread_count_update", handleUnreadCount);
     };
   }, []);
 
@@ -182,41 +206,82 @@ const Topbar = ({ onMobileMenuToggle }: TopbarProps) => {
                     No new notifications
                   </div>
                 ) : (
-                  notifications.map((item) => (
-                    <div
-                      key={item._id}
-                      onClick={() => {
-                        if (item.moduleName === "SUGGESTION") {
-                          navigate("/help-center");
-                        }
-                      }}
-                      className={cn(
-                        "p-3 hover:bg-slate-50 cursor-pointer transition-colors space-y-1",
-                        !item.isRead && "bg-blue-50/40"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800 line-clamp-1">
-                          {item.sub}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
-                        </span>
+                  notifications.map((item) => {
+                    const mod = (item.moduleName || "").toUpperCase();
+                    let badgeLabel = "Notification";
+                    let badgeColor = "bg-slate-100 text-slate-700";
+                    if (mod === "ENQUIRY") {
+                      badgeLabel = "Enquiry";
+                      badgeColor = "bg-sky-100 text-sky-700";
+                    } else if (mod === "SUPPORT") {
+                      badgeLabel = "Support";
+                      badgeColor = "bg-indigo-100 text-indigo-700";
+                    } else if (mod === "SUGGESTION") {
+                      badgeLabel = "Help Center";
+                      badgeColor = "bg-amber-100 text-amber-700";
+                    } else if (mod === "FRANCHISE_APPLICATION") {
+                      badgeLabel = "Franchise Application";
+                      badgeColor = "bg-amber-100 text-amber-800";
+                    }
+
+                    return (
+                      <div
+                        key={item._id}
+                        onClick={() => {
+                          if (!item.isRead) {
+                            api.put("/push-notification/read", { notificationIds: [item._id] }).catch(() => {});
+                            setNotifications((prev) =>
+                              prev.map((n) => (n._id === item._id ? { ...n, isRead: true } : n))
+                            );
+                            setUnreadCount((prev) => Math.max(0, prev - 1));
+                          }
+
+                          const id = item.moduleId || item._id;
+                          if (mod === "ENQUIRY") {
+                            navigate(`/enquiries?id=${id}`, { state: { item } });
+                          } else if (mod === "SUPPORT") {
+                            navigate(`/support?id=${id}`, { state: { item } });
+                          } else if (mod === "SUGGESTION") {
+                            navigate(`/help-center?id=${id}`, { state: { item } });
+                          } else if (mod === "FRANCHISE_APPLICATION") {
+                            navigate(`/franchise-applications?id=${id}`, { state: { item } });
+                          } else {
+                            navigate("/notifications", { state: { item } });
+                          }
+                        }}
+                        className={cn(
+                          "p-3 hover:bg-slate-50 cursor-pointer transition-colors space-y-1",
+                          !item.isRead && "bg-blue-50/40"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide", badgeColor)}>
+                              {badgeLabel}
+                            </span>
+                            <span className="text-xs font-bold text-slate-800 truncate">
+                              {item.sub}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 flex-shrink-0">
+                            {item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                          {item.msg}
+                        </p>
                       </div>
-                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
-                        {item.msg}
-                      </p>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
               <div className="p-2 border-t border-slate-100 text-center bg-slate-50/50">
                 <button
-                  onClick={() => navigate("/help-center")}
-                  className="text-xs font-semibold text-slate-600 hover:text-primary transition-colors"
+                  onClick={() => navigate("/notifications")}
+                  className="text-xs font-semibold text-primary hover:underline transition-colors"
                 >
-                  View All Suggestions
+                  View All Notifications
                 </button>
               </div>
             </DropdownMenuContent>

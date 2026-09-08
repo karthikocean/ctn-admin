@@ -16,8 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useSearchParams, useLocation } from "react-router-dom";
 import {
   getHelpCenterItems,
+  getHelpCenterById,
   updateHelpCenterStatus,
   deleteHelpCenterItem
 } from "@/api/HelpCenterApi";
@@ -347,6 +349,39 @@ const HelpCenterPage = () => {
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const targetId = searchParams.get("id");
+  const stateItem = (location.state as any)?.item;
+
+  useEffect(() => {
+    if (stateItem) {
+      setViewItem({
+        _id: stateItem.moduleId || stateItem._id,
+        title: stateItem.sub?.replace(/^New Suggestion:\s*/i, "") || stateItem.sub,
+        description: stateItem.msg,
+        status: stateItem.status || "PENDING",
+        createdAt: stateItem.createdAt || new Date().toISOString(),
+        member: stateItem.sender || (stateItem.name ? { fullName: stateItem.name, mobileNumber: stateItem.phone, email: stateItem.email } : null),
+        ...stateItem,
+      });
+    }
+
+    if (!targetId) return;
+    const fetchTarget = async () => {
+      try {
+        const res = await getHelpCenterById(targetId);
+        const item = res.data || res;
+        if (item && item._id) {
+          setViewItem(item);
+        }
+      } catch (err) {
+        console.error("Failed to load suggestion by id:", err);
+      }
+    };
+    fetchTarget();
+  }, [targetId, stateItem]);
+
   /* Debounce */
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 500);
@@ -460,7 +495,7 @@ const HelpCenterPage = () => {
 
   return (
     <div className="page-container relative min-h-[600px]">
-      {isLoading && items.length === 0 && (
+      {isLoading && items.length === 0 && !targetId && !stateItem && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="Loading Help Center..."

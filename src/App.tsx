@@ -46,6 +46,7 @@ import CouponsPage from "@/pages/coupons/CouponsPage";
 import ModulesPage from "@/pages/modules/ModulesPage";
 import HelpCenterPage from "@/pages/helpcenter/HelpCenterPage";
 import SupportPage from "@/pages/support/SupportPage";
+import NotificationsPage from "@/pages/notifications/NotificationsPage";
 import NotFound from "@/pages/NotFound";
 import { sidebarNavItems } from "@/config/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -250,6 +251,7 @@ const App = () => (
                   <SupportPage />
                 </PermissionRoute>
               } />
+              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

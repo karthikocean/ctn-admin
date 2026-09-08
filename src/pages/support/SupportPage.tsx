@@ -43,14 +43,16 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { cn } from "@/lib/utils";
+import { useSearchParams, useLocation } from "react-router-dom";
 import {
   getSupports,
   getSupportStats,
+  getSupportById,
   updateSupportStatus,
   deleteSupport,
   SupportItem,
 } from "@/api/SupportApi";
+import { cn } from "@/lib/utils";
 
 const getAvatarGradient = (name: string = "") => {
   const gradients = [
@@ -100,6 +102,45 @@ export const SupportPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [itemToDelete, setItemToDelete] = useState<SupportItem | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
+
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const targetId = searchParams.get("id");
+  const stateItem = (location.state as any)?.item;
+
+  useEffect(() => {
+    if (stateItem) {
+      setSelectedSupport({
+        _id: stateItem.moduleId || stateItem._id,
+        name: stateItem.name || stateItem.sender?.fullName || "Member",
+        phone: stateItem.phone || stateItem.sender?.mobileNumber || "",
+        email: stateItem.email || "",
+        description: stateItem.msg || "",
+        status: stateItem.status || "PENDING",
+        isActive: true,
+        isDeleted: false,
+        createdAt: stateItem.createdAt || new Date().toISOString(),
+        updatedAt: stateItem.updatedAt || new Date().toISOString(),
+        ...stateItem,
+      });
+      setViewDialogOpen(true);
+    }
+
+    if (!targetId) return;
+    const fetchTarget = async () => {
+      try {
+        const res = await getSupportById(targetId);
+        const item = res.data || res;
+        if (item && item._id) {
+          setSelectedSupport(item);
+          setViewDialogOpen(true);
+        }
+      } catch (err) {
+        console.error("Failed to load support by id:", err);
+      }
+    };
+    fetchTarget();
+  }, [targetId, stateItem]);
 
   const fetchStats = async () => {
     try {
@@ -265,7 +306,7 @@ export const SupportPage: React.FC = () => {
 
   return (
     <div className="page-container relative min-h-[600px] space-y-6">
-      {loading && supports.length === 0 && (
+      {loading && supports.length === 0 && !targetId && !stateItem && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="Loading Support Requests..."
@@ -499,9 +540,9 @@ export const SupportPage: React.FC = () => {
                           onDelete={
                             canDelete
                               ? () => {
-                                  setItemToDelete(item);
-                                  setDeleteDialogOpen(true);
-                                }
+                                setItemToDelete(item);
+                                setDeleteDialogOpen(true);
+                              }
                               : undefined
                           }
                         />
