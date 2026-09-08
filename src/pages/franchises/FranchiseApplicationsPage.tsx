@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   FileText,
@@ -45,6 +46,7 @@ import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
   getFranchiseApplications,
+  getFranchiseApplicationById,
   updateFranchiseApplicationStatus,
   deleteFranchiseApplication,
   FranchiseApplicationItem,
@@ -79,6 +81,46 @@ export const FranchiseApplicationsPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [itemToDelete, setItemToDelete] = useState<FranchiseApplicationItem | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
+
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const targetId = searchParams.get("id");
+  const stateItem = (location.state as any)?.item;
+
+  useEffect(() => {
+    if (stateItem) {
+      setSelectedApplication({
+        _id: stateItem.moduleId || stateItem._id,
+        fullName: stateItem.name || stateItem.fullName || stateItem.sender?.fullName || "Applicant",
+        phoneNumber: stateItem.phone || stateItem.phoneNumber || stateItem.sender?.mobileNumber || "",
+        email: stateItem.email || "",
+        state: stateItem.state || "",
+        city: stateItem.city || "",
+        companyName: stateItem.companyName || "",
+        status: stateItem.status || "PENDING",
+        isDeleted: false,
+        createdAt: stateItem.createdAt || new Date().toISOString(),
+        updatedAt: stateItem.updatedAt || new Date().toISOString(),
+        ...stateItem,
+      });
+      setViewDialogOpen(true);
+    }
+
+    if (!targetId) return;
+    const fetchTarget = async () => {
+      try {
+        const res = await getFranchiseApplicationById(targetId);
+        const item = res.data || res;
+        if (item && item._id) {
+          setSelectedApplication(item);
+          setViewDialogOpen(true);
+        }
+      } catch (err) {
+        console.error("Failed to load franchise application by id:", err);
+      }
+    };
+    fetchTarget();
+  }, [targetId, stateItem]);
 
   const fetchApplications = async () => {
     try {
@@ -229,7 +271,7 @@ export const FranchiseApplicationsPage: React.FC = () => {
 
   return (
     <div className="page-container relative min-h-[600px]">
-      {loading && applications.length === 0 && (
+      {loading && applications.length === 0 && !targetId && !stateItem && (
         <GlobalNetworkLoader
           fullScreen={false}
           title="Loading Applications..."
