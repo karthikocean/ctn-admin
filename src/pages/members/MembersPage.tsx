@@ -1321,7 +1321,7 @@ const MembersPage = () => {
                 <TableHead className="px-4 py-3.5 min-w-[190px] text-xs font-bold text-muted-foreground">Business Name</TableHead>
                 <TableHead className="px-4 py-3.5 min-w-[180px] text-xs font-bold text-muted-foreground">Category</TableHead>
                 <TableHead className="px-4 py-3.5 min-w-[160px] text-xs font-bold text-muted-foreground">Location</TableHead>
-                <TableHead className="px-4 py-3.5 min-w-[130px] whitespace-nowrap text-xs font-bold text-muted-foreground">Registered Date</TableHead>
+                <TableHead className="px-4 py-3.5 min-w-[130px] whitespace-nowrap text-xs font-bold text-muted-foreground">Plan Name</TableHead>
                 <TableHead className="px-4 py-3.5 min-w-[90px] text-right text-xs font-bold text-muted-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -1387,19 +1387,22 @@ const MembersPage = () => {
                     <TableCell className="px-4 py-3.5 min-w-[160px]">
                       <div className="flex items-center gap-1.5 text-sm text-foreground font-semibold">
                         <MapPin size={14} className="text-muted-foreground shrink-0" />
-                        <span className="whitespace-nowrap">{member.city}{member.state ? `, ${member.state}` : ""}</span>
+                        <span className="whitespace-nowrap">{member.city ? `${member.city}${member.state ? `, ${member.state}` : ""}` : (member.state || "-")}</span>
                       </div>
+                      <span className="text-xs text-muted-foreground font-medium block mt-0.5 whitespace-nowrap">
+                        {member.createdAt
+                          ? new Date(member.createdAt).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "-"}
+                      </span>
                     </TableCell>
                     <TableCell className="px-4 py-3.5 min-w-[130px] whitespace-nowrap">
                       <div className="flex flex-col items-start gap-1">
                         <span className="text-sm font-semibold text-foreground">
-                          {member.createdAt
-                            ? new Date(member.createdAt).toLocaleDateString("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })
-                            : "-"}
+                          {member.plan?.title || member.planName || member.planTitle || (typeof member.planId === "object" && member.planId?.title) || "-"}
                         </span>
                         {member.status && (
                           <Badge
