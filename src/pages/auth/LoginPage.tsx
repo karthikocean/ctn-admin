@@ -145,7 +145,7 @@ const LoginPage = () => {
     if (!trimmed) return "Email address is required";
     if (isPureNumber(trimmed)) return "Phone numbers are not allowed. Please enter your email address.";
     if (!trimmed.includes("@")) return "Email address must include an '@' symbol.";
-    if (!isValidEmail(trimmed)) return "Please enter a valid email address (e.g. admin@trustednetwork.in).";
+    if (!isValidEmail(trimmed)) return "Please enter a valid email address.";
     return "";
   };
 

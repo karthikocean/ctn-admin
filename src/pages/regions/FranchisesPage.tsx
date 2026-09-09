@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { getRegions } from "@/api/RegionApi";
+import { getRegions, getRegionDetails } from "@/api/RegionApi";
 import { getFranchises, createFranchise, updateFranchise, deleteFranchise, getFranchiseUsers } from "@/api/FranchiseApi";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 
@@ -30,6 +30,8 @@ interface User {
   fullName: string;
   businessName?: string;
   mobileNumber?: string;
+  businessRegion?: string;
+  memberRegionId?: string;
 }
 
 interface Franchise {
@@ -101,6 +103,7 @@ const FranchisesPage = () => {
   const [regionSearch, setRegionSearch] = useState("");
   const [visibleRegionCount, setVisibleRegionCount] = useState(10);
   const [saving, setSaving] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   // Status dialog states
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
@@ -144,27 +147,6 @@ const FranchisesPage = () => {
       }
 
       await fetchAssignedRegions();
-
-      try {
-        const franchiseUsers = await getFranchiseUsers();
-        if (franchiseUsers && franchiseUsers.length > 0) {
-          const mappedUsers = franchiseUsers.map((u: any) => ({
-            _id: u.id || u._id,
-            fullName: u.name || u.fullName || "",
-            businessName: u.businessName || u.business_name || u.tradeName ||
-              u.member?.businessName || u.member?.business_name || u.member?.tradeName ||
-              u.memberData?.businessName || "",
-            mobileNumber: u.phone || u.phoneNumber || u.mobile || u.mobileNumber ||
-              u.member?.mobileNumber || u.member?.phone || ""
-          }));
-          setUsersList(mappedUsers);
-        } else {
-          setUsersList([]);
-        }
-      } catch (e) {
-        console.error("Failed to load franchise users from API", e);
-        setUsersList([]);
-      }
     };
 
     loadStaticData();
@@ -200,6 +182,37 @@ const FranchisesPage = () => {
     return () => clearTimeout(timer);
   }, [regionSearch, regionOpen]);
 
+  const fetchUsersForRegion = async (regId: string, excludeId?: string) => {
+    if (!regId) {
+      setUsersList([]);
+      return;
+    }
+    setUsersLoading(true);
+    try {
+      const franchiseUsers = await getFranchiseUsers(excludeId, regId);
+      if (franchiseUsers && franchiseUsers.length > 0) {
+        const mappedUsers = franchiseUsers.map((u: any) => ({
+          _id: u.id || u._id,
+          fullName: u.name || u.fullName || "",
+          businessName: u.businessName || u.business_name || u.tradeName ||
+            u.member?.businessName || u.member?.business_name || u.member?.tradeName ||
+            u.memberData?.businessName || "",
+          mobileNumber: u.phone || u.phoneNumber || u.mobile || u.mobileNumber ||
+            u.member?.mobileNumber || u.member?.phone || "",
+          businessRegion: u.businessRegion || u.memberRegionId || ""
+        }));
+        setUsersList(mappedUsers);
+      } else {
+        setUsersList([]);
+      }
+    } catch (e) {
+      console.error("Failed to load franchise users for region", e);
+      setUsersList([]);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
   const handleOpenAdd = async () => {
     setEditingFranchise(null);
     setFranchiseName("");
@@ -210,56 +223,50 @@ const FranchisesPage = () => {
     setCommissionPercentage(0);
     setRegionOpen(false);
     setDrawerOpen(true);
-    try {
-      const franchiseUsers = await getFranchiseUsers();
-      if (franchiseUsers && franchiseUsers.length > 0) {
-        const mappedUsers = franchiseUsers.map((u: any) => ({
-          _id: u.id || u._id,
-          fullName: u.name || u.fullName || "",
-          businessName: u.businessName || u.business_name || u.tradeName ||
-            u.member?.businessName || u.member?.business_name || u.member?.tradeName ||
-            u.memberData?.businessName || "",
-          mobileNumber: u.phone || u.phoneNumber || u.mobile || u.mobileNumber ||
-            u.member?.mobileNumber || u.member?.phone || ""
-        }));
-        setUsersList(mappedUsers);
-      } else {
-        setUsersList([]);
-      }
-    } catch (e) {
-      console.error("Failed to load franchise users from API", e);
-      setUsersList([]);
-    }
+    setUsersList([]);
   };
 
   const handleEdit = async (franchise: Franchise) => {
     setEditingFranchise(franchise);
     setFranchiseName(franchise.name);
-    setSelectedRegionId(franchise.businessRegionId ? franchise.businessRegionId.toString() : (franchise.businessRegion?._id || ""));
+
+    const rawRegionId = franchise.businessRegionId || franchise.businessRegion?._id;
+    const regId = (
+      typeof rawRegionId === "object" && rawRegionId !== null
+        ? ((rawRegionId as any)._id?.toString() || (rawRegionId as any).toString())
+        : rawRegionId?.toString()
+    ) || "";
+
+    setSelectedRegionId(regId);
     setFranchiseStatus(franchise.status);
     setSelectedUsers(franchise.users || []);
     setUserSearchQuery("");
     setCommissionPercentage(franchise.commissionPercentage !== undefined ? franchise.commissionPercentage : 0);
     setRegionOpen(false);
     setDrawerOpen(true);
-    try {
-      const franchiseUsers = await getFranchiseUsers(franchise._id);
-      if (franchiseUsers && franchiseUsers.length > 0) {
-        const mappedUsers = franchiseUsers.map((u: any) => ({
-          _id: u.id || u._id,
-          fullName: u.name || u.fullName || "",
-          businessName: u.businessName || u.business_name || u.tradeName ||
-            u.member?.businessName || u.member?.business_name || u.member?.tradeName ||
-            u.memberData?.businessName || "",
-          mobileNumber: u.phone || u.phoneNumber || u.mobile || u.mobileNumber ||
-            u.member?.mobileNumber || u.member?.phone || ""
-        }));
-        setUsersList(mappedUsers);
-      } else {
-        setUsersList([]);
+
+    if (regId) {
+      const isAlreadyInList = regionsList.some(r =>
+        (r._id || r.id)?.toString() === regId ||
+        (r.areas && r.areas.some((a: any) => (a._id || a.id || a)?.toString() === regId))
+      );
+      if (!isAlreadyInList) {
+        try {
+          const singleRegion = await getRegionDetails(regId);
+          const regionData = singleRegion?.data || singleRegion;
+          if (regionData && (regionData._id || regionData.id)) {
+            setRegionsList(prev => {
+              const prevIds = new Set(prev.map(p => (p._id || p.id)?.toString()));
+              const newId = (regionData._id || regionData.id)?.toString();
+              return newId && !prevIds.has(newId) ? [...prev, regionData] : prev;
+            });
+          }
+        } catch (err) {
+          console.warn("Could not fetch specific region details:", err);
+        }
       }
-    } catch (e) {
-      console.error("Failed to load franchise users from API", e);
+      fetchUsersForRegion(regId, franchise._id);
+    } else {
       setUsersList([]);
     }
   };
@@ -391,31 +398,77 @@ const FranchisesPage = () => {
     );
   });
 
-  const allAreas = regionsList.flatMap((r) => {
-    if (r.areas && r.areas.length > 0) {
-      return r.areas.map((area: any) => ({
-        _id: typeof area === "string" ? area : area._id,
-        name: typeof area === "string" ? area : area.name,
-        city: r.city,
-        state: r.state,
-        country: r.country
-      }));
+  const allAreas = useMemo(() => {
+    const list: any[] = [];
+    const seenIds = new Set<string>();
+
+    regionsList.forEach((r) => {
+      const rId = (r._id || r.id)?.toString() || "";
+      const city = r.city || "";
+      const state = r.state || "";
+      const country = r.country || "";
+
+      if (rId && !seenIds.has(rId)) {
+        seenIds.add(rId);
+        list.push({
+          _id: rId,
+          name: `${city}${state ? `, ${state}` : ""}`,
+          city,
+          state,
+          country
+        });
+      }
+
+      if (r.areas && Array.isArray(r.areas) && r.areas.length > 0) {
+        r.areas.forEach((area: any) => {
+          const aId = (typeof area === "string" ? area : (area._id || area.id))?.toString() || "";
+          const aName = typeof area === "string" ? area : (area.name || "");
+          if (aId && !seenIds.has(aId)) {
+            seenIds.add(aId);
+            list.push({
+              _id: aId,
+              name: aName,
+              city,
+              state,
+              country
+            });
+          }
+        });
+      }
+    });
+
+    if (editingFranchise?.businessRegion) {
+      const bReg = editingFranchise.businessRegion;
+      const bId = (editingFranchise.businessRegionId || bReg._id)?.toString();
+      if (bId && !seenIds.has(bId)) {
+        seenIds.add(bId);
+        list.push({
+          _id: bId,
+          name: bReg.name || `${bReg.city}${bReg.state ? `, ${bReg.state}` : ""}`,
+          city: bReg.city || "",
+          state: bReg.state || "",
+          country: bReg.country || ""
+        });
+      }
     }
-    return [{
-      _id: r._id,
-      name: `${r.city}, ${r.state} (${r.country})`,
-      city: r.city,
-      state: r.state,
-      country: r.country
-    }];
-  });
 
-  const currentAssignedRegionId = editingFranchise?.businessRegionId?.toString() || editingFranchise?.businessRegion?._id?.toString();
+    return list;
+  }, [regionsList, editingFranchise]);
 
-  const availableAreas = allAreas.filter(area => 
-    !assignedRegionIds.includes(area._id.toString()) || 
-    (currentAssignedRegionId && currentAssignedRegionId === area._id.toString())
-  );
+  const currentAssignedRegionId = (
+    editingFranchise?.businessRegionId ||
+    editingFranchise?.businessRegion?._id
+  )?.toString() || "";
+
+  const availableAreas = useMemo(() => {
+    return allAreas.filter(area => {
+      const areaIdStr = area._id?.toString() || "";
+      if (currentAssignedRegionId && areaIdStr === currentAssignedRegionId) {
+        return true;
+      }
+      return !assignedRegionIds.some(id => id?.toString() === areaIdStr);
+    });
+  }, [allAreas, assignedRegionIds, currentAssignedRegionId]);
 
   const filteredAreas = useMemo(() => {
     if (!regionSearch.trim()) return availableAreas;
@@ -441,7 +494,49 @@ const FranchisesPage = () => {
     }
   };
 
-  const selectedArea = allAreas.find(a => a._id === selectedRegionId);
+  const selectedArea = useMemo(() => {
+    if (!selectedRegionId) return null;
+    const targetId = selectedRegionId.toString();
+    const found = allAreas.find(a => a._id?.toString() === targetId);
+    if (found) return found;
+
+    if (editingFranchise?.businessRegion) {
+      const bReg = editingFranchise.businessRegion;
+      const bId = (editingFranchise.businessRegionId || bReg._id)?.toString();
+      if (bId === targetId) {
+        return {
+          _id: targetId,
+          name: bReg.name || `${bReg.city}${bReg.state ? `, ${bReg.state}` : ""}`,
+          city: bReg.city || "",
+          state: bReg.state || "",
+          country: bReg.country || ""
+        };
+      }
+    }
+    return null;
+  }, [allAreas, selectedRegionId, editingFranchise]);
+
+  const selectedRegionDisplay = useMemo(() => {
+    if (!selectedRegionId) return "Select Business Region";
+    if (selectedArea) {
+      const name = selectedArea.name || "";
+      const city = selectedArea.city || "";
+      if (city && !name.toLowerCase().includes(city.toLowerCase())) {
+        return `${name} (${city})`;
+      }
+      return name || "Select Business Region";
+    }
+    if (editingFranchise?.businessRegion) {
+      const bReg = editingFranchise.businessRegion;
+      const name = bReg.name || `${bReg.city}${bReg.state ? `, ${bReg.state}` : ""}`;
+      const city = bReg.city || "";
+      if (city && !name.toLowerCase().includes(city.toLowerCase())) {
+        return `${name} (${city})`;
+      }
+      return name;
+    }
+    return "Select Business Region";
+  }, [selectedRegionId, selectedArea, editingFranchise]);
 
   return (
     <div className="page-container relative min-h-[600px]">
@@ -650,9 +745,7 @@ const FranchisesPage = () => {
                   aria-expanded={regionOpen}
                   className="w-full h-11 bg-secondary/50 border border-border rounded-xl justify-between px-3 text-xs font-semibold text-slate-900 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 hover:bg-secondary/40 active:scale-[0.99] transition-all"
                 >
-                  {selectedRegionId && selectedArea
-                    ? `${selectedArea.name} (${selectedArea.city})`
-                    : "Select Business Region"}
+                  <span className="truncate">{selectedRegionDisplay}</span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-slate-600" />
                 </Button>
               </PopoverTrigger>
@@ -679,8 +772,11 @@ const FranchisesPage = () => {
                           key={area._id}
                           value={area._id}
                           onSelect={() => {
-                            setSelectedRegionId(area._id);
+                            const newRegId = area._id;
+                            setSelectedRegionId(newRegId);
                             setRegionOpen(false);
+                            setSelectedUsers([]);
+                            fetchUsersForRegion(newRegId, editingFranchise?._id);
                           }}
                           className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg flex items-center justify-between"
                         >
@@ -688,10 +784,11 @@ const FranchisesPage = () => {
                             <Check
                               className={cn(
                                 "mr-2 h-3.5 w-3.5",
-                                selectedRegionId === area._id ? "opacity-100" : "opacity-0"
+                                selectedRegionId?.toString() === area._id?.toString() ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            {area.name} ({area.city})
+                            {area.name}
+                            {area.city && !area.name.toLowerCase().includes(area.city.toLowerCase()) ? ` (${area.city})` : ""}
                           </span>
                         </CommandItem>
                       ))}
@@ -718,12 +815,27 @@ const FranchisesPage = () => {
 
           {/* Multiple Users Selection */}
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Select Franchise Users</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Select Franchise Users</label>
+              {selectedRegionId && (
+                <span className="text-[10px] text-muted-foreground font-semibold">
+                  Filtered by region
+                </span>
+              )}
+            </div>
             <Popover modal={true}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full h-11 justify-start font-normal rounded-xl border-slate-200 bg-secondary/50">
+                <Button
+                  variant="outline"
+                  disabled={!selectedRegionId}
+                  className="w-full h-11 justify-start font-normal rounded-xl border-slate-200 bg-secondary/50 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
                   <Users className="mr-2 h-4 w-4 opacity-50" />
-                  {selectedUsers.length > 0
+                  {!selectedRegionId
+                    ? "Select Business Region first"
+                    : usersLoading
+                    ? "Loading region members..."
+                    : selectedUsers.length > 0
                     ? `${selectedUsers.length} user(s) selected`
                     : "Choose users"}
                 </Button>
@@ -743,51 +855,72 @@ const FranchisesPage = () => {
                 </div>
                 {/* User list */}
                 <div className="max-h-[280px] overflow-y-auto px-2 pb-2">
-                  {filteredUsers.map((user) => {
-                    const isSelected = selectedUsers.some(u => u._id === user._id);
-                    return (
-                      <div
-                        key={user._id}
-                        className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
-                          isSelected ? "bg-primary/8" : "hover:bg-slate-50"
-                        )}
-                        onClick={() => toggleUser(user)}
-                      >
-                        {/* Avatar circle */}
-                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                          <User className="h-4 w-4 text-slate-500" />
+                  {usersLoading ? (
+                    <div className="flex items-center justify-center py-8 text-xs text-muted-foreground gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading region members...
+                    </div>
+                  ) : filteredUsers.length > 0 ? (
+                    filteredUsers.map((user) => {
+                      const isSelected = selectedUsers.some(u => u._id === user._id);
+                      return (
+                        <div
+                          key={user._id}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-colors",
+                            isSelected ? "bg-primary/8" : "hover:bg-slate-50"
+                          )}
+                          onClick={() => toggleUser(user)}
+                        >
+                          {/* Avatar circle */}
+                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                            <User className="h-4 w-4 text-slate-500" />
+                          </div>
+                          {/* Name & business */}
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <span className="text-xs font-semibold text-slate-800 truncate">{user.fullName}</span>
+                            <span className="text-[10px] text-slate-400 truncate">
+                              {user.businessName || "—"}
+                            </span>
+                          </div>
+                          {/* Selection indicator */}
+                          <div className={cn(
+                            "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
+                            isSelected
+                              ? "bg-primary border-primary"
+                              : "border-slate-300 bg-white"
+                          )}>
+                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
                         </div>
-                        {/* Name & business */}
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <span className="text-xs font-semibold text-slate-800 truncate">{user.fullName}</span>
-                          <span className="text-[10px] text-slate-400 truncate">
-                            {user.businessName || "—"}
-                          </span>
-                        </div>
-                        {/* Selection indicator */}
-                        <div className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all",
-                          isSelected
-                            ? "bg-primary border-primary"
-                            : "border-slate-300 bg-white"
-                        )}>
-                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {filteredUsers.length === 0 && (
-                    <p className="text-center py-6 text-xs text-slate-400">No users found</p>
+                      );
+                    })
+                  ) : (
+                    <p className="text-center py-6 text-xs text-slate-400">
+                      {!selectedRegionId
+                        ? "Please select a business region first"
+                        : "No franchise users found for this business region"}
+                    </p>
                   )}
                 </div>
               </PopoverContent>
             </Popover>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {selectedUsers.map(u => (
-                <Badge key={u._id} variant="default" className="bg-primary/10 text-primary border-primary/20 text-[10px] py-0 px-2 flex items-center gap-1">
-                  {u.fullName}{u.businessName ? ` (${u.businessName})` : ""}
-                  <X size={10} className="cursor-pointer" onClick={() => toggleUser(u)} />
+                <Badge
+                  key={u._id}
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/25 hover:bg-primary/20 hover:text-primary text-[10px] py-0.5 px-2.5 flex items-center gap-1.5 transition-colors cursor-default font-medium"
+                >
+                  <span>{u.fullName}{u.businessName ? ` (${u.businessName})` : ""}</span>
+                  <X
+                    size={11}
+                    className="cursor-pointer text-primary/70 hover:text-red-500 hover:bg-red-100/60 rounded-full transition-colors ml-0.5 p-0.5 box-content"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleUser(u);
+                    }}
+                  />
                 </Badge>
               ))}
             </div>
