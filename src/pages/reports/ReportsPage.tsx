@@ -1348,8 +1348,19 @@ const ReportsPage = ({ defaultTab = "renewals" }: ReportsPageProps) => {
             <ChartCard title="Members by Region">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={regionData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" paddingAngle={4}>
-                    {regionData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  <Pie 
+                    data={regionData} 
+                    cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" 
+                    paddingAngle={regionData.length > 1 ? 4 : 0}
+                    stroke={regionData.length > 1 ? "#fff" : "none"}
+                  >
+                    {regionData.map((_, i) => (
+                      <Cell 
+                        key={i} 
+                        fill={COLORS[i % COLORS.length]} 
+                        stroke={regionData.length > 1 ? "#fff" : "none"} 
+                      />
+                    ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>

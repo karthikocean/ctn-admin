@@ -410,13 +410,16 @@ const DashboardPage = () => {
             <PieChart>
               <Pie 
                 data={stats.charts.regionOverview} 
-                cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" paddingAngle={4}
+                cx="50%" cy="50%" innerRadius={55} outerRadius={90} dataKey="value" 
+                paddingAngle={stats.charts.regionOverview.length > 1 ? 4 : 0}
+                stroke={stats.charts.regionOverview.length > 1 ? "#fff" : "none"}
                 className="cursor-pointer"
               >
                 {stats.charts.regionOverview.map((r, i) => (
                   <Cell 
                     key={i} 
                     fill={COLORS[i % COLORS.length]} 
+                    stroke={stats.charts.regionOverview.length > 1 ? "#fff" : "none"}
                     className="cursor-pointer"
                     onClick={(e: any) => {
                       if (e && e.stopPropagation) e.stopPropagation();

@@ -25,10 +25,11 @@ export const deleteFranchise = async (id: string) => {
   return response.data;
 };
 
-export const getFranchiseUsers = async (excludeFranchiseId?: string) => {
-  const response = await api.get("/admin-users/getfranchies-user", {
-    params: excludeFranchiseId ? { excludeFranchiseId } : {}
-  });
+export const getFranchiseUsers = async (excludeFranchiseId?: string, regionId?: string) => {
+  const params: any = {};
+  if (excludeFranchiseId) params.excludeFranchiseId = excludeFranchiseId;
+  if (regionId) params.regionId = regionId;
+  const response = await api.get("/admin-users/getfranchies-user", { params });
   return response.data;
 };
 
