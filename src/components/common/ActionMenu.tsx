@@ -1,4 +1,4 @@
-import { MoreHorizontal, Eye, Pencil, Trash2, UserPlus, CheckCircle2, X, Download } from "lucide-react";
+import { MoreHorizontal, Eye, Pencil, Trash2, UserPlus, CheckCircle2, X, Download, Layers } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,12 +15,13 @@ interface ActionMenuProps {
   downloadLabel?: string;
   onAddUser?: () => void;
   onAssign?: () => void;
+  onAssignPlan?: () => void;
   onToggleStatus?: () => void;
   statusLabel?: string;
 }
 
-const ActionMenu = ({ onView, onEdit, onDelete, onDownload, downloadLabel = "Download", onAddUser, onAssign, onToggleStatus, statusLabel }: ActionMenuProps) => {
-  const hasAnyAction = !!(onView || onEdit || onDelete || onDownload || onAddUser || onAssign || onToggleStatus);
+const ActionMenu = ({ onView, onEdit, onDelete, onDownload, downloadLabel = "Download", onAddUser, onAssign, onAssignPlan, onToggleStatus, statusLabel }: ActionMenuProps) => {
+  const hasAnyAction = !!(onView || onEdit || onDelete || onDownload || onAddUser || onAssign || onAssignPlan || onToggleStatus);
 
   return (
     <DropdownMenu>
@@ -44,6 +45,11 @@ const ActionMenu = ({ onView, onEdit, onDelete, onDownload, downloadLabel = "Dow
           )}
           {onAddUser && <DropdownMenuItem onClick={onAddUser} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap"><UserPlus size={14} className="mr-2 shrink-0" /> Add User</DropdownMenuItem>}
           {onAssign && <DropdownMenuItem onClick={onAssign} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap"><UserPlus size={14} className="mr-2 shrink-0" /> Assign Member</DropdownMenuItem>}
+          {onAssignPlan && (
+            <DropdownMenuItem onClick={onAssignPlan} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap">
+              <Layers size={14} className="mr-2 text-primary shrink-0" /> Assign Plan
+            </DropdownMenuItem>
+          )}
           {onEdit && <DropdownMenuItem onClick={onEdit} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap"><Pencil size={14} className="mr-2 shrink-0" /> Edit</DropdownMenuItem>}
           {onToggleStatus && (
             <DropdownMenuItem onClick={onToggleStatus} className="focus:bg-primary/5 focus:text-primary cursor-pointer whitespace-nowrap">

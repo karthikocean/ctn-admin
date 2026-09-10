@@ -32,6 +32,7 @@ import ActionMenu from "@/components/common/ActionMenu";
 import PaginationBar from "@/components/common/PaginationBar";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { AssignPlanModal } from "./AssignPlanModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -221,6 +222,8 @@ const MembersPage = () => {
   const [statusConfirmOpen, setStatusConfirmOpen] = useState(false);
   const [memberToToggle, setMemberToToggle] = useState<any>(null);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [assignPlanModalOpen, setAssignPlanModalOpen] = useState(false);
+  const [memberForAssignPlan, setMemberForAssignPlan] = useState<any | null>(null);
   const [page, setPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -906,6 +909,11 @@ const MembersPage = () => {
     }
   };
 
+  const handleOpenAssignPlan = (member: any) => {
+    setMemberForAssignPlan(member);
+    setAssignPlanModalOpen(true);
+  };
+
   const handleToggleStatus = (member: any) => {
     setMemberToToggle(member);
     setStatusConfirmOpen(true);
@@ -1444,6 +1452,15 @@ const MembersPage = () => {
                         <ActionMenu
                           onDownload={() => handleDownloadWelcomeCard(member)}
                           downloadLabel="Welcome Card"
+                          onAssignPlan={
+                            !member.planId &&
+                            !member.planName &&
+                            !member.plan?.title &&
+                            !member.planTitle &&
+                            canEdit
+                              ? () => handleOpenAssignPlan(member)
+                              : undefined
+                          }
                           onEdit={canEdit ? () => handleEdit(member) : undefined}
                           onDelete={canDelete ? () => handleDeleteClick(member) : undefined}
                         />
@@ -2657,6 +2674,15 @@ const MembersPage = () => {
         confirmLabel={memberToToggle?.status === "active" ? "Yes, Deactivate" : "Yes, Activate"}
         onConfirm={handleConfirmStatusToggle}
         isLoading={isTogglingStatus}
+      />
+
+      <AssignPlanModal
+        open={assignPlanModalOpen}
+        onOpenChange={setAssignPlanModalOpen}
+        member={memberForAssignPlan}
+        onSuccess={() => {
+          fetchMembers();
+        }}
       />
     </div>
   );
