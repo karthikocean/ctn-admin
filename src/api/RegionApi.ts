@@ -5,6 +5,11 @@ export const getRegions = async (params: any) => {
   return response.data;
 };
 
+export const getBusinessRegionAreas = async (params?: any) => {
+  const response = await api.get("/business-regions/areas", { params });
+  return response.data;
+};
+
 export const getRegionDetails = async (id: string) => {
   const response = await api.get(`/business-regions/${id}`);
   return response.data;
