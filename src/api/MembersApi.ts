@@ -79,3 +79,8 @@ export const getCities = async (params?: { stateIds?: string; search?: string })
     }
   }
 };
+
+export const assignMemberPlan = async (memberId: string, planId: string) => {
+  const response = await api.post(`/members/${memberId}/assign-plan`, { planId });
+  return response.data;
+};
