@@ -387,10 +387,15 @@ const AnnouncementsPage = () => {
   const fetchAnnouncements = async () => {
     setIsLoading(true);
     try {
-      const result = await getAnnouncements({ page: page - 1, limit: 9, search: searchTerm });
-      setAnnouncements(result.data || []);
+      const result = await getAnnouncements({ page: page - 1, limit: 9, search: searchTerm, type: "announcement" });
+      const rawData = result.data || [];
+      const nonMonthly = rawData.filter((a: any) => {
+        const t = (a.announcementType || "").toLowerCase().replace(/[\s_]+/g, "");
+        return t !== "monthlymeeting";
+      });
+      setAnnouncements(nonMonthly);
       setTotalPages(result.totalPages || 1);
-      setTotalAnnouncementsCount(result.total || result.totalItems || 0);
+      setTotalAnnouncementsCount(result.total || result.totalItems || nonMonthly.length);
     } catch (error) {
       console.error("Error fetching announcements:", error);
     } finally {

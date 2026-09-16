@@ -23,6 +23,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
     ],
   },
   { title: "Announcements", path: "/announcements", icon: Megaphone, moduleId: "announcements" },
+  { title: "Monthly Meeting", path: "/monthly-meetings", icon: Calendar, moduleId: "monthly_meetings" },
   { title: "Blogs", path: "/blogs", icon: FileText, moduleId: "blogs" },
   {
     title: "Trainings", icon: GraduationCap, moduleId: "trainings",

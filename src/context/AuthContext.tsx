@@ -107,13 +107,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // If modulesList is populated, and targetModule is NOT found in modulesList
     if (modulesList.length > 0 && !targetModule) {
-      if (["support", "enquiries", "helpcenter", "billings", "plans", "coupons"].includes(normalizedReq)) {
+      if (["support", "enquiries", "helpcenter", "billings", "plans", "coupons", "monthlymeetings", "monthlymeeting"].includes(normalizedReq)) {
+        if (["monthlymeetings", "monthlymeeting"].includes(normalizedReq)) {
+          const annPerm = permissions.find(p => {
+            const pModStr = String(p.moduleId).toLowerCase().replace(/[\s_]+/g, "");
+            return pModStr === "announcements" || pModStr === "announcement";
+          });
+          if (annPerm && Array.isArray(annPerm.actions)) {
+            return annPerm.actions.includes(action.toLowerCase());
+          }
+        }
         return true;
       }
       return false;
     }
 
-    const modulePerm = permissions.find(p => {
+    let modulePerm = permissions.find(p => {
       // 1. Match by module's ObjectId (preferred format)
       if (targetModule && String(p.moduleId) === String(targetModule._id)) {
         return true;
@@ -131,6 +140,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
              pModStr === normalizedReq.replace(/s$/, "") ||
              normalizedReq === pModStr.replace(/s$/, "");
     });
+
+    if (!modulePerm && ["monthlymeetings", "monthlymeeting"].includes(normalizedReq)) {
+      modulePerm = permissions.find(p => {
+        const pModStr = String(p.moduleId).toLowerCase().replace(/[\s_]+/g, "");
+        return pModStr === "announcements" || pModStr === "announcement";
+      });
+    }
 
     if (!modulePerm) return false;
 
