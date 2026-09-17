@@ -56,7 +56,7 @@ export interface Announcement {
   status: "draft" | "published" | "scheduled";
   createdAt: string;
   author: string;
-  announcementType?: "Event" | "Online Stall" | "Others" | "Training";
+  announcementType?: "Event" | "Online Stall" | "Others" | "Training" | "monthlymeeting" | "Monthly Meeting";
   date?: string;
   time?: string;
   location?: string;

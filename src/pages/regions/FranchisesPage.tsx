@@ -21,9 +21,38 @@ import { cn } from "@/lib/utils";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { getRegions, getRegionDetails } from "@/api/RegionApi";
+import { getBusinessRegionAreas } from "@/api/RegionApi";
 import { getFranchises, createFranchise, updateFranchise, deleteFranchise, getFranchiseUsers } from "@/api/FranchiseApi";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+
+export interface BusinessRegionArea {
+  _id: string;
+  name: string;
+  city: string;
+  state: string;
+  country?: string;
+  businessRegionId?: string;
+  cityId?: string;
+  stateId?: string;
+  status?: string;
+}
+
+export const formatAreaNameCityState = (item?: { name?: string; city?: string; state?: string } | null) => {
+  if (!item) return "";
+  const name = (item.name || "").trim();
+  const city = (item.city || "").trim();
+  const state = (item.state || "").trim();
+
+  const parts: string[] = [];
+  if (name) parts.push(name);
+  if (city && !parts.some(p => p.toLowerCase() === city.toLowerCase())) {
+    parts.push(city);
+  }
+  if (state && !parts.some(p => p.toLowerCase() === state.toLowerCase())) {
+    parts.push(state);
+  }
+  return parts.join(", ");
+};
 
 interface User {
   _id: string;
@@ -61,7 +90,7 @@ const FranchisesPage = () => {
   const canDelete = hasPermission("franchises", "delete");
 
   const [franchises, setFranchises] = useState<Franchise[]>([]);
-  const [regionsList, setRegionsList] = useState<any[]>([]);
+  const [areasList, setAreasList] = useState<BusinessRegionArea[]>([]);
   const [usersList, setUsersList] = useState<User[]>([]);
   const [assignedRegionIds, setAssignedRegionIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +130,7 @@ const FranchisesPage = () => {
   const [commissionPercentage, setCommissionPercentage] = useState<number | string>(0);
   const [regionOpen, setRegionOpen] = useState(false);
   const [regionSearch, setRegionSearch] = useState("");
-  const [visibleRegionCount, setVisibleRegionCount] = useState(10);
+  const [visibleRegionCount, setVisibleRegionCount] = useState(20);
   const [saving, setSaving] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
 
@@ -134,16 +163,16 @@ const FranchisesPage = () => {
     }
   };
 
-  // Load static regions & franchise users on mount
+  // Load active business region areas on mount
   useEffect(() => {
     const loadStaticData = async () => {
       try {
-        const regionRes = await getRegions({ limit: 100, status: "active" });
-        if (regionRes && regionRes.data) {
-          setRegionsList(regionRes.data);
+        const areaRes = await getBusinessRegionAreas({ limit: 100, status: "active" });
+        if (areaRes && areaRes.data) {
+          setAreasList(areaRes.data);
         }
       } catch (e) {
-        console.error("Failed to load business regions from API", e);
+        console.error("Failed to load business region areas from API", e);
       }
 
       await fetchAssignedRegions();
@@ -166,13 +195,19 @@ const FranchisesPage = () => {
 
     const timer = setTimeout(async () => {
       try {
-        const regionRes = await getRegions({
+        const areaRes = await getBusinessRegionAreas({
           search: regionSearch.trim() || undefined,
           limit: 100,
           status: "active"
         });
-        if (regionRes && regionRes.data) {
-          setRegionsList(regionRes.data);
+        if (areaRes && areaRes.data) {
+          setAreasList(prev => {
+            const existingMap = new Map(prev.map(a => [a._id?.toString(), a]));
+            areaRes.data.forEach((a: BusinessRegionArea) => {
+              existingMap.set(a._id?.toString(), a);
+            });
+            return Array.from(existingMap.values());
+          });
         }
       } catch (e) {
         console.error("Failed to search business regions from API", e);
@@ -246,24 +281,24 @@ const FranchisesPage = () => {
     setDrawerOpen(true);
 
     if (regId) {
-      const isAlreadyInList = regionsList.some(r =>
-        (r._id || r.id)?.toString() === regId ||
-        (r.areas && r.areas.some((a: any) => (a._id || a.id || a)?.toString() === regId))
-      );
-      if (!isAlreadyInList) {
-        try {
-          const singleRegion = await getRegionDetails(regId);
-          const regionData = singleRegion?.data || singleRegion;
-          if (regionData && (regionData._id || regionData.id)) {
-            setRegionsList(prev => {
-              const prevIds = new Set(prev.map(p => (p._id || p.id)?.toString()));
-              const newId = (regionData._id || regionData.id)?.toString();
-              return newId && !prevIds.has(newId) ? [...prev, regionData] : prev;
-            });
+      if (franchise.businessRegion) {
+        const bReg = franchise.businessRegion;
+        setAreasList(prev => {
+          if (!prev.some(a => a._id?.toString() === regId)) {
+            return [
+              ...prev,
+              {
+                _id: regId,
+                name: bReg.name || "",
+                city: bReg.city || "",
+                state: bReg.state || "",
+                country: bReg.country || "",
+                businessRegionId: (bReg._id || regId)?.toString()
+              }
+            ];
           }
-        } catch (err) {
-          console.warn("Could not fetch specific region details:", err);
-        }
+          return prev;
+        });
       }
       fetchUsersForRegion(regId, franchise._id);
     } else {
@@ -399,43 +434,8 @@ const FranchisesPage = () => {
   });
 
   const allAreas = useMemo(() => {
-    const list: any[] = [];
-    const seenIds = new Set<string>();
-
-    regionsList.forEach((r) => {
-      const rId = (r._id || r.id)?.toString() || "";
-      const city = r.city || "";
-      const state = r.state || "";
-      const country = r.country || "";
-
-      if (rId && !seenIds.has(rId)) {
-        seenIds.add(rId);
-        list.push({
-          _id: rId,
-          name: `${city}${state ? `, ${state}` : ""}`,
-          city,
-          state,
-          country
-        });
-      }
-
-      if (r.areas && Array.isArray(r.areas) && r.areas.length > 0) {
-        r.areas.forEach((area: any) => {
-          const aId = (typeof area === "string" ? area : (area._id || area.id))?.toString() || "";
-          const aName = typeof area === "string" ? area : (area.name || "");
-          if (aId && !seenIds.has(aId)) {
-            seenIds.add(aId);
-            list.push({
-              _id: aId,
-              name: aName,
-              city,
-              state,
-              country
-            });
-          }
-        });
-      }
-    });
+    const list: BusinessRegionArea[] = [...areasList];
+    const seenIds = new Set<string>(list.map(a => a._id?.toString()));
 
     if (editingFranchise?.businessRegion) {
       const bReg = editingFranchise.businessRegion;
@@ -444,16 +444,17 @@ const FranchisesPage = () => {
         seenIds.add(bId);
         list.push({
           _id: bId,
-          name: bReg.name || `${bReg.city}${bReg.state ? `, ${bReg.state}` : ""}`,
+          name: bReg.name || "",
           city: bReg.city || "",
           state: bReg.state || "",
-          country: bReg.country || ""
+          country: bReg.country || "",
+          businessRegionId: bReg._id?.toString()
         });
       }
     }
 
     return list;
-  }, [regionsList, editingFranchise]);
+  }, [areasList, editingFranchise]);
 
   const currentAssignedRegionId = (
     editingFranchise?.businessRegionId ||
@@ -474,10 +475,10 @@ const FranchisesPage = () => {
     if (!regionSearch.trim()) return availableAreas;
     const q = regionSearch.toLowerCase().trim();
     return availableAreas.filter(area =>
-      area.name.toLowerCase().includes(q) ||
-      area.city.toLowerCase().includes(q) ||
-      area.state.toLowerCase().includes(q) ||
-      area.country.toLowerCase().includes(q)
+      (area.name || "").toLowerCase().includes(q) ||
+      (area.city || "").toLowerCase().includes(q) ||
+      (area.state || "").toLowerCase().includes(q) ||
+      (area.country || "").toLowerCase().includes(q)
     );
   }, [availableAreas, regionSearch]);
 
@@ -506,7 +507,7 @@ const FranchisesPage = () => {
       if (bId === targetId) {
         return {
           _id: targetId,
-          name: bReg.name || `${bReg.city}${bReg.state ? `, ${bReg.state}` : ""}`,
+          name: bReg.name || "",
           city: bReg.city || "",
           state: bReg.state || "",
           country: bReg.country || ""
@@ -519,21 +520,11 @@ const FranchisesPage = () => {
   const selectedRegionDisplay = useMemo(() => {
     if (!selectedRegionId) return "Select Business Region";
     if (selectedArea) {
-      const name = selectedArea.name || "";
-      const city = selectedArea.city || "";
-      if (city && !name.toLowerCase().includes(city.toLowerCase())) {
-        return `${name} (${city})`;
-      }
-      return name || "Select Business Region";
+      return formatAreaNameCityState(selectedArea) || "Select Business Region";
     }
     if (editingFranchise?.businessRegion) {
       const bReg = editingFranchise.businessRegion;
-      const name = bReg.name || `${bReg.city}${bReg.state ? `, ${bReg.state}` : ""}`;
-      const city = bReg.city || "";
-      if (city && !name.toLowerCase().includes(city.toLowerCase())) {
-        return `${name} (${city})`;
-      }
-      return name;
+      return formatAreaNameCityState(bReg) || bReg.name || "Select Business Region";
     }
     return "Select Business Region";
   }, [selectedRegionId, selectedArea, editingFranchise]);
@@ -632,22 +623,18 @@ const FranchisesPage = () => {
                 </tr>
               ) : (
                 franchises.map((f, index) => {
-                  const region = regionsList.find(r =>
-                    r._id === f.businessRegionId?.toString() ||
-                    (r.areas && r.areas.some((a: any) => (typeof a === "string" ? a : a._id) === f.businessRegionId?.toString()))
-                  );
-                  const matchedArea = region?.areas?.find((a: any) => (typeof a === "string" ? a : a._id) === f.businessRegionId?.toString());
+                  const matchedArea = areasList.find(a => a._id?.toString() === f.businessRegionId?.toString());
                   const regionText = matchedArea
-                    ? (typeof matchedArea === "string" ? matchedArea : matchedArea.name)
-                    : (f.businessRegion?.name || (region ? `${region.city}, ${region.state}` : (f.businessRegion ? `${f.businessRegion.city}, ${f.businessRegion.state}` : "Unknown Region")));
+                    ? formatAreaNameCityState(matchedArea)
+                    : (f.businessRegion ? formatAreaNameCityState(f.businessRegion) : "Unknown Region");
                   return (
                     <tr key={f._id} className="hover:bg-secondary/30 transition-colors">
                       <td className="px-6 py-4 text-sm text-foreground font-semibold">{(page * 10) + index + 1}</td>
                       <td className="px-6 py-4 text-sm text-foreground font-semibold">{f.name}</td>
                       <td className="px-6 py-4 text-sm text-foreground font-semibold">
                         <div className="flex items-center gap-1.5">
-                          <MapPin size={13} className="text-foreground" />
-                          {regionText}
+                          <MapPin size={13} className="text-foreground shrink-0" />
+                          <span>{regionText}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-foreground font-semibold">
@@ -757,7 +744,7 @@ const FranchisesPage = () => {
                     value={regionSearch}
                     onValueChange={(val) => {
                       setRegionSearch(val);
-                      setVisibleRegionCount(10);
+                      setVisibleRegionCount(20);
                     }}
                   />
                   <CommandEmpty>No regions found.</CommandEmpty>
@@ -767,31 +754,36 @@ const FranchisesPage = () => {
                     onWheel={(e) => e.stopPropagation()}
                   >
                     <CommandGroup>
-                      {visibleAreas.map((area) => (
-                        <CommandItem
-                          key={area._id}
-                          value={area._id}
-                          onSelect={() => {
-                            const newRegId = area._id;
-                            setSelectedRegionId(newRegId);
-                            setRegionOpen(false);
-                            setSelectedUsers([]);
-                            fetchUsersForRegion(newRegId, editingFranchise?._id);
-                          }}
-                          className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg flex items-center justify-between"
-                        >
-                          <span className="flex items-center">
-                            <Check
-                              className={cn(
-                                "mr-2 h-3.5 w-3.5",
-                                selectedRegionId?.toString() === area._id?.toString() ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {area.name}
-                            {area.city && !area.name.toLowerCase().includes(area.city.toLowerCase()) ? ` (${area.city})` : ""}
-                          </span>
-                        </CommandItem>
-                      ))}
+                      {visibleAreas.map((area) => {
+                        const displayText = formatAreaNameCityState(area);
+                        const isSelected = selectedRegionId?.toString() === area._id?.toString();
+                        return (
+                          <CommandItem
+                            key={area._id}
+                            value={`${displayText} ${area._id}`}
+                            onSelect={() => {
+                              const newRegId = area._id;
+                              setSelectedRegionId(newRegId);
+                              setRegionOpen(false);
+                              setSelectedUsers([]);
+                              fetchUsersForRegion(newRegId, editingFranchise?._id);
+                            }}
+                            className="text-xs cursor-pointer hover:bg-secondary/50 rounded-lg flex items-center justify-between py-2 px-2.5"
+                          >
+                            <span className="flex items-center gap-2 truncate">
+                              <Check
+                                className={cn(
+                                  "h-3.5 w-3.5 shrink-0",
+                                  isSelected ? "opacity-100 text-primary" : "opacity-0"
+                                )}
+                              />
+                              <span className="font-semibold text-slate-800 truncate">
+                                {displayText}
+                              </span>
+                            </span>
+                          </CommandItem>
+                        );
+                      })}
                     </CommandGroup>
                   </CommandList>
                 </Command>
@@ -834,10 +826,10 @@ const FranchisesPage = () => {
                   {!selectedRegionId
                     ? "Select Business Region first"
                     : usersLoading
-                    ? "Loading region members..."
-                    : selectedUsers.length > 0
-                    ? `${selectedUsers.length} user(s) selected`
-                    : "Choose users"}
+                      ? "Loading region members..."
+                      : selectedUsers.length > 0
+                        ? `${selectedUsers.length} user(s) selected`
+                        : "Choose users"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[320px] p-0 shadow-xl rounded-2xl border border-slate-200 overflow-hidden" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>

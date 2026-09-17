@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye, Check, ChevronsUpDown, Link as LinkIcon, GraduationCap, Plus } from "lucide-react";
+import { Megaphone, Calendar, Loader2, Image as ImageIcon, Video, X, CheckCircle2, Pencil, Trash2, Search, MapPin, Clock, Users, Eye, Check, ChevronsUpDown, Link as LinkIcon, GraduationCap, Plus, QrCode, Download } from "lucide-react";
 import StatusBadge from "@/components/common/StatusBadge";
 import FormDrawer from "@/components/common/FormDrawer";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { PrivateImage } from "@/components/common/PrivateImage";
 import { PrivateVideo } from "@/components/common/PrivateVideo";
 import { PrivateAvatar } from "@/components/common/PrivateAvatar";
+import { generateAttendanceQrPdf, generateQrDataUrl } from "@/lib/qrPdfGenerator";
 
 const MediaPreview = ({ file, url, type, onRemove }: { file?: File | null, url?: string, type: 'image' | 'video', onRemove: () => void }) => {
   const [localPreview, setLocalPreview] = useState<string>("");
@@ -176,13 +177,69 @@ const AnnouncementsPage = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
+  const [previewQrUrl, setPreviewQrUrl] = useState<string>("");
+  const [downloadingQrId, setDownloadingQrId] = useState<string | null>(null);
+
+  const handleDownloadQr = async (item: any) => {
+    const id = item._id || item.announcementId;
+    if (!id) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Event ID is missing for QR download.",
+      });
+      return;
+    }
+    try {
+      setDownloadingQrId(id);
+      toast({
+        title: "Generating QR Code PDF...",
+        description: "Preparing event attendance check-in flyer.",
+      });
+      await generateAttendanceQrPdf(item);
+      toast({
+        title: "Success",
+        description: "Attendance QR Code PDF downloaded successfully.",
+      });
+    } catch (error: any) {
+      console.error("Error generating QR code PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error?.message || "Failed to generate QR Code PDF.",
+      });
+    } finally {
+      setDownloadingQrId(null);
+    }
+  };
 
   const handlePreview = async (a: any) => {
     setIsPreviewOpen(true);
     setPreviewLoading(true);
+    setPreviewQrUrl("");
     try {
+      const isEvent = (a.announcementType || "").toLowerCase() === "event";
+      if (isEvent && a._id) {
+        generateQrDataUrl(a._id)
+          .then((url) => setPreviewQrUrl(url))
+          .catch((err) => console.error("Error generating preview QR:", err));
+      }
+
       const bookingsResult = await getAnnouncementBookings(a._id);
-      setPreviewData(bookingsResult.data || null);
+      const data = bookingsResult.data || null;
+      if (data && !data._id && a._id) {
+        data._id = a._id;
+      }
+      setPreviewData(data);
+
+      if (data && (data.announcementType || "").toLowerCase() === "event") {
+        const targetId = data.announcementId || data._id || a._id;
+        if (targetId) {
+          generateQrDataUrl(targetId)
+            .then((url) => setPreviewQrUrl(url))
+            .catch((err) => console.error("Error generating preview QR:", err));
+        }
+      }
     } catch (error) {
       console.error("Error fetching bookings:", error);
       toast({
@@ -218,6 +275,7 @@ const AnnouncementsPage = () => {
     location: "",
     points: "" as any,
     membersLimit: "" as any,
+    amount: "" as any,
     scheduleDate: "",
     scheduleHour: "10",
     scheduleMinute: "00",
@@ -244,7 +302,7 @@ const AnnouncementsPage = () => {
         } else if (existingStallsRef.current[i]) {
           newStalls.push({ ...existingStallsRef.current[i] });
         } else {
-          newStalls.push({ name: `Stall ${i + 1}`, size: "", points: "" });
+          newStalls.push({ name: `Stall ${i + 1}`, size: "", points: "", amount: "" });
         }
       }
       return {
@@ -262,7 +320,7 @@ const AnnouncementsPage = () => {
       const stalls = [...(prev.stallConfig?.stalls || [])];
       const updatedStall = {
         ...stalls[index],
-        [field]: field === "points" ? (value === "" ? "" : Number(value)) : value
+        [field]: (field === "points" || field === "amount") ? (value === "" ? "" : Number(value)) : value
       };
       stalls[index] = updatedStall;
 
@@ -286,7 +344,7 @@ const AnnouncementsPage = () => {
     setFormData((prev) => {
       const currentStalls = prev.stallConfig?.stalls || [];
       const nextIndex = currentStalls.length + 1;
-      const newStall = { name: `Stall ${nextIndex}`, size: "", points: "" };
+      const newStall = { name: `Stall ${nextIndex}`, size: "", points: "", amount: "" };
       return {
         ...prev,
         stallConfig: {
@@ -329,10 +387,15 @@ const AnnouncementsPage = () => {
   const fetchAnnouncements = async () => {
     setIsLoading(true);
     try {
-      const result = await getAnnouncements({ page: page - 1, limit: 9, search: searchTerm });
-      setAnnouncements(result.data || []);
+      const result = await getAnnouncements({ page: page - 1, limit: 9, search: searchTerm, type: "announcement" });
+      const rawData = result.data || [];
+      const nonMonthly = rawData.filter((a: any) => {
+        const t = (a.announcementType || "").toLowerCase().replace(/[\s_]+/g, "");
+        return t !== "monthlymeeting";
+      });
+      setAnnouncements(nonMonthly);
       setTotalPages(result.totalPages || 1);
-      setTotalAnnouncementsCount(result.total || result.totalItems || 0);
+      setTotalAnnouncementsCount(result.total || result.totalItems || nonMonthly.length);
     } catch (error) {
       console.error("Error fetching announcements:", error);
     } finally {
@@ -364,7 +427,7 @@ const AnnouncementsPage = () => {
     const { id, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [id]: id === 'points' || id === 'membersLimit' ? (value === "" ? "" : Number(value)) : value
+      [id]: id === 'points' || id === 'membersLimit' || id === 'amount' ? (value === "" ? "" : Number(value)) : value
     }));
     if (errors[id]) setErrors(prev => ({ ...prev, [id]: "" }));
   };
@@ -373,9 +436,9 @@ const AnnouncementsPage = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.title) newErrors.title = "Title is required";
     if (!formData.content) newErrors.content = "Content is required";
-    if (!formData.fromDate) newErrors.fromDate = "From Date is required";
-    if (!formData.toDate) newErrors.toDate = "To Date is required";
-    if (formData.announcementType !== "Training" && !formData.location) {
+    if (formData.announcementType !== "Others" && !formData.fromDate) newErrors.fromDate = "From Date is required";
+    if (formData.announcementType !== "Others" && !formData.toDate) newErrors.toDate = "To Date is required";
+    if (formData.announcementType !== "Training" && formData.announcementType !== "Others" && !formData.location) {
       newErrors.location = "Location is required";
     }
     if (!formData.image && !filesToUpload.image) newErrors.image = "Image is required";
@@ -472,6 +535,11 @@ const AnnouncementsPage = () => {
       if (formData.membersLimit !== undefined && formData.membersLimit !== null && formData.membersLimit !== "" && formData.membersLimit < 0) {
         newErrors.membersLimit = "Members Limit must be a positive value";
       }
+      if (formData.announcementType === "Event" && formData.amount !== undefined && formData.amount !== null && formData.amount !== "") {
+        if (isNaN(Number(formData.amount)) || Number(formData.amount) < 0) {
+          newErrors.amount = "Amount must be a non-negative number";
+        }
+      }
     }
     if (formData.announcementType === "Others") {
       if (!formData.link || !formData.link.trim()) {
@@ -538,6 +606,7 @@ const AnnouncementsPage = () => {
       location: "",
       points: "" as any,
       membersLimit: "" as any,
+      amount: "" as any,
       scheduleDate: "",
       scheduleHour: "10",
       scheduleMinute: "00",
@@ -588,6 +657,7 @@ const AnnouncementsPage = () => {
         trainingId: formData.announcementType === "Training" ? formData.trainingId : undefined,
         points: formData.announcementType === "Training" ? 0 : (formData.points === "" ? 0 : Number(formData.points)),
         membersLimit: formData.announcementType === "Training" ? 0 : (formData.membersLimit === "" ? 0 : Number(formData.membersLimit)),
+        amount: formData.announcementType === "Event" ? (formData.amount === "" || formData.amount === undefined || formData.amount === null ? undefined : Number(formData.amount)) : undefined,
         location: formData.location || "",
         date: finalFromDate,
         time: finalFromTime,
@@ -727,7 +797,8 @@ const AnnouncementsPage = () => {
           _id: s._id ? (typeof s._id === "object" ? s._id.toString() : String(s._id)) : undefined,
           name: s.name || "",
           size: s.size || "",
-          points: s.points !== undefined && s.points !== null ? s.points : ""
+          points: s.points !== undefined && s.points !== null ? s.points : "",
+          amount: s.amount !== undefined && s.amount !== null ? s.amount : ""
         }));
         existingStallsRef.current = loadedStalls;
 
@@ -753,6 +824,7 @@ const AnnouncementsPage = () => {
           location: data.location || "",
           points: data.points || "",
           membersLimit: data.membersLimit || "",
+          amount: data.amount !== undefined && data.amount !== null ? data.amount : "",
           scheduleDate: formatLocalDateString(data.scheduleDate),
           scheduleHour: schedParts.hour,
           scheduleMinute: schedParts.minute,
@@ -906,8 +978,15 @@ const AnnouncementsPage = () => {
                           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
                             <Users size={12} className="text-indigo-500/60" /> {a.membersLimit || 'Unlimited'}
                           </div>
-                          <div className="w-fit bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-emerald-100 flex items-center gap-1">
-                            <CheckCircle2 size={10} /> {a.points || 0} Pts
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <div className="w-fit bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-emerald-100 flex items-center gap-1">
+                              <CheckCircle2 size={10} /> {a.points || 0} Pts
+                            </div>
+                            {a.amount !== undefined && a.amount !== null && a.amount !== "" && (
+                              <div className="w-fit bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded-full text-[9px] font-bold border border-blue-100 flex items-center gap-1">
+                                ₹{a.amount}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -974,38 +1053,57 @@ const AnnouncementsPage = () => {
                     )}
                   </div>
 
-                  <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
-                      onClick={() => handlePreview(a)}
-                    >
-                      <Eye size={12} className="mr-1.5" /> Preview
-                    </Button>
-                    {canEdit && (
+                  <div className="flex flex-col gap-2 mt-auto pt-4 border-t border-slate-100">
+                    {(a.announcementType || "").toLowerCase() === "event" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={downloadingQrId === a._id}
+                        className="w-full rounded-lg text-xs h-8 font-semibold border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/40 transition-all shadow-xs"
+                        onClick={() => handleDownloadQr(a)}
+                        title="Download Event Attendance QR Code as PDF"
+                      >
+                        {downloadingQrId === a._id ? (
+                          <Loader2 size={13} className="mr-1.5 animate-spin text-primary" />
+                        ) : (
+                          <QrCode size={13} className="mr-1.5 text-primary" />
+                        )}
+                        Download Attendance QR
+                      </Button>
+                    )}
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
-                        onClick={() => handleEdit(a)}
+                        onClick={() => handlePreview(a)}
                       >
-                        <Pencil size={12} className="mr-1.5" /> Edit
+                        <Eye size={12} className="mr-1.5" /> Preview
                       </Button>
-                    )}
-                    {canDelete && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
-                        onClick={() => {
-                          setDeletingId(a._id);
-                          setDeleteConfirmOpen(true);
-                        }}
-                      >
-                        <Trash2 size={12} className="mr-1.5" /> Delete
-                      </Button>
-                    )}
+                      {canEdit && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary transition-all"
+                          onClick={() => handleEdit(a)}
+                        >
+                          <Pencil size={12} className="mr-1.5" /> Edit
+                        </Button>
+                      )}
+                      {canDelete && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-lg flex-1 text-xs h-8 font-medium border-slate-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all text-slate-600"
+                          onClick={() => {
+                            setDeletingId(a._id);
+                            setDeleteConfirmOpen(true);
+                          }}
+                        >
+                          <Trash2 size={12} className="mr-1.5" /> Delete
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -1174,8 +1272,9 @@ const AnnouncementsPage = () => {
                                   <Trash2 size={13} />
                                 </button>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-                                <div className="sm:col-span-6 space-y-1">
+                              <div className="grid grid-cols-12 gap-2.5">
+                                {/* Row 1: Name + Size */}
+                                <div className="col-span-6 space-y-1">
                                   <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                     Stall Name <span className="text-red-500">*</span>
                                   </Label>
@@ -1188,7 +1287,7 @@ const AnnouncementsPage = () => {
                                   />
                                   {nameErr && <p className="text-[10px] text-red-500 font-bold leading-tight mt-0.5">{nameErr}</p>}
                                 </div>
-                                <div className="sm:col-span-3 space-y-1">
+                                <div className="col-span-6 space-y-1">
                                   <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                     Size
                                   </Label>
@@ -1200,7 +1299,8 @@ const AnnouncementsPage = () => {
                                     placeholder="e.g. 10x10"
                                   />
                                 </div>
-                                <div className="sm:col-span-3 space-y-1">
+                                {/* Row 2: Points + Amount */}
+                                <div className="col-span-6 space-y-1">
                                   <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                     Points <span className="text-red-500">*</span>
                                   </Label>
@@ -1213,6 +1313,19 @@ const AnnouncementsPage = () => {
                                     placeholder="0"
                                   />
                                   {pointsErr && <p className="text-[10px] text-red-500 font-bold leading-tight mt-0.5">{pointsErr}</p>}
+                                </div>
+                                <div className="col-span-6 space-y-1">
+                                  <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                    Amount <span className="text-slate-400 font-normal normal-case">(optional)</span>
+                                  </Label>
+                                  <Input 
+                                    type="number" 
+                                    min="0" 
+                                    value={stall.amount === undefined || stall.amount === null ? "" : stall.amount} 
+                                    onChange={(e) => handleStallFieldChange(index, "amount", e.target.value === "" ? "" : Number(e.target.value))} 
+                                    className="h-9 text-xs rounded-md bg-white" 
+                                    placeholder="0"
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -1249,7 +1362,7 @@ const AnnouncementsPage = () => {
           <div className="space-y-4 border-t border-slate-100 pt-4">
             {/* From Date & Time */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">From Date & Time <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">From Date & Time {formData.announcementType === "Others" ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}</Label>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1">
                   <Input 
@@ -1309,7 +1422,7 @@ const AnnouncementsPage = () => {
 
             {/* To Date & Time */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">To Date & Time <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">To Date & Time {formData.announcementType === "Others" ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}</Label>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1">
                   <Input 
@@ -1371,7 +1484,7 @@ const AnnouncementsPage = () => {
 
           <div className="space-y-2">
             <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Location {formData.announcementType === "Training" ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}
+              Location {(formData.announcementType === "Training" || formData.announcementType === "Others") ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}
             </Label>
             <div className="relative">
               <Input id="location" value={formData.location} onChange={handleInputChange} placeholder="Announcement location" className={`h-11 pl-10 ${errors.location ? "border-red-500" : ""}`} />
@@ -1463,7 +1576,7 @@ const AnnouncementsPage = () => {
           </div>
 
           {formData.announcementType !== "Training" && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid ${formData.announcementType === "Event" ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2"} gap-4`}>
               <div className="space-y-2">
                 <Label htmlFor="points" className="text-xs font-bold uppercase tracking-wider text-slate-600">Points</Label>
                 <Input type="number" id="points" min="0" value={formData.points === undefined || formData.points === null ? "" : formData.points} onChange={handleInputChange} placeholder="0" className={`h-11 ${errors.points ? "border-red-500" : ""}`} />
@@ -1474,6 +1587,24 @@ const AnnouncementsPage = () => {
                 <Input type="number" id="membersLimit" min="0" value={formData.membersLimit === undefined || formData.membersLimit === null ? "" : formData.membersLimit} onChange={handleInputChange} placeholder="0 (No limit)" className={`h-11 ${errors.membersLimit ? "border-red-500" : ""}`} />
                 {errors.membersLimit && <p className="text-[10px] text-red-500 font-bold">{errors.membersLimit}</p>}
               </div>
+              {formData.announcementType === "Event" && (
+                <div className="space-y-2">
+                  <Label htmlFor="amount" className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Amount <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    id="amount"
+                    min="0"
+                    step="any"
+                    value={formData.amount === undefined || formData.amount === null ? "" : formData.amount}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                    className={`h-11 ${errors.amount ? "border-red-500" : ""}`}
+                  />
+                  {errors.amount && <p className="text-[10px] text-red-500 font-bold">{errors.amount}</p>}
+                </div>
+              )}
             </div>
           )}
 
@@ -1730,15 +1861,63 @@ const AnnouncementsPage = () => {
                             <Users size={14} className="text-slate-400" />
                             <span>Limit: {previewData.membersLimit ? `${previewData.membersLimit} Members` : "Unlimited"}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 bg-emerald-50 w-fit px-2 py-0.5 rounded-full border border-emerald-100">
-                            <CheckCircle2 size={12} />
-                            <span>Cost: {previewData.points || 0} Pts</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 bg-emerald-50 w-fit px-2 py-0.5 rounded-full border border-emerald-100">
+                              <CheckCircle2 size={12} />
+                              <span>Cost: {previewData.points || 0} Pts</span>
+                            </div>
+                            {previewData.amount !== undefined && previewData.amount !== null && (
+                              <div className="flex items-center gap-2 text-xs font-semibold text-blue-700 bg-blue-50 w-fit px-2 py-0.5 rounded-full border border-blue-100">
+                                <span>Amount: ₹{previewData.amount}</span>
+                              </div>
+                            )}
                           </div>
                         </>
                       )}
                     </div>
                   </div>
                 </div>
+
+                {(previewData.announcementType || "").toLowerCase() === "event" && (
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden bg-gradient-to-br from-slate-50 to-primary/5 p-4 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <QrCode className="text-primary w-4 h-4" />
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800">
+                          Attendance QR Code
+                        </h4>
+                      </div>
+                      <Badge variant="outline" className="text-[10px] bg-white border-primary/20 text-primary font-medium">
+                        Scan to Check-In
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-center p-3 bg-white rounded-xl border border-slate-200/80 shadow-xs">
+                      {previewQrUrl ? (
+                        <img src={previewQrUrl} alt="Attendance QR Code" className="w-36 h-36 object-contain" />
+                      ) : (
+                        <div className="w-36 h-36 flex items-center justify-center">
+                          <Loader2 className="animate-spin text-primary w-6 h-6" />
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={downloadingQrId === (previewData.announcementId || previewData._id)}
+                      className="w-full text-xs h-9 font-semibold border-primary bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
+                      onClick={() => handleDownloadQr(previewData)}
+                    >
+                      {downloadingQrId === (previewData.announcementId || previewData._id) ? (
+                        <Loader2 size={13} className="mr-2 animate-spin" />
+                      ) : (
+                        <Download size={13} className="mr-2" />
+                      )}
+                      Download QR Flyer (PDF)
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Bookings Lists */}
