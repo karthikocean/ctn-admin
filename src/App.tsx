@@ -12,6 +12,7 @@ import LoginPage from "@/pages/auth/LoginPage";
 import DashboardPage from "@/pages/dashboard/DashboardPage";
 import RolesPage from "@/pages/roles/RolesPage";
 import MembersPage from "@/pages/members/MembersPage";
+import IncompleteRegistrationsPage from "@/pages/incomplete-registrations/IncompleteRegistrationsPage";
 import { AskPage, GivePage, PostPage, RequirementPage } from "@/pages/activities/ActivitiesPage";
 import SpotlightPage from "@/pages/spotlight/SpotlightPage";
 import SpotlightRequestsPage from "@/pages/spotlight/SpotlightRequestsPage";
@@ -128,6 +129,11 @@ const App = () => (
               <Route path="/" element={<LandingRoute />} />
               <Route path="/roles" element={<RolesPage />} />
               <Route path="/members" element={<MembersPage />} />
+              <Route path="/incomplete-registrations" element={
+                <PermissionRoute module="incomplete_registrations" action="view">
+                  <IncompleteRegistrationsPage />
+                </PermissionRoute>
+              } />
               <Route path="/spotlight" element={
                 <PermissionRoute module="spotlight_creation" action="view">
                   <SpotlightPage />

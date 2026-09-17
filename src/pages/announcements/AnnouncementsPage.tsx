@@ -302,7 +302,7 @@ const AnnouncementsPage = () => {
         } else if (existingStallsRef.current[i]) {
           newStalls.push({ ...existingStallsRef.current[i] });
         } else {
-          newStalls.push({ name: `Stall ${i + 1}`, size: "", points: "" });
+          newStalls.push({ name: `Stall ${i + 1}`, size: "", points: "", amount: "" });
         }
       }
       return {
@@ -320,7 +320,7 @@ const AnnouncementsPage = () => {
       const stalls = [...(prev.stallConfig?.stalls || [])];
       const updatedStall = {
         ...stalls[index],
-        [field]: field === "points" ? (value === "" ? "" : Number(value)) : value
+        [field]: (field === "points" || field === "amount") ? (value === "" ? "" : Number(value)) : value
       };
       stalls[index] = updatedStall;
 
@@ -344,7 +344,7 @@ const AnnouncementsPage = () => {
     setFormData((prev) => {
       const currentStalls = prev.stallConfig?.stalls || [];
       const nextIndex = currentStalls.length + 1;
-      const newStall = { name: `Stall ${nextIndex}`, size: "", points: "" };
+      const newStall = { name: `Stall ${nextIndex}`, size: "", points: "", amount: "" };
       return {
         ...prev,
         stallConfig: {
@@ -436,9 +436,9 @@ const AnnouncementsPage = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.title) newErrors.title = "Title is required";
     if (!formData.content) newErrors.content = "Content is required";
-    if (!formData.fromDate) newErrors.fromDate = "From Date is required";
-    if (!formData.toDate) newErrors.toDate = "To Date is required";
-    if (formData.announcementType !== "Training" && !formData.location) {
+    if (formData.announcementType !== "Others" && !formData.fromDate) newErrors.fromDate = "From Date is required";
+    if (formData.announcementType !== "Others" && !formData.toDate) newErrors.toDate = "To Date is required";
+    if (formData.announcementType !== "Training" && formData.announcementType !== "Others" && !formData.location) {
       newErrors.location = "Location is required";
     }
     if (!formData.image && !filesToUpload.image) newErrors.image = "Image is required";
@@ -797,7 +797,8 @@ const AnnouncementsPage = () => {
           _id: s._id ? (typeof s._id === "object" ? s._id.toString() : String(s._id)) : undefined,
           name: s.name || "",
           size: s.size || "",
-          points: s.points !== undefined && s.points !== null ? s.points : ""
+          points: s.points !== undefined && s.points !== null ? s.points : "",
+          amount: s.amount !== undefined && s.amount !== null ? s.amount : ""
         }));
         existingStallsRef.current = loadedStalls;
 
@@ -1271,8 +1272,9 @@ const AnnouncementsPage = () => {
                                   <Trash2 size={13} />
                                 </button>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
-                                <div className="sm:col-span-6 space-y-1">
+                              <div className="grid grid-cols-12 gap-2.5">
+                                {/* Row 1: Name + Size */}
+                                <div className="col-span-6 space-y-1">
                                   <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                     Stall Name <span className="text-red-500">*</span>
                                   </Label>
@@ -1285,7 +1287,7 @@ const AnnouncementsPage = () => {
                                   />
                                   {nameErr && <p className="text-[10px] text-red-500 font-bold leading-tight mt-0.5">{nameErr}</p>}
                                 </div>
-                                <div className="sm:col-span-3 space-y-1">
+                                <div className="col-span-6 space-y-1">
                                   <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                     Size
                                   </Label>
@@ -1297,7 +1299,8 @@ const AnnouncementsPage = () => {
                                     placeholder="e.g. 10x10"
                                   />
                                 </div>
-                                <div className="sm:col-span-3 space-y-1">
+                                {/* Row 2: Points + Amount */}
+                                <div className="col-span-6 space-y-1">
                                   <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                                     Points <span className="text-red-500">*</span>
                                   </Label>
@@ -1310,6 +1313,19 @@ const AnnouncementsPage = () => {
                                     placeholder="0"
                                   />
                                   {pointsErr && <p className="text-[10px] text-red-500 font-bold leading-tight mt-0.5">{pointsErr}</p>}
+                                </div>
+                                <div className="col-span-6 space-y-1">
+                                  <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                    Amount <span className="text-slate-400 font-normal normal-case">(optional)</span>
+                                  </Label>
+                                  <Input 
+                                    type="number" 
+                                    min="0" 
+                                    value={stall.amount === undefined || stall.amount === null ? "" : stall.amount} 
+                                    onChange={(e) => handleStallFieldChange(index, "amount", e.target.value === "" ? "" : Number(e.target.value))} 
+                                    className="h-9 text-xs rounded-md bg-white" 
+                                    placeholder="0"
+                                  />
                                 </div>
                               </div>
                             </div>
@@ -1346,7 +1362,7 @@ const AnnouncementsPage = () => {
           <div className="space-y-4 border-t border-slate-100 pt-4">
             {/* From Date & Time */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">From Date & Time <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">From Date & Time {formData.announcementType === "Others" ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}</Label>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1">
                   <Input 
@@ -1406,7 +1422,7 @@ const AnnouncementsPage = () => {
 
             {/* To Date & Time */}
             <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">To Date & Time <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">To Date & Time {formData.announcementType === "Others" ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}</Label>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1">
                   <Input 
@@ -1468,7 +1484,7 @@ const AnnouncementsPage = () => {
 
           <div className="space-y-2">
             <Label htmlFor="location" className="text-xs font-bold uppercase tracking-wider text-slate-600">
-              Location {formData.announcementType === "Training" ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}
+              Location {(formData.announcementType === "Training" || formData.announcementType === "Others") ? <span className="text-slate-400 font-normal lowercase">(optional)</span> : <span className="text-red-500">*</span>}
             </Label>
             <div className="relative">
               <Input id="location" value={formData.location} onChange={handleInputChange} placeholder="Announcement location" className={`h-11 pl-10 ${errors.location ? "border-red-500" : ""}`} />

@@ -1,4 +1,4 @@
-import { LucideIcon, Users, Shield, MapPin, Megaphone, Calendar, FileText, GraduationCap, BarChart3, Layers, Link2, Gift, Trophy, Medal, LayoutDashboard, UserCheck, Activity, CreditCard, Star, Globe, Ticket, ShoppingBag, HelpCircle, Headset, Bell } from "lucide-react";
+import { LucideIcon, Users, Shield, MapPin, Megaphone, Calendar, FileText, GraduationCap, BarChart3, Layers, Link2, Gift, Trophy, Medal, LayoutDashboard, UserCheck, UserX, Activity, CreditCard, Star, Globe, Ticket, ShoppingBag, HelpCircle, Headset, Bell } from "lucide-react";
 
 export interface SidebarNavItem {
   title: string;
@@ -47,6 +47,7 @@ export const sidebarNavItems: SidebarNavItem[] = [
   //   ],
   // },
   { title: "Members", path: "/members", icon: UserCheck, moduleId: "members" },
+  { title: "Incomplete Registrations", path: "/incomplete-registrations", icon: UserX, moduleId: "incomplete_registrations" },
   {
     title: "Activities", icon: Activity, moduleId: "activities",
     children: [
