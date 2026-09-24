@@ -80,12 +80,14 @@ const PlansPage = () => {
       eventVisitor: boolean;
       eventStall: boolean;
       spotlights: boolean;
+      leadGeneration: boolean;
     };
     benefits: {
       requirementResponseLimit: number;
       pointMultiplier: number;
       trainingDiscountPercentage: number;
       referralBonusMonths: number;
+      leadGenerationCount: number;
     };
   }>({
     title: "",
@@ -103,13 +105,15 @@ const PlansPage = () => {
       monthlyMeeting: false,
       eventVisitor: false,
       eventStall: false,
-      spotlights: false
+      spotlights: false,
+      leadGeneration: false
     },
     benefits: {
       requirementResponseLimit: 0,
       pointMultiplier: 1,
       trainingDiscountPercentage: 0,
-      referralBonusMonths: 0
+      referralBonusMonths: 0,
+      leadGenerationCount: 0
     }
   });
 
@@ -314,13 +318,15 @@ const PlansPage = () => {
         monthlyMeeting: false,
         eventVisitor: false,
         eventStall: false,
-        spotlights: false
+        spotlights: false,
+        leadGeneration: false
       },
       benefits: {
         requirementResponseLimit: 0,
         pointMultiplier: 1,
         trainingDiscountPercentage: 0,
-        referralBonusMonths: 0
+        referralBonusMonths: 0,
+        leadGenerationCount: 0
       }
     });
   };
@@ -359,17 +365,31 @@ const PlansPage = () => {
       status: fullPlan.status || "active",
       billingType: fullPlan.billingType || "basic",
       billingCycle: fullPlan.billingCycle || "monthly",
-      features: fullPlan.features || {
+      features: fullPlan.features ? {
+        monthlyMeeting: fullPlan.features.monthlyMeeting ?? false,
+        eventVisitor: fullPlan.features.eventVisitor ?? false,
+        eventStall: fullPlan.features.eventStall ?? false,
+        spotlights: fullPlan.features.spotlights ?? false,
+        leadGeneration: fullPlan.features.leadGeneration ?? false
+      } : {
         monthlyMeeting: false,
         eventVisitor: false,
         eventStall: false,
-        spotlights: false
+        spotlights: false,
+        leadGeneration: false
       },
-      benefits: fullPlan.benefits || {
+      benefits: fullPlan.benefits ? {
+        requirementResponseLimit: fullPlan.benefits.requirementResponseLimit ?? 0,
+        pointMultiplier: fullPlan.benefits.pointMultiplier ?? 1,
+        trainingDiscountPercentage: fullPlan.benefits.trainingDiscountPercentage ?? 0,
+        referralBonusMonths: fullPlan.benefits.referralBonusMonths ?? 0,
+        leadGenerationCount: fullPlan.benefits.leadGenerationCount ?? 0
+      } : {
         requirementResponseLimit: 0,
         pointMultiplier: 1,
         trainingDiscountPercentage: 0,
-        referralBonusMonths: 0
+        referralBonusMonths: 0,
+        leadGenerationCount: 0
       }
     });
     setDrawerOpen(true);
@@ -984,6 +1004,24 @@ const PlansPage = () => {
                   <span className="text-[9px] text-muted-foreground leading-none mt-0.5">Highlight profile options in spotlights</span>
                 </div>
               </label>
+
+              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-border/60 bg-secondary/15 cursor-pointer hover:bg-secondary/30 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.features.leadGeneration}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      features: { ...formData.features, leadGeneration: e.target.checked }
+                    })
+                  }
+                  className="rounded border-border text-primary focus:ring-primary w-4 h-4"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-foreground">Lead Generation</span>
+                  <span className="text-[9px] text-muted-foreground leading-none mt-0.5">Allows accessing lead generation feature</span>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -1077,6 +1115,26 @@ const PlansPage = () => {
                       benefits: {
                         ...formData.benefits,
                         referralBonusMonths: Math.max(0, parseInt(e.target.value) || 0)
+                      }
+                    })
+                  }
+                  className="mt-1.5 h-10 rounded-lg border-border bg-secondary/30 text-xs font-bold"
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest block ml-0.5">
+                  Lead Generation Count
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.benefits.leadGenerationCount}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      benefits: {
+                        ...formData.benefits,
+                        leadGenerationCount: Math.max(0, parseInt(e.target.value) || 0)
                       }
                     })
                   }
@@ -1269,7 +1327,8 @@ const PlansPage = () => {
                         monthlyMeeting: false,
                         eventVisitor: false,
                         eventStall: false,
-                        spotlights: false
+                        spotlights: false,
+                        leadGeneration: false
                       }).map(([key, val]) => (
                         <div key={key} className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
                           <span className="font-semibold text-foreground capitalize">
@@ -1303,6 +1362,10 @@ const PlansPage = () => {
                       <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
                         <span className="font-semibold text-foreground">Referral Bonus Months</span>
                         <span className="font-bold text-foreground">{viewingPlan.benefits?.referralBonusMonths ?? 0} months</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                        <span className="font-semibold text-foreground">Lead Generation Count</span>
+                        <span className="font-bold text-foreground">{viewingPlan.benefits?.leadGenerationCount ?? 0}</span>
                       </div>
                     </div>
                   </div>
