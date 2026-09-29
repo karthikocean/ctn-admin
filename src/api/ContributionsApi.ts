@@ -15,3 +15,8 @@ export const getContributionDetails = async (id: string) => {
   return response.data;
 };
 
+export const deleteContribution = async (id: string) => {
+  const response = await api.delete(`/contributions/${id}`);
+  return response.data;
+};
+

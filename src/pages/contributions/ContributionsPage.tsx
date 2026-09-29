@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, Heart, Filter, RefreshCw, Calendar as CalendarIcon } from "lucide-react";
+import { Search, Heart, Filter, RefreshCw, Calendar as CalendarIcon, Trash2, Loader2 } from "lucide-react";
 import PaginationBar from "@/components/common/PaginationBar";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
 import EmptyState from "@/components/common/EmptyState";
-import { getContributions } from "@/api/ContributionsApi";
+import { getContributions, deleteContribution } from "@/api/ContributionsApi";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -17,6 +17,17 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { PrivateAvatar } from "@/components/common/PrivateAvatar";
@@ -49,6 +60,42 @@ const ContributionsPage = () => {
   const [contributions, setContributions] = useState<any[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  const { toast } = useToast();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contributionToDelete, setContributionToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteClick = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation();
+    setContributionToDelete(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!contributionToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteContribution(contributionToDelete.id);
+      toast({
+        title: "Deleted",
+        description: res?.message || "Contribution permanently deleted successfully.",
+        variant: "success"
+      });
+      setDeleteDialogOpen(false);
+      setContributionToDelete(null);
+      fetchContributions();
+    } catch (err: any) {
+      console.error("Error deleting contribution:", err);
+      toast({
+        title: "Deletion Failed",
+        description: err.response?.data?.message || "Failed to delete contribution.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const fetchContributions = async () => {
     setLoading(true);
@@ -361,12 +408,13 @@ const ContributionsPage = () => {
                 <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Type</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Details</th>
                 <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap">Date</th>
+                <th className="text-center px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider whitespace-nowrap w-24">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {contributions.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan={5} className="py-8">
+                  <td colSpan={6} className="py-8">
                     <EmptyState
                       title="No contributions found"
                       description="Try adjusting your search query or filters."
@@ -456,6 +504,17 @@ const ContributionsPage = () => {
                     <td className="px-6 py-4 text-sm text-foreground font-semibold whitespace-nowrap">
                       {formatDate(c.date)}
                     </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => handleDeleteClick(e, c)}
+                        className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Delete Contribution"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -468,6 +527,48 @@ const ContributionsPage = () => {
           </div>
         )}
       </motion.div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-2xl border-border bg-card max-w-md p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold text-foreground">
+              Permanently Delete Contribution?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground mt-2 leading-relaxed">
+              Are you sure you want to permanently delete this contribution record? This action cannot be undone. Any reward points awarded for this record will be decreased and the point history will be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-6">
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="rounded-xl border-border"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-2 font-medium"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 size={15} />
+                  <span>Delete Permanently</span>
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
