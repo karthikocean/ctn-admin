@@ -1,12 +1,23 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Calendar, FileText, Phone, Mail, MapPin, Handshake, Users, Receipt, IndianRupee, Image as ImageIcon, CheckCircle2, MessageSquare } from "lucide-react";
-import { getContributionDetails } from "@/api/ContributionsApi";
+import { ArrowLeft, ArrowRight, Calendar, FileText, Phone, Mail, MapPin, Handshake, Users, Receipt, IndianRupee, Image as ImageIcon, CheckCircle2, MessageSquare, Trash2, Loader2 } from "lucide-react";
+import { getContributionDetails, deleteContribution } from "@/api/ContributionsApi";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import StatusBadge from "@/components/common/StatusBadge";
 import GlobalNetworkLoader from "@/components/common/GlobalNetworkLoader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn, formatCompactNumber } from "@/lib/utils";
 import { PrivateAvatar } from "@/components/common/PrivateAvatar";
@@ -29,9 +40,34 @@ const formatType = (type: string) => {
 const ContributionDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [contribution, setContribution] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteContribution(id);
+      toast({
+        title: "Deleted",
+        description: res?.message || "Contribution permanently deleted successfully.",
+        variant: "success"
+      });
+      navigate("/contributions", { replace: true });
+    } catch (err: any) {
+      console.error("Error deleting contribution:", err);
+      toast({
+        title: "Deletion Failed",
+        description: err.response?.data?.message || "Failed to delete contribution.",
+        variant: "destructive"
+      });
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -110,6 +146,16 @@ const ContributionDetailPage = () => {
             <p className="text-xs text-muted-foreground">Value exchange record details</p>
           </div>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setDeleteDialogOpen(true)}
+          className="rounded-xl border-destructive/30 text-destructive hover:bg-destructive hover:text-destructive-foreground h-9 gap-1.5 transition-colors"
+        >
+          <Trash2 size={15} />
+          <span>Delete</span>
+        </Button>
       </div>
 
       {/* Grid Layout using all free horizontal space */}
@@ -395,6 +441,48 @@ const ContributionDetailPage = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="rounded-2xl border-border bg-card max-w-md p-6">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold text-foreground">
+              Permanently Delete Contribution?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-muted-foreground mt-2 leading-relaxed">
+              Are you sure you want to permanently delete this contribution record? This action cannot be undone. Any reward points awarded for this record will be decreased and the point history will be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-6">
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="rounded-xl border-border"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              className="rounded-xl bg-destructive hover:bg-destructive/90 text-destructive-foreground gap-2 font-medium"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 size={15} />
+                  <span>Delete Permanently</span>
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
