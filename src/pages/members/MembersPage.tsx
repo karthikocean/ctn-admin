@@ -1325,7 +1325,7 @@ const MembersPage = () => {
             <TableHeader className="bg-secondary/30">
               <TableRow className="border-b border-border/80">
                 <TableHead className="px-4 py-3.5 w-12 text-center text-xs font-bold text-muted-foreground">S.No</TableHead>
-                <TableHead className="px-4 py-3.5 min-w-[190px] text-xs font-bold text-muted-foreground">Member Details</TableHead>
+                <TableHead className="px-4 py-3.5 min-w-[190px] max-w-[240px] text-xs font-bold text-muted-foreground">Member Details</TableHead>
                 <TableHead className="px-4 py-3.5 min-w-[190px] text-xs font-bold text-muted-foreground">Business Name</TableHead>
                 <TableHead className="px-4 py-3.5 min-w-[180px] text-xs font-bold text-muted-foreground">Category</TableHead>
                 <TableHead className="px-4 py-3.5 min-w-[160px] text-xs font-bold text-muted-foreground">Location</TableHead>
@@ -1354,7 +1354,7 @@ const MembersPage = () => {
                     <TableCell className="px-4 py-3.5 text-center text-sm font-semibold text-foreground">
                       {((page - 1) * 10) + index + 1}
                     </TableCell>
-                    <TableCell className="px-4 py-3.5 min-w-[190px]">
+                    <TableCell className="px-4 py-3.5 min-w-[190px] max-w-[240px]">
                       <div className="flex items-center gap-3">
                         <PrivateAvatar
                           src={member.profilePhoto}
@@ -1364,7 +1364,7 @@ const MembersPage = () => {
                           avatarFallbackClassName={cn("text-xs font-bold shadow-inner flex items-center justify-center border", getAvatarGradient(member.fullName || "?"))}
                         />
                         <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-semibold text-foreground leading-snug tracking-tight whitespace-nowrap">{member.fullName}</span>
+                          <span className="text-sm font-semibold text-foreground leading-snug tracking-tight break-words">{member.fullName}</span>
                           <span className="text-xs text-muted-foreground font-medium">{member.mobileNumber}</span>
                           {getMemberRegionName(member) && (
                             <span className="text-[11px] text-slate-500 font-normal mt-0.5 whitespace-nowrap">
