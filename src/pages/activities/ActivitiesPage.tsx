@@ -842,7 +842,7 @@ const GenericActivityTablePage = ({
                           )}
                         />
                         <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-semibold text-foreground leading-snug tracking-tight whitespace-nowrap">
+                          <span className="text-sm font-semibold text-foreground leading-snug tracking-tight break-words">
                             {post.member?.fullName || "Anonymous"}
                           </span>
                           {post.member?.businessName ? (

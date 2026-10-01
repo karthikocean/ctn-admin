@@ -88,6 +88,7 @@ const PlansPage = () => {
       trainingDiscountPercentage: number;
       referralBonusMonths: number;
       leadGenerationCount: number;
+      postRespondCount: number;
     };
   }>({
     title: "",
@@ -113,7 +114,8 @@ const PlansPage = () => {
       pointMultiplier: 1,
       trainingDiscountPercentage: 0,
       referralBonusMonths: 0,
-      leadGenerationCount: 0
+      leadGenerationCount: 0,
+      postRespondCount: 0
     }
   });
 
@@ -326,7 +328,8 @@ const PlansPage = () => {
         pointMultiplier: 1,
         trainingDiscountPercentage: 0,
         referralBonusMonths: 0,
-        leadGenerationCount: 0
+        leadGenerationCount: 0,
+        postRespondCount: 0
       }
     });
   };
@@ -383,13 +386,15 @@ const PlansPage = () => {
         pointMultiplier: fullPlan.benefits.pointMultiplier ?? 1,
         trainingDiscountPercentage: fullPlan.benefits.trainingDiscountPercentage ?? 0,
         referralBonusMonths: fullPlan.benefits.referralBonusMonths ?? 0,
-        leadGenerationCount: fullPlan.benefits.leadGenerationCount ?? 0
+        leadGenerationCount: fullPlan.benefits.leadGenerationCount ?? 0,
+        postRespondCount: fullPlan.benefits.postRespondCount ?? 0
       } : {
         requirementResponseLimit: 0,
         pointMultiplier: 1,
         trainingDiscountPercentage: 0,
         referralBonusMonths: 0,
-        leadGenerationCount: 0
+        leadGenerationCount: 0,
+        postRespondCount: 0
       }
     });
     setDrawerOpen(true);
@@ -1141,6 +1146,26 @@ const PlansPage = () => {
                   className="mt-1.5 h-10 rounded-lg border-border bg-secondary/30 text-xs font-bold"
                 />
               </div>
+              <div>
+                <Label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest block ml-0.5">
+                  Post Respond Count
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={formData.benefits.postRespondCount}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      benefits: {
+                        ...formData.benefits,
+                        postRespondCount: Math.max(0, parseInt(e.target.value) || 0)
+                      }
+                    })
+                  }
+                  className="mt-1.5 h-10 rounded-lg border-border bg-secondary/30 text-xs font-bold"
+                />
+              </div>
             </div>
           </div>
 
@@ -1366,6 +1391,10 @@ const PlansPage = () => {
                       <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
                         <span className="font-semibold text-foreground">Lead Generation Count</span>
                         <span className="font-bold text-foreground">{viewingPlan.benefits?.leadGenerationCount ?? 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20 border border-border/40">
+                        <span className="font-semibold text-foreground">Post Respond Count</span>
+                        <span className="font-bold text-foreground">{viewingPlan.benefits?.postRespondCount ?? 0}</span>
                       </div>
                     </div>
                   </div>
