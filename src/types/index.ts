@@ -144,6 +144,8 @@ export interface Post {
     businessName: string;
   };
   status: string;
+  isActive?: boolean;
+  statusReason?: string;
 }
 
 export interface PointEntry {
