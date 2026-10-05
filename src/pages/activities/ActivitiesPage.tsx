@@ -162,20 +162,26 @@ const ActivityDetailModal = ({
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge
-              variant="outline"
-              className={`text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider rounded-full ${
-                selectedPost.status === "active"
-                  ? "bg-green-500/10 text-green-600 border-green-200"
-                  : selectedPost.status === "reported"
-                  ? "bg-rose-500/10 text-rose-600 border-rose-200"
-                  : selectedPost.status === "blocked"
-                  ? "bg-red-500/10 text-red-600 border-red-200"
-                  : "bg-muted text-muted-foreground border-border"
-              }`}
-            >
-              {selectedPost.status || "active"}
-            </Badge>
+            {(() => {
+              const statusKey = (selectedPost.status || (selectedPost.isActive === false ? "inactive" : "active")).toLowerCase();
+              return (
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider rounded-full",
+                    statusKey === "active"
+                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-200"
+                      : statusKey === "reported"
+                      ? "bg-rose-500/10 text-rose-600 border-rose-200"
+                      : statusKey === "blocked"
+                      ? "bg-red-500/10 text-red-600 border-red-200"
+                      : "bg-slate-100 text-slate-600 border-slate-200"
+                  )}
+                >
+                  {statusKey}
+                </Badge>
+              );
+            })()}
           </div>
         </div>
 
@@ -423,7 +429,8 @@ const GenericActivityTablePage = ({
 
   const handleOpenPreview = (post: Post) => {
     setSelectedPost(post);
-    setNewStatus(post.status || "active");
+    const effectiveStatus = (post.status || (post.isActive === false ? "inactive" : "active")).toLowerCase();
+    setNewStatus(effectiveStatus);
     setStatusReason("");
   };
 
@@ -915,20 +922,26 @@ const GenericActivityTablePage = ({
 
                     {/* Status */}
                     <TableCell className="px-4 py-3.5 text-center whitespace-nowrap">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider rounded-full ${
-                          post.status === "active"
-                            ? "bg-green-500/10 text-green-600 border-green-200"
-                            : post.status === "reported"
-                            ? "bg-rose-500/10 text-rose-600 border-rose-200"
-                            : post.status === "blocked"
-                            ? "bg-red-500/10 text-red-600 border-red-200"
-                            : "bg-muted text-muted-foreground border-border"
-                        }`}
-                      >
-                        {post.status || "active"}
-                      </Badge>
+                      {(() => {
+                        const statusKey = (post.status || (post.isActive === false ? "inactive" : "active")).toLowerCase();
+                        return (
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider rounded-full",
+                              statusKey === "active"
+                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-200"
+                                : statusKey === "reported"
+                                ? "bg-rose-500/10 text-rose-600 border-rose-200"
+                                : statusKey === "blocked"
+                                ? "bg-red-500/10 text-red-600 border-red-200"
+                                : "bg-slate-100 text-slate-600 border-slate-200"
+                            )}
+                          >
+                            {statusKey}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
 
                     {/* Actions */}
@@ -952,7 +965,7 @@ const GenericActivityTablePage = ({
                               <Eye size={14} className="text-blue-500" />
                               <span>View</span>
                             </DropdownMenuItem>
-                            {statusFilter !== "reported" && post.status !== "reported" && (
+                            {statusFilter !== "reported" && post.status?.toLowerCase() !== "reported" && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   setStatusUpdatePost(post);
